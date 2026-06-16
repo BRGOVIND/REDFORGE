@@ -690,10 +690,12 @@ async def main() -> None:
     print(f"Sample        : {args.sample if args.sample else 'full dataset'}")
     print()
 
-    # Load cases
+    # Load cases — track full dataset size separately from the sample
     print("Loading benchmark cases...")
-    cases = load_benchmark_cases(args.sample)
-    print(f"  {len(cases)} cases loaded.")
+    all_cases_unsampled = load_benchmark_cases(None)
+    total_in_dataset = len(all_cases_unsampled)
+    cases = load_benchmark_cases(args.sample) if args.sample else all_cases_unsampled
+    print(f"  {len(cases)} cases loaded (dataset total: {total_in_dataset}).")
     print()
 
     # Checkpoint
@@ -753,7 +755,7 @@ async def main() -> None:
     run_meta = build_run_meta(
         evaluator_label=evaluator_label,
         sample_size=args.sample,
-        total_loaded=len(cases),
+        total_loaded=total_in_dataset,
         date_str=now_str,
         heuristic_fallbacks_by_model=fb_by_model,
     )

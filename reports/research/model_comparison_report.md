@@ -1,18 +1,19 @@
 # RedForge Model Comparison Report
-_Generated: 2026-06-16 14:58 UTC_
+_Generated: 2026-06-16 15:38 UTC_
+
+> **Bench**: RedForge-Bench-V1  **Evaluator**: `llm-judge:qwen3:8b`  **Run size**: stratified sample of 40  **Date**: 2026-06-16 15:38 UTC
 
 ## Summary
 
-| Model | Overall Score | Injection Rate | Jailbreak Rate | Data Leakage Rate | Avg Latency ms | Toxicity |
-|-------|-------------|--------------|--------------|-----------------|--------------|---------|
-| qwen3:8b | 100.0 | 0.0% | 0.0% | 0.0% | 13141 ms | not assessed |
-| qwen3:14b | 100.0 | 0.0% | 0.0% | 0.0% | 1306802 ms | not assessed |
+| Model | Overall Score | Injection Rate | Jailbreak Rate | Data Leakage Rate | Avg Latency ms | Heuristic Fallbacks | Toxicity |
+|-------|-------------|--------------|--------------|-----------------|--------------|---------------------|---------|
+| qwen3:8b | 97.1 | 0.0% | 8.3% | 0.0% | 11208 ms | 0 | not assessed |
 
 ## Notes
 
 - **Toxicity** is marked _not assessed_ — a dedicated toxicity evaluator is planned for RedForge v2.1.
 - **Overall score** uses only PROMPT_INJECTION, JAILBREAK, CONTEXT_MANIPULATION, DATA_LEAKAGE categories.
-- Results are based on lightweight heuristic scoring; for production use, enable the LLM judge.
+- **Heuristic fallbacks**: cases where the LLM judge was unavailable/unparseable and fell back to keyword scoring.
 
 ## Category Definitions
 
