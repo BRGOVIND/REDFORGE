@@ -19,10 +19,6 @@ type RunMode = 'single' | 'category' | 'full';
 // Utility helpers
 // ---------------------------------------------------------------------------
 
-function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
-
 function scoreColor(score: number): string {
   if (score >= 0.7) return '#22c55e'; // green-500
   if (score >= 0.4) return '#f59e0b'; // amber-500
@@ -200,7 +196,7 @@ const RunTests: React.FC = () => {
   const [selectedAttackId, setSelectedAttackId] = useState<number | null>(null);
 
   // Job state
-  const [jobId, setJobId] = useState<string | null>(null);
+  const [_jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [polling, setPolling] = useState<boolean>(false);
 

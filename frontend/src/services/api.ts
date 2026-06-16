@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 import type {
   OllamaModel,
   PingResult,
@@ -23,11 +23,12 @@ const client = axios.create({
 });
 
 client.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const apiError: ApiError = error.response?.data ?? {
+  (response: AxiosResponse) => response,
+  (error: unknown) => {
+    const axiosErr = error as { response?: { data?: ApiError }; message?: string };
+    const apiError: ApiError = axiosErr.response?.data ?? {
       error: 'Network Error',
-      detail: error.message ?? 'An unexpected error occurred',
+      detail: axiosErr.message ?? 'An unexpected error occurred',
     };
     return Promise.reject(apiError);
   }

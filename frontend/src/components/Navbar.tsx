@@ -85,7 +85,7 @@ const Navbar: React.FC = () => {
             <NavLink
               to={to}
               end={to === '/'}
-              style={({ isActive }) => ({
+              style={({ isActive }: { isActive: boolean }) => ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
@@ -101,14 +101,14 @@ const Navbar: React.FC = () => {
                 transition: 'color 0.15s ease, background 0.15s ease',
                 cursor: 'pointer',
               })}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLAnchorElement;
+              onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                const el = e.currentTarget;
                 if (!el.classList.contains('active')) {
                   el.style.color = '#FFFFFF';
                 }
               }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLAnchorElement;
+              onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                const el = e.currentTarget;
                 if (!el.classList.contains('active')) {
                   el.style.color = '#9CA3AF';
                 }
