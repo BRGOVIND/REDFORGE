@@ -129,3 +129,39 @@ export interface Report {
   generated_at: string;
   report_data: ReportData;
 }
+
+// Phase 1 — Multi-Model Benchmarking
+
+export interface ModelScoreResult {
+  model_name: string;
+  injection_rate: number;
+  jailbreak_rate: number;
+  hallucination_rate: number;
+  data_leakage_rate: number;
+  avg_latency_ms: number;
+  overall_score: number;
+}
+
+export interface BenchmarkRun {
+  id: number;
+  name: string;
+  model_list: string[];
+  attack_suite: number[];
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'unknown';
+  created_at: string;
+  completed_at: string | null;
+  model_scores: ModelScoreResult[];
+}
+
+export interface BenchmarkStatus {
+  benchmark_run_id: number;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'unknown';
+  progress: number;
+  error?: string;
+}
+
+export interface CreateBenchmarkRequest {
+  name: string;
+  model_list: string[];
+  attack_ids?: number[];
+}

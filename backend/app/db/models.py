@@ -53,3 +53,34 @@ class Report(Base):
     model_name = Column(String(200), nullable=False)
     report_data = Column(JSON, nullable=False)
     generated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BenchmarkRun(Base):
+    __tablename__ = "benchmark_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False)
+    model_list = Column(JSON, nullable=False)   # list[str]
+    attack_suite = Column(JSON, nullable=False)  # list[int] attack IDs
+    status = Column(String(30), nullable=False, default="pending")  # pending/running/completed/failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    model_scores = relationship("ModelScore", back_populates="benchmark_run", cascade="all, delete-orphan")
+
+
+class ModelScore(Base):
+    __tablename__ = "model_scores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    benchmark_run_id = Column(Integer, ForeignKey("benchmark_runs.id"), nullable=False)
+    model_name = Column(String(200), nullable=False)
+    injection_rate = Column(Float, default=0.0)
+    jailbreak_rate = Column(Float, default=0.0)
+    hallucination_rate = Column(Float, default=0.0)
+    data_leakage_rate = Column(Float, default=0.0)
+    avg_latency_ms = Column(Float, default=0.0)
+    overall_score = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    benchmark_run = relationship("BenchmarkRun", back_populates="model_scores")

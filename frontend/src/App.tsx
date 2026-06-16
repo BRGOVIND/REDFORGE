@@ -8,6 +8,7 @@ const Attacks = React.lazy(() => import('./pages/Attacks'));
 const RunTests = React.lazy(() => import('./pages/RunTests'));
 const Hallucination = React.lazy(() => import('./pages/Hallucination'));
 const Reports = React.lazy(() => import('./pages/Reports'));
+const Comparison = React.lazy(() => import('./pages/Comparison'));
 
 const Fallback = () => (
   <div className="flex items-center justify-center h-full w-full text-gray-400 text-sm">
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/run" element={<RunTests />} />
           <Route path="/hallucination" element={<Hallucination />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/compare" element={<Comparison />} />
         </Routes>
       </Suspense>
     </Layout>

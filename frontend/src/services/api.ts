@@ -10,6 +10,9 @@ import type {
   DashboardMetrics,
   Report,
   ApiError,
+  BenchmarkRun,
+  BenchmarkStatus,
+  CreateBenchmarkRequest,
 } from '../types';
 
 const API_BASE = '/api';
@@ -107,4 +110,25 @@ export async function getReports(modelName?: string): Promise<Report[]> {
 
 export function downloadReport(id: number): string {
   return `${API_BASE}/reports/${id}/download`;
+}
+
+// Benchmarks
+export async function createBenchmark(req: CreateBenchmarkRequest): Promise<BenchmarkRun> {
+  const res = await client.post<BenchmarkRun>('/benchmarks', req);
+  return res.data;
+}
+
+export async function getBenchmarkStatus(id: number): Promise<BenchmarkStatus> {
+  const res = await client.get<BenchmarkStatus>(`/benchmarks/${id}/status`);
+  return res.data;
+}
+
+export async function getBenchmark(id: number): Promise<BenchmarkRun> {
+  const res = await client.get<BenchmarkRun>(`/benchmarks/${id}`);
+  return res.data;
+}
+
+export async function listBenchmarks(): Promise<BenchmarkRun[]> {
+  const res = await client.get<BenchmarkRun[]>('/benchmarks');
+  return res.data;
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Shield, Cpu, Zap, Play, Brain, FileText } from 'lucide-react';
+import { Shield, Cpu, Zap, Play, Brain, FileText, BarChart2 } from 'lucide-react';
 import ThreatPulse from './ThreatPulse';
 
 interface NavItem {
@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { to: '/run', icon: <Play size={18} />, label: 'Run Tests' },
   { to: '/hallucination', icon: <Brain size={18} />, label: 'Hallucination' },
   { to: '/reports', icon: <FileText size={18} />, label: 'Reports' },
+  { to: '/compare', icon: <BarChart2 size={18} />, label: 'Compare Models' },
 ];
 
 const Navbar: React.FC = () => {

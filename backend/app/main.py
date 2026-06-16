@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks
 from app.db.database import init_db, AsyncSessionLocal
 from app.attacks.library import seed_attacks
 
@@ -37,6 +37,7 @@ app.include_router(runs.router)
 app.include_router(evaluate.router)
 app.include_router(dashboard.router)
 app.include_router(reports.router)
+app.include_router(benchmarks.router)
 
 
 @app.get("/")
