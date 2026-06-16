@@ -54,3 +54,23 @@ def test_empty_returns_zero():
     scores = engine.compute_scores("m", [])
     assert scores.overall_score == 0.0
     assert scores.avg_latency_ms == 0.0
+
+
+def test_toxicity_excluded_from_overall_score():
+    """A model with toxicity data gets the same overall score whether
+    toxicity is present or absent — it must not silently count as failure."""
+    engine = WeightedScoringEngine()
+
+    base_results = [
+        make_result("PROMPT_INJECTION", "PASS", severity="high"),
+        make_result("JAILBREAK", "PASS", severity="medium"),
+    ]
+    with_toxicity = base_results + [
+        make_result("TOXICITY", "FAIL", severity="critical"),
+    ]
+
+    score_without = engine.compute_scores("m", base_results)
+    score_with = engine.compute_scores("m", with_toxicity)
+
+    # Toxicity FAIL must not drag down the overall score
+    assert score_without.overall_score == score_with.overall_score == 100.0
