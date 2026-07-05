@@ -124,6 +124,69 @@ class AgentFinding(Base):
     agent_run = relationship("AgentRun", back_populates="findings")
 
 
+class EvaluationSession(Base):
+    """A durable, resumable evaluation session.
+
+    Unlike the legacy in-memory batch job store, every field here is persisted,
+    so a session survives browser refresh, backend restart, and interruption.
+    """
+
+    __tablename__ = "evaluation_sessions"
+
+    id = Column(String(36), primary_key=True)  # UUID4 string
+    session_type = Column(String(50), nullable=False)  # batch / benchmark / agent / single
+    status = Column(String(20), nullable=False, default="pending")
+    # pending / running / paused / completed / failed / cancelled
+    selected_models = Column(JSON, nullable=False, default=list)      # list[str]
+    selected_categories = Column(JSON, nullable=False, default=list)  # list[str]
+    selected_tier = Column(String(50), nullable=True)
+    total_tasks = Column(Integer, nullable=False, default=0)
+    completed_tasks = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    estimated_seconds = Column(Float, nullable=True)
+    actual_seconds = Column(Float, nullable=True)
+    # "metadata" is reserved by SQLAlchemy's Declarative API, so the Python
+    # attribute is renamed while the DB column stays "metadata".
+    session_metadata = Column("metadata", JSON, nullable=True)
+
+    events = relationship(
+        "EvaluationEvent",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="EvaluationEvent.id",
+    )
+
+
+class EvaluationEvent(Base):
+    """An append-only record of a significant action within a session.
+
+    This is the backend foundation a future WebSocket feed will replay/stream.
+    Events are never mutated after creation.
+    """
+
+    __tablename__ = "evaluation_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(
+        String(36), ForeignKey("evaluation_sessions.id"), nullable=False, index=True
+    )
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    event_type = Column(String(50), nullable=False)
+    # session_created / model_started / attack_started / response_received /
+    # verdict_generated / session_completed / session_failed
+    model_name = Column(String(200), nullable=True)
+    category = Column(String(50), nullable=True)
+    attack_name = Column(String(200), nullable=True)
+    response_excerpt = Column(Text, nullable=True)
+    verdict = Column(String(20), nullable=True)
+    latency_ms = Column(Integer, nullable=True)
+    event_metadata = Column("metadata", JSON, nullable=True)
+
+    session = relationship("EvaluationSession", back_populates="events")
+
+
 class DatasetEntry(Base):
     __tablename__ = "dataset_entries"
 
