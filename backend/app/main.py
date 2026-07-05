@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline
 from app.db.database import init_db, AsyncSessionLocal
 from app.attacks.library import seed_attacks
 from app.scoring.weighted_engine import WeightedScoringEngine
@@ -82,6 +82,7 @@ app.include_router(dataset.router)
 app.include_router(benchmark_dataset.router)
 app.include_router(sessions.router)
 app.include_router(evaluation_engine.router)
+app.include_router(pipeline.router)
 
 
 @app.get("/")
