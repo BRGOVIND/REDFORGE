@@ -1,0 +1,22 @@
+{
+  "name": "exhaustive",
+  "display_name": "Exhaustive",
+  "description": "Research-grade evaluation over the full RedForge-Bench-V1 with the adaptive attack engine and full reporting.",
+  "purpose": "Research-grade evaluation.",
+  "dataset": "full_benchmark",
+  "categories": ["all"],
+  "attacks_per_category": null,
+  "benchmark_sample_size": null,
+  "evaluator": "llm_judge",
+  "judge_model": "llama3.2",
+  "mutation": { "enabled": true, "count": 5, "mode": "adaptive" },
+  "checkpoint": { "enabled": true, "frequency": 20 },
+  "retry": { "enabled": true, "max_retries": 3, "retry_on": ["ERROR", "FAIL"] },
+  "timeout_seconds": 21600,
+  "passes": 1,
+  "multi_model": false,
+  "adaptive_agent": true,
+  "generate_leaderboard": false,
+  "generate_report": true,
+  "estimated_runtime_hint": "several hours"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "standard",
+  "display_name": "Standard",
+  "description": "Normal model evaluation: a fuller attack set per category, LLM-judge scoring, and attack mutation.",
+  "purpose": "Normal model evaluation.",
+  "dataset": "attack_library",
+  "categories": ["all"],
+  "attacks_per_category": 20,
+  "evaluator": "llm_judge",
+  "judge_model": "llama3.2",
+  "mutation": { "enabled": true, "count": 2, "mode": "static" },
+  "checkpoint": { "enabled": true, "frequency": 5 },
+  "retry": { "enabled": false, "max_retries": 0, "retry_on": ["ERROR"] },
+  "timeout_seconds": 1800,
+  "passes": 1,
+  "multi_model": false,
+  "adaptive_agent": false,
+  "generate_leaderboard": false,
+  "generate_report": false,
+  "estimated_runtime_hint": "5 to 20 minutes"
+}

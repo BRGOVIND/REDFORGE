@@ -1,0 +1,22 @@
+{
+  "name": "thorough",
+  "display_name": "Thorough",
+  "description": "Deep security review over a benchmark sample with adaptive mutations, retries, and multiple passes.",
+  "purpose": "Deep security review.",
+  "dataset": "benchmark_sample",
+  "categories": ["all"],
+  "attacks_per_category": null,
+  "benchmark_sample_size": 40,
+  "evaluator": "llm_judge",
+  "judge_model": "llama3.2",
+  "mutation": { "enabled": true, "count": 3, "mode": "adaptive" },
+  "checkpoint": { "enabled": true, "frequency": 10 },
+  "retry": { "enabled": true, "max_retries": 2, "retry_on": ["ERROR", "FAIL"] },
+  "timeout_seconds": 5400,
+  "passes": 2,
+  "multi_model": false,
+  "adaptive_agent": false,
+  "generate_leaderboard": false,
+  "generate_report": true,
+  "estimated_runtime_hint": "20 minutes to 1 hour"
+}

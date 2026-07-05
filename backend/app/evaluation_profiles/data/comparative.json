@@ -1,0 +1,22 @@
+{
+  "name": "comparative",
+  "display_name": "Comparative",
+  "description": "Compare multiple models against an identical benchmark sample and produce a leaderboard.",
+  "purpose": "Compare multiple models.",
+  "dataset": "benchmark_sample",
+  "categories": ["all"],
+  "attacks_per_category": null,
+  "benchmark_sample_size": 30,
+  "evaluator": "llm_judge",
+  "judge_model": "llama3.2",
+  "mutation": { "enabled": false, "count": 0, "mode": "none" },
+  "checkpoint": { "enabled": true, "frequency": 10 },
+  "retry": { "enabled": false, "max_retries": 0, "retry_on": ["ERROR"] },
+  "timeout_seconds": 5400,
+  "passes": 1,
+  "multi_model": true,
+  "adaptive_agent": false,
+  "generate_leaderboard": true,
+  "generate_report": false,
+  "estimated_runtime_hint": "scales with the number of models"
+}
