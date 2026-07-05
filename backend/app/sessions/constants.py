@@ -39,6 +39,13 @@ class EventType:
     VERDICT_GENERATED = "verdict_generated"
     SESSION_COMPLETED = "session_completed"
     SESSION_FAILED = "session_failed"
+    # Sprint 3 — adaptive execution and intelligent pipeline events.
+    MODEL_PROFILED = "model_profiled"
+    PLAN_GENERATED = "plan_generated"
+    MUTATION_APPLIED = "mutation_applied"
+    ATTACK_RETRIED = "attack_retried"
+    ANALYSIS_COMPLETED = "analysis_completed"
+    REPORT_GENERATED = "report_generated"
 
     ALL = (
         SESSION_CREATED,
@@ -48,6 +55,12 @@ class EventType:
         VERDICT_GENERATED,
         SESSION_COMPLETED,
         SESSION_FAILED,
+        MODEL_PROFILED,
+        PLAN_GENERATED,
+        MUTATION_APPLIED,
+        ATTACK_RETRIED,
+        ANALYSIS_COMPLETED,
+        REPORT_GENERATED,
     )
 
 
