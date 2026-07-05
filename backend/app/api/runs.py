@@ -1,7 +1,6 @@
 import time
 from datetime import datetime, timezone
 from typing import Optional
-from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -9,16 +8,17 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.sessions import get_session_manager
 from app.db.database import get_db
 from app.db.models import Attack, TestRun
 from app.evaluators.scoring import score_response
+from app.sessions.constants import EventType, SessionType
+from app.sessions.session_manager import SessionManager
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
 OLLAMA_BASE_URL = "http://localhost:11434"
 OLLAMA_TIMEOUT = 60.0
-
-JOB_STORE: dict[str, dict] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -88,60 +88,6 @@ async def call_ollama(model_name: str, prompt: str) -> tuple[str, int]:
 
 
 # ---------------------------------------------------------------------------
-# Background batch task
-# ---------------------------------------------------------------------------
-
-async def _run_batch(job_id: str, model_name: str, attacks: list[Attack]) -> None:
-    from app.db.database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as db:
-        for attack in attacks:
-            try:
-                response_text, latency_ms = await call_ollama(model_name, attack.prompt)
-            except HTTPException as exc:
-                JOB_STORE[job_id]["status"] = "failed"
-                JOB_STORE[job_id]["error"] = exc.detail
-                return
-
-            result = score_response(attack.prompt, response_text)
-
-            test_run = TestRun(
-                model_name=model_name,
-                attack_id=attack.id,
-                prompt_sent=attack.prompt,
-                model_response=response_text,
-                score=result.score,
-                verdict=result.verdict,
-                reason=result.reason,
-                latency_ms=latency_ms,
-                timestamp=datetime.now(timezone.utc),
-            )
-            db.add(test_run)
-            await db.commit()
-            await db.refresh(test_run)
-
-            run_result = RunResult(
-                id=test_run.id,
-                model_name=model_name,
-                attack_id=attack.id,
-                attack_name=attack.name,
-                category=attack.category,
-                prompt_sent=attack.prompt,
-                model_response=response_text,
-                score=result.score,
-                verdict=result.verdict,
-                reason=result.reason,
-                latency_ms=latency_ms,
-                timestamp=test_run.timestamp,
-            )
-
-            JOB_STORE[job_id]["results"].append(run_result.model_dump())
-            JOB_STORE[job_id]["completed"] += 1
-
-    JOB_STORE[job_id]["status"] = "completed"
-
-
-# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
@@ -194,6 +140,7 @@ async def run_batch(
     req: BatchRunRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
+    manager: SessionManager = Depends(get_session_manager),
 ):
     query = select(Attack)
     if req.category is not None:
@@ -207,31 +154,39 @@ async def run_batch(
             detail=f"No attacks found" + (f" for category '{req.category}'" if req.category else ""),
         )
 
-    job_id = str(uuid4())
-    JOB_STORE[job_id] = {
-        "status": "running",
-        "total": len(attacks),
-        "completed": 0,
-        "results": [],
-    }
+    # Batch jobs are now durable evaluation sessions. The job_id returned is the
+    # session id, and all state lives in the database — nothing in memory — so a
+    # poll immediately after creation succeeds and survives a backend restart.
+    session = await manager.create_session(
+        session_type=SessionType.BATCH,
+        selected_models=[req.model_name],
+        selected_categories=[req.category] if req.category else [],
+    )
+    background_tasks.add_task(manager.run_session, session.id)
 
-    background_tasks.add_task(_run_batch, job_id, req.model_name, attacks)
-
-    return {"job_id": job_id, "total": len(attacks)}
+    return {"job_id": session.id, "total": session.total_tasks}
 
 
 @router.get("/{job_id}/status", response_model=JobStatus)
-async def get_job_status(job_id: str) -> JobStatus:
-    job = JOB_STORE.get(job_id)
-    if job is None:
+async def get_job_status(
+    job_id: str,
+    manager: SessionManager = Depends(get_session_manager),
+) -> JobStatus:
+    session = await manager.get_session(job_id)
+    if session is None:
         raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+
+    # Per-attack results are reconstructed from the persisted verdict events,
+    # whose metadata carries the full RunResult payload.
+    events = await manager.get_events(job_id, event_type=EventType.VERDICT_GENERATED)
+    results = [RunResult(**event.event_metadata) for event in events if event.event_metadata]
 
     return JobStatus(
         job_id=job_id,
-        status=job["status"],
-        total=job["total"],
-        completed=job["completed"],
-        results=[RunResult(**r) for r in job["results"]],
+        status=session.status,
+        total=session.total_tasks or 0,
+        completed=session.completed_tasks or 0,
+        results=results,
     )
 
 
