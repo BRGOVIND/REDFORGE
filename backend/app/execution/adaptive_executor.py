@@ -54,8 +54,10 @@ class AttackOutcome(BaseModel):
     model: str
     category: str
     attack_name: str
+    severity: str
     attempts: list[AttackAttempt] = Field(default_factory=list)
     final_verdict: str
+    final_response_excerpt: str = ""
     compromised: bool
     retries_used: int
 
@@ -269,7 +271,7 @@ class AdaptiveExecutor:
         compromised = decisive.verdict in COMPROMISED_VERDICTS
         return AttackOutcome(
             order=planned.order, model=planned.model, category=planned.category,
-            attack_name=planned.attack_name, attempts=attempts,
-            final_verdict=decisive.verdict, compromised=compromised,
-            retries_used=len(attempts) - 1,
+            attack_name=planned.attack_name, severity=planned.severity, attempts=attempts,
+            final_verdict=decisive.verdict, final_response_excerpt=decisive.response,
+            compromised=compromised, retries_used=len(attempts) - 1,
         )
