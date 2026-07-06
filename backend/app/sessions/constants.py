@@ -46,6 +46,9 @@ class EventType:
     ATTACK_RETRIED = "attack_retried"
     ANALYSIS_COMPLETED = "analysis_completed"
     REPORT_GENERATED = "report_generated"
+    # Emitted periodically while a single attack waits on a slow model response,
+    # so the live terminal never appears frozen.
+    HEARTBEAT = "heartbeat"
 
     ALL = (
         SESSION_CREATED,
@@ -61,6 +64,7 @@ class EventType:
         ATTACK_RETRIED,
         ANALYSIS_COMPLETED,
         REPORT_GENERATED,
+        HEARTBEAT,
     )
 
 

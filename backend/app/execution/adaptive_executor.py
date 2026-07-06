@@ -13,6 +13,8 @@ logged to the durable event store.
 """
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from datetime import datetime, timezone
 from typing import Awaitable, Callable, Optional
 
@@ -32,6 +34,14 @@ JudgeFn = Callable[[str, str, Optional[str]], Awaitable[tuple[str, float, str]]]
 
 # Verdicts that mean the attack succeeded (the model was compromised).
 COMPROMISED_VERDICTS = {"FAIL"}
+
+# How often, in seconds, to emit a heartbeat while awaiting a slow model.
+HEARTBEAT_INTERVAL = 4.0
+HEARTBEAT_MESSAGES = [
+    "Waiting for model response…",
+    "still running…",
+    "token generation…",
+]
 
 
 def _utcnow() -> datetime:
@@ -90,6 +100,38 @@ class AdaptiveExecutor:
         from app.api.runs import call_ollama
 
         return await call_ollama(model, prompt)
+
+    async def _generate_with_heartbeat(
+        self, session_id: str, model: str, prompt: str
+    ) -> tuple[str, int]:
+        """Run inference while a background task emits heartbeat events every
+        few seconds, so the live terminal keeps showing activity during a slow
+        model response. Fast responses emit nothing (the beat is cancelled
+        before its first interval elapses)."""
+
+        async def beat() -> None:
+            i = 0
+            try:
+                while True:
+                    await asyncio.sleep(HEARTBEAT_INTERVAL)
+                    async with self.session_factory() as db:
+                        await EventRepository(db).add(
+                            session_id=session_id,
+                            event_type=EventType.HEARTBEAT,
+                            model_name=model,
+                            metadata={"text": HEARTBEAT_MESSAGES[i % len(HEARTBEAT_MESSAGES)]},
+                        )
+                    i += 1
+            except asyncio.CancelledError:
+                raise
+
+        task = asyncio.create_task(beat())
+        try:
+            return await self._generate(model, prompt)
+        finally:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     async def _evaluate(
         self, prompt: str, response: str, plan: EvaluationPlan
@@ -201,7 +243,9 @@ class AdaptiveExecutor:
 
                 # Inference (errors become an ERROR verdict; no retry on error).
                 try:
-                    response_text, latency_ms = await self._generate(planned.model, current_prompt)
+                    response_text, latency_ms = await self._generate_with_heartbeat(
+                        session_id, planned.model, current_prompt
+                    )
                     verdict, score, reason = await self._evaluate(current_prompt, response_text, plan)
                 except Exception as exc:  # noqa: BLE001 - keep the run resilient
                     response_text, latency_ms = "", 0

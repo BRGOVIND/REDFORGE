@@ -17,6 +17,7 @@ from app.db.database import AsyncSessionLocal
 from app.db.models import EvaluationEvent, EvaluationSession
 from app.sessions.constants import SessionType
 from app.sessions.session_manager import SessionManager
+from app.sessions.terminal import events_to_lines
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -212,3 +213,33 @@ async def list_session_events(
         session_id, after_id=after_id, event_type=event_type
     )
     return [_to_event_response(e) for e in events]
+
+
+@router.get("/{session_id}/terminal")
+async def get_session_terminal(
+    session_id: str,
+    after_id: int = 0,
+    manager: SessionManager = Depends(get_session_manager),
+) -> dict:
+    """Incremental, human-readable terminal output derived from real events.
+
+    Pass ``after_id`` (the ``cursor`` from the previous response) to receive only
+    new lines — the same cursor pattern as the event feed, so the terminal
+    streams without re-fetching history.
+    """
+    session = await manager.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
+
+    events = await manager.get_events(session_id, after_id=after_id)
+    cursor = after_id
+    for e in events:
+        if e.id > cursor:
+            cursor = e.id
+    lines = events_to_lines(events, session.total_tasks or 0)
+    return {
+        "session_id": session_id,
+        "status": session.status,
+        "cursor": cursor,
+        "lines": [line.model_dump() for line in lines],
+    }
