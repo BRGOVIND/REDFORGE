@@ -78,6 +78,15 @@ export function useHistory(model: string | null) {
   });
 }
 
+export function useSystemChecks(refetchInterval = 2500) {
+  return useQuery({
+    queryKey: ['system-checks'],
+    queryFn: api.getSystemChecks,
+    refetchInterval,
+    staleTime: 1500,
+  });
+}
+
 export function useStartEvaluation() {
   return useMutation({
     mutationFn: ({ profile, models }: { profile: string; models: string[] }) =>

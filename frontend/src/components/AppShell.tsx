@@ -31,7 +31,11 @@ function SystemStatus() {
   const { data, isError } = useModels();
   const online = !isError && !data?.error;
   return (
-    <div className="flex items-center gap-2 px-3 py-2 text-xs text-content-subtle">
+    <NavLink
+      to="/setup"
+      className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-content-subtle transition-colors hover:bg-overlay hover:text-content rf-focus"
+      title="System check & setup"
+    >
       <span
         className={cn(
           'h-2 w-2 rounded-full',
@@ -39,8 +43,8 @@ function SystemStatus() {
           online && 'animate-pulse-dot'
         )}
       />
-      {online ? `Ollama · ${data?.models?.length ?? 0} models` : 'Backend offline'}
-    </div>
+      {online ? `Ollama · ${data?.models?.length ?? 0} models` : 'Setup required'}
+    </NavLink>
   );
 }
 
