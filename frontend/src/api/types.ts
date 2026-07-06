@@ -265,3 +265,42 @@ export interface ApiError {
   error?: string;
   detail?: string;
 }
+
+// --- System checks (Sprint 5, onboarding) ----------------------------------
+
+export type CheckStatus = 'ok' | 'warning' | 'failed';
+
+export interface SystemCheck {
+  key: string;
+  label: string;
+  status: CheckStatus;
+  detail: string;
+  hint: string;
+}
+
+export interface SystemChecksResponse {
+  ready: boolean;
+  platform: string;
+  checks: SystemCheck[];
+  installed_models: string[];
+  recommended_models: string[];
+  ollama_download_url: string;
+}
+
+// --- Live terminal (Sprint 5) ----------------------------------------------
+
+export type TerminalLevel = 'info' | 'success' | 'warning' | 'failure' | 'system';
+
+export interface TerminalLine {
+  id: number;
+  ts: string | null;
+  level: TerminalLevel;
+  text: string;
+}
+
+export interface TerminalResponse {
+  session_id: string;
+  status: string;
+  cursor: number;
+  lines: TerminalLine[];
+}

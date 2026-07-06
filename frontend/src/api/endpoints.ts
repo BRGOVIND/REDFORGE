@@ -16,6 +16,8 @@ import type {
   PlanResponse,
   ReportResponse,
   SessionResponse,
+  SystemChecksResponse,
+  TerminalResponse,
 } from './types';
 
 // Models
@@ -56,6 +58,15 @@ export const getSessionEvents = (id: string, afterId = 0) =>
   http
     .get<EvaluationEvent[]>(`/sessions/${id}/events`, { params: { after_id: afterId } })
     .then((r) => r.data);
+
+export const getSessionTerminal = (id: string, afterId = 0) =>
+  http
+    .get<TerminalResponse>(`/sessions/${id}/terminal`, { params: { after_id: afterId } })
+    .then((r) => r.data);
+
+// System checks (onboarding)
+export const getSystemChecks = () =>
+  http.get<SystemChecksResponse>('/system/checks').then((r) => r.data);
 
 export const pauseSession = (id: string) =>
   http.post<SessionResponse>(`/sessions/${id}/pause`).then((r) => r.data);

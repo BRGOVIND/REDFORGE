@@ -16,6 +16,8 @@ import {
 import { Button, Card, CardHeader, ErrorState, PageHeader, Progress, Spinner, StatusBadge } from '../components/ui';
 import { ScoreDonut, VerdictBadge } from '../components/shared';
 import { useSessionStream } from '../hooks/useSessionStream';
+import { useTerminalStream } from '../hooks/useTerminalStream';
+import { Terminal } from '../components/Terminal';
 import { useSessionControl } from '../hooks/queries';
 import { toast } from '../lib/toast';
 import { formatDuration, formatTime, titleCase } from '../lib/format';
@@ -113,11 +115,15 @@ function EventRow({ e }: { e: EvaluationEvent }) {
 export default function LiveSessionPage() {
   const { id } = useParams<{ id: string }>();
   const { session, events, metrics, isDone, error } = useSessionStream(id ?? null);
+  const terminal = useTerminalStream(id ?? null);
   const { pause, resume, cancel } = useSessionControl();
 
   const eventTypes = useMemo(() => new Set(events.map((e) => e.event_type)), [events]);
-  // Newest first, windowed for performance (never render the whole history).
-  const feed = useMemo(() => [...events].reverse().slice(0, 150), [events]);
+  // Newest first, windowed; heartbeats belong in the terminal, not the feed.
+  const feed = useMemo(
+    () => [...events].reverse().filter((e) => e.event_type !== 'heartbeat').slice(0, 150),
+    [events]
+  );
 
   const latestFinding = events.find(
     (e) => e.event_type === 'verdict_generated' && e.verdict === 'FAIL'
@@ -247,6 +253,11 @@ export default function LiveSessionPage() {
             )}
           </div>
         </Card>
+      </div>
+
+      {/* Live terminal — real, streamed backend output */}
+      <div className="mt-6">
+        <Terminal lines={terminal.lines} live={running} />
       </div>
     </div>
   );
