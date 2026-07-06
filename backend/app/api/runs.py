@@ -15,10 +15,12 @@ from app.evaluators.scoring import score_response
 from app.sessions.constants import EventType, SessionType
 from app.sessions.session_manager import SessionManager
 
+from app.config import settings
+
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_TIMEOUT = 60.0
+OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
+OLLAMA_TIMEOUT = settings.OLLAMA_TIMEOUT
 
 
 # ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.db.models import Attack, TestRun
 from app.evaluators.scoring import score_response
 
@@ -16,7 +17,7 @@ OllamaCallFn = Callable[[str, str], Awaitable[tuple[str, int]]]
 
 async def default_ollama_call(model_name: str, prompt: str) -> tuple[str, int]:
     import time
-    url = "http://localhost:11434/api/generate"
+    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
     payload = {"model": model_name, "prompt": prompt, "stream": False}
     start = time.monotonic()
     async with httpx.AsyncClient(timeout=120.0) as client:

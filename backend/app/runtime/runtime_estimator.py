@@ -16,11 +16,12 @@ from typing import Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.db.models import TestRun
 from app.runtime.model_sizes import estimate_model_ram_mb
 
 # Conservative fallback when a model has no recorded latency yet.
-DEFAULT_LATENCY_MS = 4000.0
+DEFAULT_LATENCY_MS = settings.DEFAULT_LATENCY_MS
 # Rough bytes persisted per LLM call (TestRun row + events).
 BYTES_PER_CALL = 4096
 # Fixed process/runtime overhead added on top of model weights.

@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import httpx
 
+from app.config import settings
 from app.evaluators.hallucination import score_hallucination
 from app.evaluators.judge import judge_response
 
@@ -26,9 +27,9 @@ class HallucinationResponse(BaseModel):
 @router.post("/hallucination", response_model=HallucinationResponse)
 async def evaluate_hallucination(request: HallucinationRequest) -> HallucinationResponse:
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=settings.OLLAMA_TIMEOUT) as client:
             ollama_response = await client.post(
-                "http://localhost:11434/api/generate",
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
                 json={
                     "model": request.model_name,
                     "prompt": request.question,

@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,19 +7,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system
+from app.config import settings
 from app.db.database import init_db, AsyncSessionLocal
 from app.attacks.library import seed_attacks
 from app.scoring.weighted_engine import WeightedScoringEngine
 from app.scoring.scoring_interface import set_scoring_engine
 
 
-ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.environ.get(
-        "REDFORGE_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if o.strip()
-]
+ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

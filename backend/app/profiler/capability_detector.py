@@ -12,9 +12,10 @@ from typing import Optional
 
 import httpx
 
+from app.config import settings
 from app.runtime.model_sizes import parse_param_billions
 
-OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
 
 
 @dataclass
@@ -28,7 +29,9 @@ class Capabilities:
 
 
 async def fetch_model_metadata(
-    model_name: str, base_url: str = OLLAMA_BASE_URL, timeout: float = 15.0
+    model_name: str,
+    base_url: str = OLLAMA_BASE_URL,
+    timeout: float = settings.OLLAMA_SHOW_TIMEOUT,
 ) -> Optional[dict]:
     """Call Ollama ``/api/show``. Returns ``None`` if unreachable/not found."""
     try:

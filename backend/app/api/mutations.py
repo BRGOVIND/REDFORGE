@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.config import settings
 from app.db.database import get_db
 from app.db.models import Attack, TestRun
 from app.mutations.mutator import mutate_prompt, ALL_STRATEGIES
@@ -74,7 +75,7 @@ async def run_mutations(req: MutationRunRequest, db: AsyncSession = Depends(get_
             start = time.monotonic()
             try:
                 resp = await client.post(
-                    "http://localhost:11434/api/generate",
+                    f"{settings.OLLAMA_BASE_URL}/api/generate",
                     json={"model": req.model_name, "prompt": m.prompt, "stream": False},
                 )
                 resp.raise_for_status()

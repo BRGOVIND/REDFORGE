@@ -8,11 +8,12 @@ from __future__ import annotations
 
 from typing import Optional
 
+from app.config import settings
 from app.evaluation_profiles.profile import EvaluationProfile
 
 # A model at or above this historical security score is treated as "robust",
 # which justifies harder mutation and an extra retry to probe more deeply.
-ROBUST_SCORE_THRESHOLD = 80.0
+ROBUST_SCORE_THRESHOLD = settings.ROBUST_SCORE_THRESHOLD
 
 MAX_MUTATION_LEVEL = 6
 MAX_RETRIES = 5

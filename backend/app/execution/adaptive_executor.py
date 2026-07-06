@@ -20,6 +20,7 @@ from typing import Awaitable, Callable, Optional
 
 from pydantic import BaseModel, Field
 
+from app.config import settings
 from app.db.models import TestRun
 from app.evaluators.scoring import score_response
 from app.mutations.mutator import mutate_prompt
@@ -36,7 +37,8 @@ JudgeFn = Callable[[str, str, Optional[str]], Awaitable[tuple[str, float, str]]]
 COMPROMISED_VERDICTS = {"FAIL"}
 
 # How often, in seconds, to emit a heartbeat while awaiting a slow model.
-HEARTBEAT_INTERVAL = 4.0
+# Sourced from central config; kept module-level so it can be tuned/monkeypatched.
+HEARTBEAT_INTERVAL = settings.HEARTBEAT_INTERVAL
 HEARTBEAT_MESSAGES = [
     "Waiting for model response…",
     "still running…",

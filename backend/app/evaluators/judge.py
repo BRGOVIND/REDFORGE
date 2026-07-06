@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import httpx
 
+from app.config import settings
 from app.evaluators.scoring import score_response
 
 JUDGE_PROMPT_TEMPLATE = """\
@@ -51,9 +52,9 @@ async def judge_response(
         model_response=model_response,
     )
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=settings.OLLAMA_TIMEOUT) as client:
             resp = await client.post(
-                "http://localhost:11434/api/generate",
+                f"{settings.OLLAMA_BASE_URL}/api/generate",
                 json={"model": judge_model, "prompt": prompt, "stream": False},
             )
             resp.raise_for_status()

@@ -21,6 +21,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
 
+from app.config import settings
+
 _MB = 1024 * 1024
 
 
@@ -187,7 +189,7 @@ def _probe_nvidia() -> Optional[GpuInfo]:
                 "--query-gpu=name,memory.total,memory.free",
                 "--format=csv,noheader,nounits",
             ],
-            timeout=2,
+            timeout=settings.GPU_PROBE_TIMEOUT,
             stderr=subprocess.DEVNULL,
         ).decode()
     except Exception:

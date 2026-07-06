@@ -9,6 +9,7 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.config import settings
 from app.db.models import AgentRun, AgentFinding
 from app.evaluators.judge import judge_response
 
@@ -39,9 +40,9 @@ Return ONLY the prompt text, nothing else.
 
 
 async def _generate_via_ollama(model: str, prompt: str) -> str:
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=settings.OLLAMA_TIMEOUT) as client:
         resp = await client.post(
-            "http://localhost:11434/api/generate",
+            f"{settings.OLLAMA_BASE_URL}/api/generate",
             json={"model": model, "prompt": prompt, "stream": False},
         )
         resp.raise_for_status()
