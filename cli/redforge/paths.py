@@ -9,13 +9,32 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# cli/redforge/paths.py -> cli/redforge -> cli -> <root>
-_ROOT = Path(__file__).resolve().parent.parent.parent
+# cli/redforge/paths.py -> cli/redforge -> cli -> <root>  (source / release layout)
+_INTREE = Path(__file__).resolve().parent.parent.parent
+
+
+def _looks_like_root(p: Path) -> bool:
+    return (p / "backend").is_dir() and (p / "cli").is_dir() and (p / "VERSION").is_file()
 
 
 def root() -> Path:
+    """Locate the RedForge installation.
+
+    1. ``REDFORGE_HOME`` env var, if set.
+    2. In-tree layout (running from source or a release: cli/ is next to backend/).
+    3. Walk up from the current directory (covers a pip-installed CLI invoked from
+       inside a checkout — the package itself lives in site-packages).
+    """
     env = os.environ.get("REDFORGE_HOME")
-    return Path(env).resolve() if env else _ROOT
+    if env:
+        return Path(env).resolve()
+    if (_INTREE / "backend").is_dir():
+        return _INTREE
+    cwd = Path.cwd().resolve()
+    for candidate in (cwd, *cwd.parents):
+        if _looks_like_root(candidate):
+            return candidate
+    return _INTREE
 
 
 def backend_dir() -> Path:

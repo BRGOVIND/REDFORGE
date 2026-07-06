@@ -21,3 +21,11 @@ Thumbs.db
 # IDE
 .vscode/settings.json
 .idea/
+
+# CLI runtime files (pid/log)
+.redforge/
+
+# Python build artifacts
+build/
+*.egg-info/
+.eggs/

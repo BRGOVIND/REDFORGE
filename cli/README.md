@@ -3,19 +3,29 @@
 The unified `redforge` command. **Standard library only** — end users need
 nothing beyond Python (and Ollama). `psutil` is used opportunistically if present.
 
-## Install
+## Install / run
+
+Three equivalent ways — all produce a working CLI:
 
 ```bash
-pip install -e cli        # from source
-# or, in a packaged release, the launcher wraps it for you
-```
+# 1. Install the console command (from the repo root)
+pip install .            # then:  redforge version
+#    (editable also works:  pip install -e .)
 
-Without installing, run it from source via the wrappers:
+# 2. Run as a module from the repo root — no install
+python -m cli.redforge version
 
-```bash
+# 3. Run via the wrappers — no install
 scripts/redforge doctor          # Linux/macOS
 scripts\redforge.cmd doctor      # Windows
 ```
+
+In a packaged release, `start.cmd` / `start.sh` set `PYTHONPATH` and run
+`python -m redforge …` for you.
+
+> The CLI locates the RedForge install via `REDFORGE_HOME`, then the in-tree
+> layout, then by walking up from the current directory. Run it from inside a
+> checkout, or set `REDFORGE_HOME`.
 
 ## Commands
 

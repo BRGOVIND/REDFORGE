@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "redforge"
+version = "1.0.0"
+description = "RedForge — local AI security evaluation (CLI)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# The CLI is standard-library only; end users need nothing beyond Python.
+# Backend dependencies are installed separately (`redforge install`).
+dependencies = []
+
+[project.scripts]
+redforge = "redforge.cli:main"
+
+[tool.setuptools]
+# The `redforge` package lives under cli/ so `pip install .` from the repo root
+# installs the CLI and its `redforge` console script.
+package-dir = { "" = "cli" }
+packages = ["redforge"]
