@@ -1,49 +1,33 @@
 import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AppShell } from './components/AppShell';
+import { Spinner } from './components/ui';
 
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const Models = React.lazy(() => import('./pages/Models'));
-const Attacks = React.lazy(() => import('./pages/Attacks'));
-const RunTests = React.lazy(() => import('./pages/RunTests'));
-const Hallucination = React.lazy(() => import('./pages/Hallucination'));
-const Reports = React.lazy(() => import('./pages/Reports'));
-const Comparison = React.lazy(() => import('./pages/Comparison'));
-const Analytics = React.lazy(() => import('./pages/Analytics'));
-const Mutations = React.lazy(() => import('./pages/Mutations'));
-const RedTeamAgent = React.lazy(() => import('./pages/RedTeamAgent'));
-const Leaderboard = React.lazy(() => import('./pages/Leaderboard'));
-const History = React.lazy(() => import('./pages/History'));
-const Dataset = React.lazy(() => import('./pages/Dataset'));
-const AgentAnalytics = React.lazy(() => import('./pages/AgentAnalytics'));
-
-const Fallback = () => (
-  <div className="flex items-center justify-center h-full w-full text-gray-400 text-sm">
-    Loading...
-  </div>
-);
+const Dashboard = React.lazy(() => import('./pages/DashboardPage'));
+const NewEvaluation = React.lazy(() => import('./pages/NewEvaluationPage'));
+const LiveList = React.lazy(() => import('./pages/LiveListPage'));
+const LiveSession = React.lazy(() => import('./pages/LiveSessionPage'));
+const Reports = React.lazy(() => import('./pages/ReportsPage'));
+const ReportDetail = React.lazy(() => import('./pages/ReportDetailPage'));
+const Leaderboard = React.lazy(() => import('./pages/LeaderboardPage'));
+const History = React.lazy(() => import('./pages/HistoryPage'));
 
 export default function App() {
   return (
-    <Layout>
-      <Suspense fallback={<Fallback />}>
+    <AppShell>
+      <Suspense fallback={<Spinner label="Loading page…" />}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/models" element={<Models />} />
-          <Route path="/attacks" element={<Attacks />} />
-          <Route path="/run" element={<RunTests />} />
-          <Route path="/hallucination" element={<Hallucination />} />
+          <Route path="/new" element={<NewEvaluation />} />
+          <Route path="/live" element={<LiveList />} />
+          <Route path="/live/:id" element={<LiveSession />} />
           <Route path="/reports" element={<Reports />} />
-          <Route path="/compare" element={<Comparison />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/mutations" element={<Mutations />} />
-          <Route path="/agent" element={<RedTeamAgent />} />
+          <Route path="/reports/:id" element={<ReportDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/history" element={<History />} />
-          <Route path="/dataset" element={<Dataset />} />
-          <Route path="/agent-analytics" element={<AgentAnalytics />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
-    </Layout>
+    </AppShell>
   );
 }
