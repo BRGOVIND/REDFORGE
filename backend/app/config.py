@@ -41,6 +41,20 @@ class Settings:
     # Very short timeout for the first-run system check (keep the wizard snappy).
     OLLAMA_HEALTH_TIMEOUT: float = _float("REDFORGE_OLLAMA_HEALTH_TIMEOUT", 2.5)
 
+    # --- Runtime (unified LLM layer) -------------------------------------
+    # Which provider backs the runtime (ollama today; pluggable tomorrow).
+    RUNTIME_PROVIDER: str = _str("REDFORGE_RUNTIME_PROVIDER", "ollama")
+    # Max concurrent generations PER MODEL (1 = serialize, don't hammer Ollama).
+    RUNTIME_CONCURRENCY: int = _int("REDFORGE_RUNTIME_CONCURRENCY", 1)
+    # Timeouts (seconds).
+    RUNTIME_CONNECT_TIMEOUT: float = _float("REDFORGE_RUNTIME_CONNECT_TIMEOUT", 10.0)
+    RUNTIME_IDLE_TIMEOUT: float = _float("REDFORGE_RUNTIME_IDLE_TIMEOUT", 300.0)
+    # Retries on transient connection failures (not on timeouts/cancels).
+    RUNTIME_RETRY_COUNT: int = _int("REDFORGE_RUNTIME_RETRY_COUNT", 1)
+    RUNTIME_RETRY_BACKOFF: float = _float("REDFORGE_RUNTIME_RETRY_BACKOFF", 0.5)
+    # How long /api/tags and /api/show results stay cached (seconds).
+    MODEL_CACHE_TTL: float = _float("REDFORGE_MODEL_CACHE_TTL", 30.0)
+
     # --- Adaptive execution ----------------------------------------------
     # How often to emit a heartbeat while awaiting a slow model response.
     HEARTBEAT_INTERVAL: float = _float("REDFORGE_HEARTBEAT_INTERVAL", 4.0)

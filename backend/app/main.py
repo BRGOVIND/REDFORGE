@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status
 from app.config import settings
 from app.errors import register_error_handlers
 from app.logging_config import configure_logging, get_logger
@@ -81,6 +81,7 @@ app.include_router(sessions.router)
 app.include_router(evaluation_engine.router)
 app.include_router(pipeline.router)
 app.include_router(system.router)
+app.include_router(runtime_status.router)
 
 
 # Standardized structured error responses for every endpoint.
