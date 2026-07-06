@@ -2,12 +2,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system
 from app.config import settings
+from app.errors import register_error_handlers
+from app.logging_config import configure_logging, get_logger
 from app.db.database import init_db, AsyncSessionLocal
 from app.attacks.library import seed_attacks
 from app.scoring.weighted_engine import WeightedScoringEngine
@@ -35,6 +36,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging()
+    get_logger("startup").info("RedForge API starting up")
     set_scoring_engine(WeightedScoringEngine())
     await init_db()
     async with AsyncSessionLocal() as db:
@@ -80,14 +83,10 @@ app.include_router(pipeline.router)
 app.include_router(system.router)
 
 
+# Standardized structured error responses for every endpoint.
+register_error_handlers(app)
+
+
 @app.get("/")
 async def root():
     return {"name": "RedForge API", "version": "2.0.0", "status": "online"}
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, e: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={"error": "Internal server error", "detail": str(e)},
-    )

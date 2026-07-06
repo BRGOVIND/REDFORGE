@@ -262,8 +262,11 @@ export interface HistoryResponse {
 }
 
 export interface ApiError {
-  error?: string;
+  /** Standardized envelope: `{ error: { code, message, details } }`;
+   *  legacy/network errors may use a plain string or `detail`. */
+  error?: string | { code?: string; message?: string; details?: unknown };
   detail?: string;
+  success?: boolean;
 }
 
 // --- System checks (Sprint 5, onboarding) ----------------------------------

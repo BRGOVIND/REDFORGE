@@ -12,6 +12,8 @@ are injectable so the pipeline runs deterministically in tests without Ollama.
 """
 from __future__ import annotations
 
+import logging
+import time
 from typing import Awaitable, Callable, Optional
 
 from app.analysis import (
@@ -23,6 +25,7 @@ from app.analysis import (
 from app.analysis.security_analyzer import AttackResult
 from app.evaluation_profiles import profile_registry
 from app.execution.adaptive_executor import AdaptiveExecutor
+from app.logging_config import get_logger, log_op
 from app.planner import EvaluationPlanner, build_planning_context
 from app.planner.evaluation_planner import EvaluationPlan
 from app.profiler import ModelProfiler
@@ -34,6 +37,9 @@ from app.sessions.session_repository import SessionRepository
 GenerateFn = Callable[[str, str], Awaitable[tuple[str, int]]]
 JudgeFn = Callable[[str, str, Optional[str]], Awaitable[tuple[str, float, str]]]
 MetadataFetcher = Callable[[str], Awaitable[Optional[dict]]]
+
+
+logger = get_logger("pipeline")
 
 
 class PipelineError(ValueError):
@@ -116,6 +122,10 @@ class EvaluationPipeline:
         if profile is None:
             raise PipelineError(f"session '{session_id}' has no valid profile")
         models = meta.get("models") or session.selected_models or []
+        primary_model = models[0] if models else None
+        started = time.monotonic()
+        log_op(logger, logging.INFO, f"evaluation started (profile={profile.name})",
+               op="run", session=session_id, model=primary_model)
 
         # 1+2. Profile models and 3. build plan (skip if resuming with a plan).
         if "evaluation_plan" in meta:
@@ -127,10 +137,17 @@ class EvaluationPipeline:
         summary = await self.executor.execute_plan(session_id, plan)
         if summary.status in (SessionStatus.PAUSED, SessionStatus.CANCELLED):
             await self._merge_metadata(session_id, {"stage": summary.status})
+            log_op(logger, logging.INFO, f"evaluation {summary.status}",
+                   op="run", session=session_id, model=primary_model,
+                   duration=time.monotonic() - started)
             return session_id
 
         # 5+6. Analyze and build the report from durable events.
         await self._analyze_and_report(session_id, profile, models, plan)
+        log_op(logger, logging.INFO,
+               f"evaluation completed ({summary.executed} attacks, {summary.compromised} compromised)",
+               op="run", session=session_id, model=primary_model,
+               duration=time.monotonic() - started)
         return session_id
 
     async def run_full(self, profile_name: str, models: list[str]) -> str:

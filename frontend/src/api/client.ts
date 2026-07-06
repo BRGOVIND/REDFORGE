@@ -20,8 +20,13 @@ http.interceptors.response.use(
   }
 );
 
-/** Extract a human-readable message from any rejected API value. */
+/** Extract a human-readable message from any rejected API value.
+ *  Handles the standardized `{ error: { message } }` envelope and the older
+ *  `{ detail }` / `{ error: string }` shapes (e.g. network errors). */
 export function errorMessage(err: unknown): string {
   const e = err as ApiError;
-  return e?.detail || e?.error || 'Something went wrong';
+  if (e && typeof e.error === 'object' && e.error?.message) return e.error.message;
+  if (typeof e?.detail === 'string') return e.detail;
+  if (typeof e?.error === 'string') return e.error;
+  return 'Something went wrong';
 }
