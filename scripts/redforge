@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Run the RedForge CLI from source (no install needed).
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="$DIR/../cli:${PYTHONPATH:-}"
+exec python3 -m redforge "$@"

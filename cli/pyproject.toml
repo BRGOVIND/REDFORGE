@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "redforge-cli"
+version = "1.0.0"
+description = "RedForge command-line interface — install, start, and manage a local AI security lab"
+readme = "README.md"
+requires-python = ">=3.11"
+# Dependency-light by design: the CLI uses only the standard library so end
+# users need nothing beyond Python. (psutil is used opportunistically if present.)
+dependencies = []
+
+[project.scripts]
+redforge = "redforge.cli:main"
+
+[tool.setuptools]
+packages = ["redforge"]
