@@ -1,12 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: #0A0E1A;
-  font-family: 'Inter', sans-serif;
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-base text-content font-sans antialiased;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgba(229, 72, 77, 0.3);
+  }
+
+  /* Subtle, unobtrusive scrollbars (Grafana/Linear style) */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2c2c32;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3a3a42;
+    background-clip: padding-box;
+  }
 }
 
-* {
-  box-sizing: border-box;
+@layer components {
+  /* Card: neutral elevated surface with a hairline border and faint gradient */
+  .rf-card {
+    @apply rounded-xl border border-border bg-surface;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 120px);
+  }
+
+  .rf-card-hover {
+    @apply transition-colors duration-150 hover:border-border-strong;
+  }
+
+  /* Focus ring used across interactive elements */
+  .rf-focus {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-red-ring focus-visible:ring-offset-0;
+  }
+
+  .rf-scroll-fade {
+    mask-image: linear-gradient(180deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  }
 }
