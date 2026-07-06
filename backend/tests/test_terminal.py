@@ -100,11 +100,12 @@ def test_events_to_lines_filters_unmapped():
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture
-async def factory():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False}, poolclass=StaticPool,
-    )
+async def factory(tmp_path):
+    # A real on-disk DB (not a shared in-memory connection) so the heartbeat's
+    # concurrent session gets its own connection — mirroring production, where
+    # the executor holds one connection while the heartbeat task uses another.
+    url = f"sqlite+aiosqlite:///{(tmp_path / 'terminal.db').as_posix()}"
+    engine = create_async_engine(url)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
