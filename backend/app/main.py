@@ -9,6 +9,7 @@ from app.api import models, attacks, runs, evaluate, dashboard, reports, benchma
 from app.config import settings
 from app.errors import register_error_handlers
 from app.logging_config import configure_logging, get_logger
+from app.static_serving import mount_frontend
 from app.db.database import init_db, AsyncSessionLocal
 from app.attacks.library import seed_attacks
 from app.scoring.weighted_engine import WeightedScoringEngine
@@ -47,7 +48,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="RedForge API",
-    version="2.0.0",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -88,6 +89,11 @@ app.include_router(runtime_status.router)
 register_error_handlers(app)
 
 
-@app.get("/")
-async def root():
-    return {"name": "RedForge API", "version": "2.0.0", "status": "online"}
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    return {"name": "RedForge API", "version": app.version, "status": "online"}
+
+
+# Serve the built frontend (production single-process mode). Must be LAST so the
+# SPA catch-all never shadows the API. In dev this is a no-op (Vite serves the UI).
+mount_frontend(app)

@@ -35,9 +35,9 @@ def test_all_expected_routers_registered():
 
 
 @pytest.mark.asyncio
-async def test_root_endpoint_online():
+async def test_health_endpoint_online():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/")
+        resp = await client.get("/healthz")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "online"
