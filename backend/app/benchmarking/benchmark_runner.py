@@ -3,28 +3,20 @@ from __future__ import annotations
 import asyncio
 from typing import Callable, Awaitable
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.config import settings
 from app.db.models import Attack, TestRun
 from app.evaluators.scoring import score_response
+from app.runtime.manager import get_runtime
 
 OllamaCallFn = Callable[[str, str], Awaitable[tuple[str, int]]]
 
 
 async def default_ollama_call(model_name: str, prompt: str) -> tuple[str, int]:
-    import time
-    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
-    payload = {"model": model_name, "prompt": prompt, "stream": False}
-    start = time.monotonic()
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.post(url, json=payload)
-        resp.raise_for_status()
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        return resp.json().get("response", ""), elapsed_ms
+    result = await get_runtime().generate(model_name, prompt)
+    return result.text, result.latency_ms
 
 
 async def run_attacks_for_model(
