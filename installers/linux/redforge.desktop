@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RedForge
+Comment=Local AI security evaluation
+Exec=AppRun
+Icon=redforge
+Categories=Development;Security;
+Terminal=true
