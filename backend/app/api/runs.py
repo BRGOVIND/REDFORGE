@@ -1,8 +1,6 @@
-import time
 from datetime import datetime, timezone
 from typing import Optional
 
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -12,15 +10,12 @@ from app.api.sessions import get_session_manager
 from app.db.database import get_db
 from app.db.models import Attack, TestRun
 from app.evaluators.scoring import score_response
+from app.runtime.errors import RuntimeLLMError
+from app.runtime.manager import get_runtime
 from app.sessions.constants import EventType, SessionType
 from app.sessions.session_manager import SessionManager
 
-from app.config import settings
-
 router = APIRouter(prefix="/api/runs", tags=["runs"])
-
-OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
-OLLAMA_TIMEOUT = settings.OLLAMA_TIMEOUT
 
 
 # ---------------------------------------------------------------------------
@@ -65,28 +60,17 @@ class JobStatus(BaseModel):
 # ---------------------------------------------------------------------------
 
 async def call_ollama(model_name: str, prompt: str) -> tuple[str, int]:
-    start = time.monotonic()
+    """Thin wrapper over the unified runtime, kept for backward compatibility.
+
+    Returns ``(text, latency_ms)`` and maps runtime errors to HTTP errors so the
+    single/batch endpoints keep their existing behavior.
+    """
     try:
-        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
-            response = await client.post(
-                f"{OLLAMA_BASE_URL}/api/generate",
-                json={"model": model_name, "prompt": prompt, "stream": False},
-            )
-            response.raise_for_status()
-            data = response.json()
-            latency_ms = int((time.monotonic() - start) * 1000)
-            return data.get("response", ""), latency_ms
-    except (httpx.ConnectError, httpx.TimeoutException) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Ollama is offline or unreachable at {OLLAMA_BASE_URL}. "
-                   f"Ensure Ollama is running. Error: {exc}",
-        ) from exc
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Ollama returned HTTP {exc.response.status_code}: {exc.response.text}",
-        ) from exc
+        result = await get_runtime().generate(model_name, prompt)
+    except RuntimeLLMError as exc:
+        status = exc.http_status if exc.http_status in (404, 503, 504) else 503
+        raise HTTPException(status_code=status, detail=exc.message) from exc
+    return result.text, result.latency_ms
 
 
 # ---------------------------------------------------------------------------

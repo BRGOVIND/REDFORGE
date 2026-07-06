@@ -16,13 +16,13 @@ from app.config import settings
 class ModelCache:
     def __init__(self, ttl: float | None = None) -> None:
         self.ttl = ttl if ttl is not None else settings.MODEL_CACHE_TTL
-        self._tags: Optional[tuple[float, list[str]]] = None
+        self._tags: Optional[tuple[float, list[dict]]] = None
         self._show: dict[str, tuple[float, Optional[dict]]] = {}
 
     def _fresh(self, ts: float) -> bool:
         return (time.monotonic() - ts) < self.ttl
 
-    async def get_tags(self, fetch: Callable[[], Awaitable[list[str]]]) -> list[str]:
+    async def get_tags(self, fetch: Callable[[], Awaitable[list[dict]]]) -> list[dict]:
         if self._tags and self._fresh(self._tags[0]):
             return self._tags[1]
         value = await fetch()

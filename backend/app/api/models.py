@@ -1,16 +1,13 @@
 import time
 from typing import Optional
 
-import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.config import settings
+from app.runtime.errors import RuntimeLLMError
+from app.runtime.manager import get_runtime
 
 router = APIRouter(prefix="/api/models", tags=["models"])
-
-OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
-OLLAMA_TIMEOUT = settings.OLLAMA_TAGS_TIMEOUT
 
 
 class ModelInfo(BaseModel):
@@ -30,43 +27,34 @@ class PingResult(BaseModel):
 @router.get("")
 async def list_models():
     try:
-        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
-            response = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
-            response.raise_for_status()
-            data = response.json()
-            models = [
-                ModelInfo(
-                    name=m["name"],
-                    size=m["size"],
-                    modified_at=m["modified_at"],
-                    digest=m["digest"],
-                )
-                for m in data.get("models", [])
-            ]
-            return {"models": models}
-    except (httpx.ConnectError, httpx.TimeoutException):
+        raw = await get_runtime().list_models_raw()
+    except RuntimeLLMError:
         return {
             "error": "Ollama is offline",
-            "detail": "Cannot connect to Ollama at localhost:11434. Ensure Ollama is running.",
+            "detail": "Cannot connect to Ollama. Ensure it is running.",
             "models": [],
         }
+    models = [
+        ModelInfo(
+            name=m["name"],
+            size=m.get("size", 0),
+            modified_at=m.get("modified_at", ""),
+            digest=m.get("digest", ""),
+        )
+        for m in raw
+        if m.get("name")
+    ]
+    return {"models": models}
 
 
 @router.post("/{model_name}/ping")
 async def ping_model(model_name: str):
     start = time.monotonic()
     try:
-        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
-            response = await client.post(
-                f"{OLLAMA_BASE_URL}/api/generate",
-                json={"model": model_name, "prompt": "Hi", "stream": False},
-            )
-            response.raise_for_status()
-            latency_ms = (time.monotonic() - start) * 1000
-            return PingResult(model=model_name, online=True, latency_ms=round(latency_ms, 2))
-    except (httpx.ConnectError, httpx.TimeoutException) as e:
-        return PingResult(model=model_name, online=False, error=str(e))
-    except httpx.HTTPStatusError as e:
-        return PingResult(model=model_name, online=False, error=f"HTTP {e.response.status_code}: {e.response.text}")
-    except Exception as e:
-        return PingResult(model=model_name, online=False, error=str(e))
+        await get_runtime().generate(model_name, "Hi")
+        latency_ms = (time.monotonic() - start) * 1000
+        return PingResult(model=model_name, online=True, latency_ms=round(latency_ms, 2))
+    except RuntimeLLMError as exc:
+        return PingResult(model=model_name, online=False, error=exc.message)
+    except Exception as exc:  # noqa: BLE001
+        return PingResult(model=model_name, online=False, error=str(exc))

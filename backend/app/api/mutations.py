@@ -7,11 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.config import settings
 from app.db.database import get_db
 from app.db.models import Attack, TestRun
 from app.mutations.mutator import mutate_prompt, ALL_STRATEGIES
 from app.evaluators.scoring import score_response
+from app.runtime.manager import get_runtime
 
 router = APIRouter(prefix="/api/mutations", tags=["mutations"])
 
@@ -60,8 +60,6 @@ async def generate_mutations(req: MutationGenerateRequest, db: AsyncSession = De
 
 @router.post("/run", response_model=list[MutationRunResult])
 async def run_mutations(req: MutationRunRequest, db: AsyncSession = Depends(get_db)):
-    import httpx, time
-
     result = await db.execute(select(Attack).where(Attack.id == req.attack_id))
     attack = result.scalar_one_or_none()
     if not attack:
@@ -70,40 +68,35 @@ async def run_mutations(req: MutationRunRequest, db: AsyncSession = Depends(get_
     mutations = mutate_prompt(attack.prompt, req.strategies)
     run_results: list[MutationRunResult] = []
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        for m in mutations:
-            start = time.monotonic()
-            try:
-                resp = await client.post(
-                    f"{settings.OLLAMA_BASE_URL}/api/generate",
-                    json={"model": req.model_name, "prompt": m.prompt, "stream": False},
-                )
-                resp.raise_for_status()
-                response_text = resp.json().get("response", "")
-                latency_ms = int((time.monotonic() - start) * 1000)
-            except Exception as exc:
-                response_text = f"[ERROR: {exc}]"
-                latency_ms = 0
+    runtime = get_runtime()
+    for m in mutations:
+        try:
+            generation = await runtime.generate(req.model_name, m.prompt)
+            response_text = generation.text
+            latency_ms = generation.latency_ms
+        except Exception as exc:  # noqa: BLE001 - record the error inline, keep going
+            response_text = f"[ERROR: {exc}]"
+            latency_ms = 0
 
-            scored = score_response(m.prompt, response_text)
-            db.add(TestRun(
-                model_name=req.model_name,
-                attack_id=req.attack_id,
-                prompt_sent=m.prompt,
-                model_response=response_text,
-                score=scored.score,
-                verdict=scored.verdict,
-                reason=f"[mutation:{m.strategy}] {scored.reason}",
-                latency_ms=latency_ms,
-            ))
-            run_results.append(MutationRunResult(
-                strategy=m.strategy,
-                prompt=m.prompt,
-                response=response_text,
-                verdict=scored.verdict,
-                score=scored.score,
-                latency_ms=latency_ms,
-            ))
+        scored = score_response(m.prompt, response_text)
+        db.add(TestRun(
+            model_name=req.model_name,
+            attack_id=req.attack_id,
+            prompt_sent=m.prompt,
+            model_response=response_text,
+            score=scored.score,
+            verdict=scored.verdict,
+            reason=f"[mutation:{m.strategy}] {scored.reason}",
+            latency_ms=latency_ms,
+        ))
+        run_results.append(MutationRunResult(
+            strategy=m.strategy,
+            prompt=m.prompt,
+            response=response_text,
+            verdict=scored.verdict,
+            score=scored.score,
+            latency_ms=latency_ms,
+        ))
 
     await db.commit()
     return run_results

@@ -10,20 +10,18 @@ from __future__ import annotations
 import platform
 import shutil
 
-import httpx
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db.models import Attack
-from app.config import settings
 from app.dataset import benchmark_loader
 from app.resources.resource_monitor import detect_gpu
+from app.runtime.manager import get_runtime
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
-OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
 RECOMMENDED_MODELS = ["qwen3:8b", "gemma", "llama3", "mistral"]
 OLLAMA_DOWNLOAD_URL = "https://ollama.com/download"
 
@@ -42,14 +40,11 @@ def _start_hint() -> str:
 
 
 async def _ollama_tags() -> tuple[bool, list[str]]:
-    """(reachable, model names). Short timeout keeps the wizard responsive."""
+    """(reachable, model names) — fresh (cache-bypassed) so the wizard reacts
+    immediately when Ollama starts or a model is pulled."""
     try:
-        async with httpx.AsyncClient(timeout=settings.OLLAMA_HEALTH_TIMEOUT) as client:
-            resp = await client.get(f"{OLLAMA_BASE_URL}/api/tags")
-            resp.raise_for_status()
-            data = resp.json()
-            models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
-            return True, models
+        models = await get_runtime().list_models(use_cache=False)
+        return True, models
     except Exception:
         return False, []
 

@@ -10,12 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-import httpx
-
-from app.config import settings
+from app.runtime.manager import get_runtime
 from app.runtime.model_sizes import parse_param_billions
-
-OLLAMA_BASE_URL = settings.OLLAMA_BASE_URL
 
 
 @dataclass
@@ -28,19 +24,10 @@ class Capabilities:
     source: str                            # "ollama" or "name"
 
 
-async def fetch_model_metadata(
-    model_name: str,
-    base_url: str = OLLAMA_BASE_URL,
-    timeout: float = settings.OLLAMA_SHOW_TIMEOUT,
-) -> Optional[dict]:
-    """Call Ollama ``/api/show``. Returns ``None`` if unreachable/not found."""
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.post(f"{base_url}/api/show", json={"name": model_name})
-            resp.raise_for_status()
-            return resp.json()
-    except Exception:
-        return None
+async def fetch_model_metadata(model_name: str) -> Optional[dict]:
+    """Fetch a model's ``/api/show`` metadata via the runtime (cached).
+    Returns ``None`` if unreachable/not found."""
+    return await get_runtime().show_model(model_name)
 
 
 def _extract_context_length(model_info: dict) -> Optional[int]:

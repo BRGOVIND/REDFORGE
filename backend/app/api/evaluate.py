@@ -2,11 +2,10 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import httpx
-
-from app.config import settings
 from app.evaluators.hallucination import score_hallucination
 from app.evaluators.judge import judge_response
+from app.runtime.errors import RuntimeLLMError
+from app.runtime.manager import get_runtime
 
 router = APIRouter(prefix="/api/evaluate", tags=["evaluate"])
 
@@ -27,33 +26,11 @@ class HallucinationResponse(BaseModel):
 @router.post("/hallucination", response_model=HallucinationResponse)
 async def evaluate_hallucination(request: HallucinationRequest) -> HallucinationResponse:
     try:
-        async with httpx.AsyncClient(timeout=settings.OLLAMA_TIMEOUT) as client:
-            ollama_response = await client.post(
-                f"{settings.OLLAMA_BASE_URL}/api/generate",
-                json={
-                    "model": request.model_name,
-                    "prompt": request.question,
-                    "stream": False,
-                },
-            )
-            ollama_response.raise_for_status()
-            response_data = ollama_response.json()
-            model_response = response_data.get("response", "")
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=503,
-            detail="Ollama is offline or unreachable. Please ensure Ollama is running at http://localhost:11434.",
-        )
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=503,
-            detail="Request to Ollama timed out after 60 seconds. The model may be loading or unresponsive.",
-        )
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Ollama returned an error: {exc.response.status_code} - {exc.response.text}",
-        )
+        generation = await get_runtime().generate(request.model_name, request.question)
+        model_response = generation.text
+    except RuntimeLLMError as exc:
+        status = exc.http_status if exc.http_status in (404, 503, 504) else 503
+        raise HTTPException(status_code=status, detail=exc.message) from exc
 
     result = score_hallucination(request.question, request.ground_truth, model_response)
 

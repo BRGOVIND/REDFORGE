@@ -64,7 +64,13 @@ class Provider(ABC):
     async def health(self) -> bool: ...
 
     @abstractmethod
-    async def list_models(self) -> list[str]: ...
+    async def list_models_raw(self) -> list[dict]:
+        """Return the provider's native model entries (dicts)."""
+        ...
+
+    async def list_models(self) -> list[str]:
+        """Model names, derived from :meth:`list_models_raw`."""
+        return [m.get("name", "") for m in await self.list_models_raw() if m.get("name")]
 
     @abstractmethod
     async def show_model(self, model: str) -> Optional[dict]: ...
@@ -138,7 +144,7 @@ class OllamaProvider(Provider):
         except Exception:  # noqa: BLE001
             return False
 
-    async def list_models(self) -> list[str]:
+    async def list_models_raw(self) -> list[dict]:
         try:
             async with httpx.AsyncClient(timeout=settings.OLLAMA_TAGS_TIMEOUT) as client:
                 resp = await client.get(f"{self.base_url}/api/tags")
@@ -146,7 +152,7 @@ class OllamaProvider(Provider):
                 data = resp.json()
         except Exception as exc:  # noqa: BLE001
             raise self._map_error(exc) from exc
-        return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+        return data.get("models", [])
 
     async def show_model(self, model: str) -> Optional[dict]:
         try:
@@ -260,8 +266,14 @@ class RuntimeClient:
     async def health(self) -> bool:
         return await self.provider.health()
 
-    async def list_models(self) -> list[str]:
-        return await self.cache.get_tags(self.provider.list_models)
+    async def list_models_raw(self, *, use_cache: bool = True) -> list[dict]:
+        if not use_cache:
+            self.cache.invalidate()  # force a fresh fetch (e.g. health checks)
+        return await self.cache.get_tags(self.provider.list_models_raw)
+
+    async def list_models(self, *, use_cache: bool = True) -> list[str]:
+        raw = await self.list_models_raw(use_cache=use_cache)
+        return [m.get("name", "") for m in raw if m.get("name")]
 
     async def show_model(self, model: str) -> Optional[dict]:
         return await self.cache.get_show(model, lambda: self.provider.show_model(model))

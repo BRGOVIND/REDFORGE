@@ -99,9 +99,10 @@ class AdaptiveExecutor:
     async def _generate(self, model: str, prompt: str) -> tuple[str, int]:
         if self._generate_fn is not None:
             return await self._generate_fn(model, prompt)
-        from app.api.runs import call_ollama
+        from app.runtime.manager import get_runtime
 
-        return await call_ollama(model, prompt)
+        result = await get_runtime().generate(model, prompt)
+        return result.text, result.latency_ms
 
     async def _generate_with_heartbeat(
         self, session_id: str, model: str, prompt: str
