@@ -21,6 +21,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+for _s in (sys.stdout, sys.stderr):  # UTF-8 safe on cp1252 consoles
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
 ROOT = Path(__file__).resolve().parent.parent
 RELEASES = ROOT / "releases"
 
