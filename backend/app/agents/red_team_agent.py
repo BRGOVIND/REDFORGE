@@ -5,12 +5,11 @@ import time
 from datetime import datetime, timezone
 from typing import Callable, Awaitable
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.config import settings
 from app.db.models import AgentRun, AgentFinding
+from app.runtime.manager import get_runtime
 from app.evaluators.judge import judge_response
 
 OllamaCallFn = Callable[[str, str], Awaitable[tuple[str, int]]]
@@ -40,13 +39,8 @@ Return ONLY the prompt text, nothing else.
 
 
 async def _generate_via_ollama(model: str, prompt: str) -> str:
-    async with httpx.AsyncClient(timeout=settings.OLLAMA_TIMEOUT) as client:
-        resp = await client.post(
-            f"{settings.OLLAMA_BASE_URL}/api/generate",
-            json={"model": model, "prompt": prompt, "stream": False},
-        )
-        resp.raise_for_status()
-        return resp.json().get("response", "").strip()
+    result = await get_runtime().generate(model, prompt)
+    return result.text.strip()
 
 
 def _estimate_tokens(text: str) -> int:

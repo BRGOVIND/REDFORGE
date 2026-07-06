@@ -14,7 +14,6 @@ import time
 from datetime import datetime, timezone
 from typing import Callable
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
