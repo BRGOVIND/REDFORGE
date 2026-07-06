@@ -1,14 +1,40 @@
-import { ArrowUpRight, BookOpen, Github, Map } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowUpRight, BookOpen, Download as DownloadIcon, Github, Map, Terminal } from 'lucide-react';
 import { Reveal } from '../motion';
 import { SectionLabel } from '../components/marks';
 
+const RELEASES = 'https://github.com/BRGOVIND/REDFORGE/releases/latest';
+const REPO = 'https://github.com/BRGOVIND/REDFORGE';
+
+type OS = 'windows' | 'linux' | 'mac' | 'other';
+
+function detectOS(): OS {
+  if (typeof navigator === 'undefined') return 'other';
+  const s = `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
+  if (s.includes('win')) return 'windows';
+  if (s.includes('mac')) return 'mac';
+  if (s.includes('linux') || s.includes('x11')) return 'linux';
+  return 'other';
+}
+
+const PRIMARY: Record<OS, { label: string; sub: string }> = {
+  windows: { label: 'Download for Windows', sub: 'Installer (.exe) · Python 3.11+ & Ollama' },
+  linux: { label: 'Download for Linux', sub: 'AppImage · Python 3.11+ & Ollama' },
+  mac: { label: 'Download for macOS', sub: 'Archive (.tar.gz) · Python 3.11+ & Ollama' },
+  other: { label: 'Download RedForge', sub: 'Choose your platform on the releases page' },
+};
+
 const LINKS = [
-  { icon: Github, k: 'GitHub', v: 'Clone the source, star the repo, open a pull request.', href: 'https://github.com/BRGOVIND/REDFORGE' },
-  { icon: BookOpen, k: 'Documentation', v: 'Architecture, the API, and the benchmark, in depth.', href: 'https://github.com/BRGOVIND/REDFORGE#readme' },
-  { icon: Map, k: 'Roadmap', v: 'Where RedForge is going — and how to shape it.', href: 'https://github.com/BRGOVIND/REDFORGE' },
+  { icon: Github, k: 'GitHub', v: 'Clone the source, star the repo, open a pull request.', href: REPO },
+  { icon: BookOpen, k: 'Documentation', v: 'Installation, quick start, troubleshooting.', href: `${REPO}#readme` },
+  { icon: Map, k: 'Roadmap', v: 'Where RedForge is going — and how to shape it.', href: REPO },
 ];
 
 export function Download() {
+  const [os, setOs] = useState<OS>('other');
+  useEffect(() => setOs(detectOS()), []);
+  const primary = PRIMARY[os];
+
   return (
     <section id="download" className="relative border-t border-steel-800 py-32 sm:py-44">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
@@ -22,13 +48,42 @@ export function Download() {
                 Forge it<br />yourself.
               </h2>
             </Reveal>
-            <Reveal delay={240}>
+
+            {/* OS-detected primary download */}
+            <Reveal delay={220}>
+              <a
+                href={RELEASES}
+                target="_blank"
+                rel="noreferrer"
+                className="focus-ring group mt-8 flex items-center gap-4 rounded-xl border border-forge/40 bg-forge/10 px-5 py-4 transition-colors hover:bg-forge/20"
+              >
+                <DownloadIcon size={22} className="shrink-0 text-forge" />
+                <div className="flex-1">
+                  <div className="display text-lg text-bone">{primary.label}</div>
+                  <div className="text-xs text-steel-300">{primary.sub}</div>
+                </div>
+                <ArrowUpRight size={18} className="text-forge transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </a>
+            </Reveal>
+
+            <Reveal delay={300}>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs text-steel-400">
+                <a href={RELEASES} target="_blank" rel="noreferrer" className="hover:text-bone focus-ring">Windows</a>
+                <a href={RELEASES} target="_blank" rel="noreferrer" className="hover:text-bone focus-ring">Linux AppImage</a>
+                <a href={RELEASES} target="_blank" rel="noreferrer" className="hover:text-bone focus-ring">macOS</a>
+                <a href={REPO} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-bone focus-ring">
+                  <Terminal size={12} /> Developer (git clone)
+                </a>
+              </div>
+            </Reveal>
+
+            <Reveal delay={360}>
               <div className="mt-8 max-w-sm rounded-lg border border-steel-700 bg-char/60 p-4 font-mono text-[13px] leading-relaxed text-steel-300">
-                <span className="text-steel-500">$ </span>git clone redforge
+                <span className="text-steel-500"># install once, then:</span>
                 <br />
-                <span className="text-steel-500">$ </span>uvicorn app.main:app
+                <span className="text-steel-500">$ </span>redforge start
                 <br />
-                <span className="text-forge">→ </span>open localhost:5173
+                <span className="text-forge">→ </span>browser opens · no Node.js needed
               </div>
             </Reveal>
           </div>

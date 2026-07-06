@@ -10,6 +10,7 @@ import { Benchmark } from './sections/Benchmark';
 import { BuiltFor } from './sections/BuiltFor';
 import { Local } from './sections/Local';
 import { Download } from './sections/Download';
+import { InstallSteps } from './sections/InstallSteps';
 import { Future } from './sections/Future';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
         <BuiltFor />
         <Local />
         <Download />
+        <InstallSteps />
         <Future />
       </main>
     </div>
