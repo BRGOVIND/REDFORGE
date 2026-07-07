@@ -13,9 +13,25 @@ const ReportDetail = React.lazy(() => import('./pages/ReportDetailPage'));
 const Leaderboard = React.lazy(() => import('./pages/LeaderboardPage'));
 const History = React.lazy(() => import('./pages/HistoryPage'));
 
+// Browser tab title per route (branding pass — no routing change).
+function titleFor(pathname: string): string {
+  if (pathname.startsWith('/new')) return 'RedForge • New Evaluation';
+  if (pathname.startsWith('/live')) return 'RedForge • Live Evaluation';
+  if (pathname.startsWith('/reports')) return 'RedForge • Reports';
+  if (pathname.startsWith('/history')) return 'RedForge • History';
+  if (pathname.startsWith('/leaderboard')) return 'RedForge • Leaderboard';
+  if (pathname.startsWith('/setup')) return 'RedForge • Setup';
+  return 'RedForge';
+}
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Keep the browser tab title in sync with the current page.
+  useEffect(() => {
+    document.title = titleFor(location.pathname);
+  }, [location.pathname]);
 
   // First launch → send the user through the setup wizard once.
   useEffect(() => {

@@ -27,10 +27,7 @@ EOF
 chmod +x "$APPDIR/AppRun"
 
 cp "$(dirname "$0")/redforge.desktop" "$APPDIR/redforge.desktop"
-# A 1x1 placeholder icon keeps appimagetool happy; replace with a real icon.
-printf 'P1\n1 1\n0\n' > "$APPDIR/redforge.pnm" 2>/dev/null || true
-cp "$(dirname "$0")/redforge.desktop" "$APPDIR/" 2>/dev/null || true
-: > "$APPDIR/redforge.png"
+cp "$(dirname "$0")/redforge.png" "$APPDIR/redforge.png"
 
 ARCH=x86_64 appimagetool "$APPDIR" "$ROOT/releases/RedForge-$VERSION-x86_64.AppImage"
 echo "✓ AppImage → releases/RedForge-$VERSION-x86_64.AppImage"

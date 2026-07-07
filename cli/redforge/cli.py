@@ -42,14 +42,25 @@ def _get_json(url: str, timeout: float = 3.0):
 # Commands
 # ---------------------------------------------------------------------------
 
+def _banner() -> None:
+    """A tiny forged mark (chevron · ember · chevron) — only for version/doctor."""
+    print()
+    print("   " + red("▲"))
+    print("   " + red("◆") + "   " + bold("RedForge"))
+    print("   " + red("▼") + "   " + dim("local AI red teaming"))
+    print()
+
+
 def cmd_version(_args) -> int:
+    _banner()
     print(f"RedForge {_version()}")
     return 0
 
 
 def cmd_doctor(args) -> int:
+    _banner()
     checks = collect()
-    print(bold("\nRedForge Doctor\n"))
+    print(bold("System check\n"))
     for c in checks:
         print(f"  {status_mark(c.level)} {c.label:<22} {dim(c.detail)}")
     ready = is_ready(checks)

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo-mark.png" alt="RedForge" width="112" height="112" />
+</p>
+
 # RedForge
 
 **A local red-teaming laboratory for LLMs.** Point it at any model you run through

@@ -54,9 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <aside className="sticky top-0 flex h-screen w-60 min-w-60 flex-col border-r border-border bg-surface">
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 font-mono text-sm font-bold text-white">
-            RF
-          </span>
+          <img src="/logo-mark.png" alt="RedForge" width={32} height={32} className="h-8 w-8 rounded-lg" />
           <div className="leading-tight">
             <p className="text-sm font-semibold text-content">RedForge</p>
             <p className="font-mono text-[10px] text-content-faint">v3 · evaluation</p>

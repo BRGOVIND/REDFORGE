@@ -21,14 +21,16 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
 WizardStyle=modern
 DisableProgramGroupPage=yes
+SetupIconFile=installer.ico
+UninstallDisplayIcon={app}\backend\app\static\favicon.ico
 
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\RedForge"; Filename: "{app}\start.cmd"; WorkingDir: "{app}"
-Name: "{group}\RedForge Doctor"; Filename: "cmd.exe"; Parameters: "/k set PYTHONPATH={app}\cli & python -m redforge doctor"; WorkingDir: "{app}"
-Name: "{autodesktop}\RedForge"; Filename: "{app}\start.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\RedForge"; Filename: "{app}\start.cmd"; WorkingDir: "{app}"; IconFilename: "{app}\backend\app\static\favicon.ico"
+Name: "{group}\RedForge Doctor"; Filename: "cmd.exe"; Parameters: "/k set PYTHONPATH={app}\cli & python -m redforge doctor"; WorkingDir: "{app}"; IconFilename: "{app}\backend\app\static\favicon.ico"
+Name: "{autodesktop}\RedForge"; Filename: "{app}\start.cmd"; WorkingDir: "{app}"; Tasks: desktopicon; IconFilename: "{app}\backend\app\static\favicon.ico"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"
