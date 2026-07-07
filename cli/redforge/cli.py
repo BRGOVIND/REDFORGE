@@ -150,8 +150,8 @@ def cmd_install(args) -> int:
     fe = paths.frontend_dir()
     if static is None and (fe / "package.json").is_file() and __import__("shutil").which("node"):
         print(cyan("Building frontend assets…"))
-        subprocess.call(["npm", "install"], cwd=str(fe), shell=(__import__("os").name == "nt"))
-        subprocess.call(["npm", "run", "build"], cwd=str(fe), shell=(__import__("os").name == "nt"))
+        subprocess.call(process.npm_cmd(["install"]), cwd=str(fe))
+        subprocess.call(process.npm_cmd(["run", "build"]), cwd=str(fe))
     print(green("✓ Frontend assets") if paths.static_dir() else dim("• Frontend build skipped (no Node)"))
 
     # Initialize the database (idempotent; the backend also does this on start).

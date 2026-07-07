@@ -44,7 +44,8 @@ def _version() -> str:
 def build_frontend() -> Path:
     fe = ROOT / "frontend"
     print("• Building frontend (npm run build)…")
-    subprocess.run(["npm", "run", "build"], cwd=str(fe), check=True, shell=(os.name == "nt"))
+    npm = ["cmd", "/c", "npm", "run", "build"] if os.name == "nt" else ["npm", "run", "build"]
+    subprocess.run(npm, cwd=str(fe), check=True)  # explicit arg list, never shell=True
     dist = fe / "dist"
     if not (dist / "index.html").is_file():
         raise SystemExit("frontend build did not produce dist/index.html")

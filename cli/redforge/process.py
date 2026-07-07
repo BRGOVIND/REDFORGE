@@ -22,6 +22,16 @@ from . import paths
 from .colors import bold, cyan, dim, green, red, yellow
 
 
+def npm_cmd(args: list[str]) -> list[str]:
+    """Build an npm command as an explicit arg list (never shell=True).
+
+    On Windows ``npm`` is ``npm.cmd`` (a batch file), which can't be launched
+    without a shell, so we invoke it via ``cmd /c`` with a fixed argument list —
+    no string is ever passed to a shell for interpretation.
+    """
+    return ["cmd", "/c", "npm", *args] if os.name == "nt" else ["npm", *args]
+
+
 def _http_json(url: str, timeout: float = 2.0):
     with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - localhost
         return json.loads(resp.read().decode())
@@ -64,7 +74,7 @@ def _ensure_frontend_built() -> Path | None:
     if node and (fe / "package.json").is_file():
         print(dim("No frontend build found — building it once (npm run build)…"))
         try:
-            subprocess.run(["npm", "run", "build"], cwd=str(fe), check=True, shell=(os.name == "nt"))
+            subprocess.run(npm_cmd(["run", "build"]), cwd=str(fe), check=True)
         except Exception as exc:
             print(yellow(f"Frontend build failed ({exc}); starting API only."))
         return paths.static_dir()
@@ -125,7 +135,7 @@ def _start_dev(host: str, port: int, env: dict, logf) -> int:
         cwd=str(paths.backend_dir()), env=env,
     )
     _write_pid(backend.pid)
-    vite = subprocess.Popen(["npm", "run", "dev"], cwd=str(paths.frontend_dir()), shell=(os.name == "nt"))
+    vite = subprocess.Popen(npm_cmd(["run", "dev"]), cwd=str(paths.frontend_dir()))
     print(green("Backend :%d  ·  Vite :5173" % port))
     try:
         backend.wait()
