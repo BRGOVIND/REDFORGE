@@ -1,5 +1,5 @@
 import { Reveal } from '../motion';
-import { SectionLabel, Wordmark } from '../components/marks';
+import { SectionLabel } from '../components/marks';
 
 const HORIZON = [
   { k: 'Enterprise', v: 'Team workspaces, SSO, and audit trails for organizations running RedForge at scale.' },
@@ -39,23 +39,6 @@ export function Future() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="mx-auto mt-40 max-w-editorial px-6 sm:px-10">
-        <div className="flex flex-col items-start justify-between gap-8 border-t border-steel-800 pt-10 sm:flex-row sm:items-center">
-          <div>
-            <Wordmark />
-            <p className="mt-3 max-w-xs text-[13px] text-steel-500">
-              Break your model before attackers do. Local AI security, forged in the open.
-            </p>
-          </div>
-          <div className="flex items-center gap-8">
-            <a href="#top" className="focus-ring text-[13px] text-steel-300 hover:text-bone">Back to top</a>
-            <a href="https://github.com/BRGOVIND/REDFORGE" target="_blank" rel="noreferrer" className="focus-ring text-[13px] text-steel-300 hover:text-bone">GitHub</a>
-            <span className="label text-steel-600">MIT · {new Date().getFullYear()}</span>
-          </div>
-        </div>
-      </footer>
     </section>
   );
 }

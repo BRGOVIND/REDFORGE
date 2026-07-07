@@ -42,7 +42,7 @@ export function AttackViz() {
 
           <div className="lg:col-span-8">
             <Reveal delay={200}>
-              <svg viewBox="0 0 600 400" className="w-full" role="img" aria-label="Attacks travelling into a model core">
+              <svg viewBox="-72 0 744 400" className="w-full overflow-visible" role="img" aria-label="Attacks travelling into a model core">
                 <defs>
                   <radialGradient id="core" cx="50%" cy="50%">
                     <stop offset="0%" stopColor="#FFD9A0" />

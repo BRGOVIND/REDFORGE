@@ -12,6 +12,8 @@ import { Local } from './sections/Local';
 import { Download } from './sections/Download';
 import { InstallSteps } from './sections/InstallSteps';
 import { Future } from './sections/Future';
+import { About } from './sections/About';
+import { Footer } from './components/Footer';
 
 export default function App() {
   const [entered, setEntered] = useState(false);
@@ -32,7 +34,9 @@ export default function App() {
         <Download />
         <InstallSteps />
         <Future />
+        <About />
       </main>
+      <Footer />
     </div>
   );
 }
