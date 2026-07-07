@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Generate every branding asset from the single source image (favicon.jpg).
+"""Generate every branding asset from the single source image (favicon.png).
 
 Center-crops the source to a square and emits the full icon set for the website,
 the application, the installers, and the repo. Re-runnable and idempotent.
 
-Usage: python scripts/generate_icons.py [path/to/favicon.jpg]
+The source is the transparent RedForge PNG mark. To refresh branding in future,
+replace ~/Downloads/favicon.png (or pass a path) and re-run — nothing else.
+
+Usage: python scripts/generate_icons.py [path/to/favicon.png]
 """
 from __future__ import annotations
 
@@ -20,13 +23,13 @@ def find_source() -> Path:
     if len(sys.argv) > 1:
         return Path(sys.argv[1])
     candidates = sorted(
-        (Path.home() / "Downloads").glob("favicon*.jpg"),
+        (Path.home() / "Downloads").glob("favicon*.png"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
     if candidates:
         return candidates[0]
-    raise SystemExit("favicon.jpg not found in ~/Downloads")
+    raise SystemExit("favicon.png not found in ~/Downloads")
 
 
 def load_square(src: Path) -> Image.Image:
@@ -41,7 +44,9 @@ def main() -> int:
     src = find_source()
     print(f"source: {src} ({Image.open(src).size})")
     base = load_square(src)
-    bg = base.getpixel((4, 4))  # near-black corner = brand background
+    # The mark is transparent, so icons keep their alpha; the social card sits on
+    # the site's dark ink (#050506) to stay on-brand.
+    bg = (5, 5, 6, 255)
 
     def png(size: int, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
