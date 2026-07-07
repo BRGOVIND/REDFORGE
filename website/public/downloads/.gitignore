@@ -1,0 +1,4 @@
+# Release binaries are placed here at build/deploy time, never committed.
+*
+!.gitignore
+!README.md

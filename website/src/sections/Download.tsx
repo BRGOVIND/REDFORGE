@@ -83,6 +83,7 @@ export function Download() {
               {primary ? (
                 <a
                   href={primary.asset.url}
+                  download={primary.asset.filename}
                   className="focus-ring group mt-8 flex items-center gap-4 rounded-xl border border-forge/40 bg-forge/10 px-5 py-4 transition-colors hover:bg-forge/20"
                   aria-label={`${primary.label} — ${primary.asset.filename}`}
                 >
@@ -125,6 +126,7 @@ export function Download() {
                     <li key={a.id}>
                       <a
                         href={a.url}
+                        download={a.filename}
                         className="focus-ring group flex items-center justify-between gap-3 rounded py-1.5 text-[13px] text-steel-300 hover:text-bone"
                       >
                         <span>{a.label}</span>
