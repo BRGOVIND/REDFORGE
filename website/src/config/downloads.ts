@@ -46,11 +46,27 @@ export const ASSETS = {
   linuxTarGz: asset('linux-tar', 'Linux / macOS (.tar.gz)', `redforge-${VERSION}.tar.gz`),
 } as const;
 
+/**
+ * The asset offered as the primary Windows download.
+ *
+ * A signed `RedForge-Setup-<VERSION>.exe` installer has not been built yet, so we
+ * ship the verified ZIP as the primary download. The installer remains fully
+ * defined (see ASSETS.windowsInstaller / OTHER_DOWNLOADS) — once the real
+ * installer exists, switch this one line back to `ASSETS.windowsInstaller`.
+ */
+export const WINDOWS_PRIMARY: Asset = ASSETS.windowsZip;
+
 /** The primary, OS-detected download. Returns null for unknown OS. */
 export function primaryFor(os: OS): { asset: Asset; label: string; sub: string } | null {
   switch (os) {
-    case 'windows':
-      return { asset: ASSETS.windowsInstaller, label: 'Download for Windows', sub: `Installer · v${VERSION}` };
+    case 'windows': {
+      const isInstaller = WINDOWS_PRIMARY === ASSETS.windowsInstaller;
+      return {
+        asset: WINDOWS_PRIMARY,
+        label: 'Download for Windows',
+        sub: `${isInstaller ? 'Installer' : 'ZIP'} · v${VERSION}`,
+      };
+    }
     case 'linux':
       return { asset: ASSETS.linuxAppImage, label: 'Download for Linux', sub: `AppImage · v${VERSION}` };
     case 'mac':
