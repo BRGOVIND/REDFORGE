@@ -1,4 +1,14 @@
-# Release binaries are placed here at build/deploy time, never committed.
+# Ignore everything by default
 *
+
+# Keep metadata
 !.gitignore
 !README.md
+
+# Release assets
+!redforge-1.0.0.zip
+!redforge-1.0.0.tar.gz
+!RELEASE_NOTES.md
+
+# Future Windows installer
+!RedForge-Setup-1.0.0.exe
