@@ -62,7 +62,8 @@ def stage(version: str, dist: Path) -> Path:
     shutil.copytree(ROOT / "cli", staging / "cli", ignore=_IGNORE)
     shutil.copytree(ROOT / "datasets", staging / "datasets", ignore=_IGNORE)
     shutil.copytree(ROOT / "docs", staging / "docs", ignore=_IGNORE)
-    for f in ("VERSION", "README.md", "CHANGELOG.md", "RELEASE_NOTES.md"):
+    for f in ("VERSION", "README.md", "CHANGELOG.md", "RELEASE_NOTES.md",
+              "LICENSE", "ROADMAP.md", "CONTRIBUTING.md", "SECURITY.md"):
         src = ROOT / f
         if src.is_file():
             shutil.copy2(src, staging / f)
