@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Github } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Wordmark } from './marks';
 import { cn } from '../lib/cn';
 
@@ -7,6 +7,7 @@ const LINKS = [
   { href: '#how', label: 'How it works' },
   { href: '#benchmark', label: 'Benchmark' },
   { href: '#local', label: 'Local' },
+  { href: '#quickstart', label: 'Quickstart' },
 ];
 
 export function Nav({ visible }: { visible: boolean }) {
@@ -61,9 +62,9 @@ export function Nav({ visible }: { visible: boolean }) {
           </div>
           <a
             href="#download"
-            className="focus-ring group flex items-center gap-2 rounded-full border border-steel-600 px-4 py-2 text-[13px] text-bone transition-colors hover:border-forge hover:bg-forge/10"
+            className="focus-ring group flex items-center gap-2 rounded-full border border-steel-600 px-4 py-2.5 text-[13px] text-bone transition-colors duration-300 hover:border-forge hover:bg-forge/10 sm:py-2"
           >
-            <Github size={14} />
+            <Download size={14} className="text-steel-300 transition-colors group-hover:text-forge" />
             Download
           </a>
         </nav>

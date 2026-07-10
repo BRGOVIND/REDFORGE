@@ -1,8 +1,21 @@
-# RedForge v1.0.0 — Release Notes
+# RedForge v1.2.0 — Release Notes
 
-**RedForge** is a local AI security laboratory: point it at an Ollama model, run
-adversarial evaluations, and get a structured security report — entirely on your
-machine. No cloud, no API keys.
+**RedForge** is a local AI security laboratory: point it at a model, run
+adversarial evaluations, and get a structured security report — on your own
+machine by default. No cloud and no API keys unless you opt into a cloud provider.
+
+## New in v1.2.0
+- **Nine runtime providers** — Ollama (default), LM Studio, llama.cpp, vLLM,
+  OpenAI, Anthropic, Gemini, Groq, OpenRouter. Switch from the Runtime page or
+  with `REDFORGE_RUNTIME_PROVIDER`. See [docs/providers.md](docs/providers.md).
+- **Model Manager** — browse every model across providers, view metadata, and
+  delete (where supported), all from one page.
+- **System Health Engine** — one source of truth behind `/api/health`,
+  `redforge doctor`, onboarding, and startup.
+- **Safer by default** — binding to a non-local address now warns that the API
+  is unauthenticated before it starts.
+- **Reproducible releases** — pinned dependencies, a single VERSION source,
+  checksums, and CI. Full details in [CHANGELOG.md](CHANGELOG.md).
 
 ## Install in three steps
 

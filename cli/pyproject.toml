@@ -4,7 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redforge-cli"
-version = "1.0.0"
+# Single source of truth: resolved from the repo-root VERSION file by
+# redforge._version (see docs/architecture/release-engineering.md).
+dynamic = ["version"]
 description = "RedForge command-line interface — install, start, and manage a local AI security lab"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,3 +19,6 @@ redforge = "redforge.cli:main"
 
 [tool.setuptools]
 packages = ["redforge"]
+
+[tool.setuptools.dynamic]
+version = { attr = "redforge.__version__" }

@@ -21,6 +21,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from checksums import write_sums  # noqa: E402
+from version import read_version  # noqa: E402
+
 for _s in (sys.stdout, sys.stderr):  # UTF-8 safe on cp1252 consoles
     try:
         _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
@@ -30,6 +35,27 @@ for _s in (sys.stdout, sys.stderr):  # UTF-8 safe on cp1252 consoles
 ROOT = Path(__file__).resolve().parent.parent
 RELEASES = ROOT / "releases"
 
+# Only end-user documentation ships in a release. Internal engineering docs
+# (docs/architecture/, architecture-audit*, *-architecture.md) are excluded so
+# the public download contains nothing developer-only. Files absent from the
+# repo are skipped silently.
+END_USER_DOCS = [
+    "quickstart.md",
+    "installation.md",
+    "cli-reference.md",
+    "architecture-overview.md",
+    "first-run-experience.md",
+    "model-installation.md",
+    "providers.md",
+    "runtime.md",
+    "gpu-support.md",
+    "evaluation-engine.md",
+    "intelligent-evaluation.md",
+    "troubleshooting.md",
+    "common-errors.md",
+    "faq.md",
+]
+
 _IGNORE = shutil.ignore_patterns(
     "__pycache__", "*.pyc", "*.pyo", ".pytest_cache", "*.db",
     ".vite", "node_modules", "dist", ".mypy_cache",
@@ -37,8 +63,8 @@ _IGNORE = shutil.ignore_patterns(
 
 
 def _version() -> str:
-    vf = ROOT / "VERSION"
-    return vf.read_text().strip() if vf.is_file() else "0.0.0"
+    """Delegates to the single source of truth (scripts/version.py → VERSION)."""
+    return read_version()
 
 
 def build_frontend() -> Path:
@@ -62,7 +88,7 @@ def stage(version: str, dist: Path) -> Path:
     shutil.copytree(ROOT / "backend", staging / "backend", ignore=_IGNORE)
     shutil.copytree(ROOT / "cli", staging / "cli", ignore=_IGNORE)
     shutil.copytree(ROOT / "datasets", staging / "datasets", ignore=_IGNORE)
-    shutil.copytree(ROOT / "docs", staging / "docs", ignore=_IGNORE)
+    _stage_docs(staging / "docs")
     for f in ("VERSION", "README.md", "CHANGELOG.md", "RELEASE_NOTES.md",
               "LICENSE", "ROADMAP.md", "CONTRIBUTING.md", "SECURITY.md"):
         src = ROOT / f
@@ -76,6 +102,18 @@ def stage(version: str, dist: Path) -> Path:
 
     _write_launchers(staging)
     return staging
+
+
+def _stage_docs(dest: Path) -> None:
+    """Copy only end-user docs — never internal engineering documents."""
+    dest.mkdir(parents=True, exist_ok=True)
+    shipped = 0
+    for name in END_USER_DOCS:
+        src = ROOT / "docs" / name
+        if src.is_file():
+            shutil.copy2(src, dest / name)
+            shipped += 1
+    print(f"  docs: {shipped} end-user file(s) (internal engineering docs excluded)")
 
 
 def _write_launchers(staging: Path) -> None:
@@ -147,11 +185,15 @@ def main() -> int:
     staging = stage(version, dist)
     artifacts = archive(staging, version)
 
+    print("• Writing SHA256SUMS.txt…")
+    sums = write_sums(artifacts, RELEASES / "SHA256SUMS.txt")
+
     print("\n✓ Release built (no Node.js required to run):")
     print(f"  staging: {staging}")
     for a in artifacts:
         size = a.stat().st_size // 1024
         print(f"  {a.name}  ({size} KB)")
+    print(f"  {sums.name}")
     return 0
 
 

@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -5,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding
 from app.config import settings
 from app.errors import register_error_handlers
 from app.logging_config import configure_logging, get_logger
@@ -14,6 +15,7 @@ from app.db.database import init_db, AsyncSessionLocal
 from app.attacks.library import seed_attacks
 from app.scoring.weighted_engine import WeightedScoringEngine
 from app.scoring.scoring_interface import set_scoring_engine
+from app.version import __version__
 
 
 ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
@@ -35,6 +37,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+async def _log_startup_health() -> None:
+    """Non-blocking startup validation: run the health engine once and log a
+    summary. Never raises — startup proceeds regardless of health findings."""
+    try:
+        from app.health import Status, health_service
+
+        report = await health_service.run()
+        log = get_logger("startup")
+        s = report.summary
+        log.info(
+            "system health: %s (%d ok, %d warning, %d error, ready=%s)",
+            report.status, s.healthy, s.warning, s.error, report.ready,
+        )
+        for c in report.checks:
+            if c.status != Status.HEALTHY:
+                log.warning("health · %s: %s%s", c.name, c.message,
+                            f" — {c.suggested_fix}" if c.suggested_fix else "")
+    except Exception as exc:  # noqa: BLE001
+        get_logger("startup").warning("startup health check skipped: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
@@ -43,12 +66,16 @@ async def lifespan(app: FastAPI):
     await init_db()
     async with AsyncSessionLocal() as db:
         await seed_attacks(db)
+    # Health validation must not delay readiness: it probes the runtime provider
+    # (network, timed) and is log-only. Run it in the background so /healthz comes
+    # up immediately. Keep a reference so the task is not garbage-collected.
+    app.state.startup_health_task = asyncio.create_task(_log_startup_health())
     yield
 
 
 app = FastAPI(
     title="RedForge API",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -83,6 +110,10 @@ app.include_router(evaluation_engine.router)
 app.include_router(pipeline.router)
 app.include_router(system.router)
 app.include_router(runtime_status.router)
+app.include_router(providers.router)
+app.include_router(model_manager.router)
+app.include_router(health.router)
+app.include_router(onboarding.router)
 
 
 # Standardized structured error responses for every endpoint.

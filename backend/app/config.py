@@ -42,8 +42,14 @@ class Settings:
     OLLAMA_HEALTH_TIMEOUT: float = _float("REDFORGE_OLLAMA_HEALTH_TIMEOUT", 2.5)
 
     # --- Runtime (unified LLM layer) -------------------------------------
-    # Which provider backs the runtime (ollama today; pluggable tomorrow).
+    # Which provider backs the runtime. Built-ins: ollama (default), lmstudio,
+    # llamacpp, vllm, openai, anthropic, gemini, groq, openrouter.
     RUNTIME_PROVIDER: str = _str("REDFORGE_RUNTIME_PROVIDER", "ollama")
+    # Provider-agnostic HTTP timeouts used by the non-Ollama providers. Each
+    # provider owns its own base URL / API key via convention env vars (see
+    # app/runtime/providers), so adding a provider needs no new setting here.
+    RUNTIME_READ_TIMEOUT: float = _float("REDFORGE_RUNTIME_READ_TIMEOUT", 120.0)
+    RUNTIME_METADATA_TIMEOUT: float = _float("REDFORGE_RUNTIME_METADATA_TIMEOUT", 10.0)
     # Max concurrent generations PER MODEL (1 = serialize, don't hammer Ollama).
     RUNTIME_CONCURRENCY: int = _int("REDFORGE_RUNTIME_CONCURRENCY", 1)
     # Timeouts (seconds).
@@ -78,6 +84,12 @@ class Settings:
         ).split(",")
         if o.strip()
     ]
+
+    # --- Database ---------------------------------------------------------
+    # SQLAlchemy async URL. Default preserves the historical CWD-relative
+    # SQLite path exactly; override with REDFORGE_DATABASE_URL (e.g. to pin an
+    # absolute path independent of the launch directory).
+    DATABASE_URL: str = _str("REDFORGE_DATABASE_URL", "sqlite+aiosqlite:///./redforge.db")
 
     # --- Logging ----------------------------------------------------------
     LOG_LEVEL: str = _str("REDFORGE_LOG_LEVEL", "INFO")

@@ -1,13 +1,13 @@
-"""The unified runtime client and provider abstraction.
+"""The unified runtime engine and provider abstraction.
 
-Everything that talks to an LLM goes through :class:`RuntimeClient`. It owns the
-queue, cancellation, timeouts, retries, metrics, model cache, and logging, and
-delegates the actual transport to a :class:`Provider`. Ollama is the only
-provider today, but nothing above the provider layer knows that — adding
-LM Studio / llama.cpp / vLLM / an OpenAI-compatible API is a new ``Provider``.
+Everything that talks to an LLM goes through :class:`RuntimeClient` (the runtime
+"manager"). It owns the queue, cancellation, timeouts, retries, metrics, model
+cache, and logging, and delegates only the wire transport to a :class:`Provider`.
 
-No raw ``httpx`` exception escapes this module: the provider maps them all to
-:mod:`app.runtime.errors`.
+Providers live in :mod:`app.runtime.providers` and implement *nothing* but
+provider-specific communication — no queue/retry/metrics/cancellation logic is
+ever duplicated there. No raw ``httpx`` exception escapes a provider: each maps
+transport failures to :mod:`app.runtime.errors` via :mod:`app.runtime.transport`.
 """
 from __future__ import annotations
 
@@ -19,8 +19,6 @@ from abc import ABC, abstractmethod
 from typing import AsyncIterator, Optional
 from uuid import uuid4
 
-import httpx
-
 from app.config import settings
 from app.logging_config import get_logger, log_op
 from app.runtime.cancel import CancellationToken, CancelRegistry
@@ -28,10 +26,7 @@ from app.runtime.errors import (
     CancelledGeneration,
     ConnectionFailure,
     GenerationTimeout,
-    ModelNotFound,
-    OllamaUnavailable,
     ProviderUnavailable,
-    RuntimeLLMError,
 )
 from app.runtime.metrics import metrics
 from app.runtime.models import ModelCache
@@ -47,9 +42,52 @@ logger = get_logger("runtime")
 # ---------------------------------------------------------------------------
 
 class Provider(ABC):
-    """A backend that can run generations. Implement one per LLM server."""
+    """A backend that can run generations. Implement one per LLM server/API.
+
+    A provider is responsible for *communication only*: build the request, parse
+    the response, and map transport errors. The shared runtime concerns (queue,
+    retries, metrics, cancellation, streaming assembly) live in
+    :class:`RuntimeClient` and must never be reimplemented here.
+
+    Contract:
+      * :meth:`generate` returns a :class:`GenerationResult`.
+      * :meth:`stream_generate` yields raw chunk dicts shaped like
+        ``{"response": <delta>, "done": <bool>, "eval_count"?, "done_reason"?}``;
+        the streaming engine turns these into :class:`StreamEvent`s uniformly.
+      * :meth:`health`, :meth:`list_models_raw`, :meth:`show_model` are metadata.
+    """
 
     name: str = "provider"
+
+    # -- capabilities -------------------------------------------------------
+    # Lightweight, declarative feature flags. Providers override the class
+    # attributes; the management/model layers and the frontend read the
+    # ``capabilities()`` object rather than checking provider names. Defaults are
+    # conservative (a minimal provider exposes only name + streaming).
+    supports_deletion: bool = False        # can delete an installed model
+    supports_metadata: bool = False        # exposes more than just a model name
+    supports_context_length: bool = False  # can report a model's context window
+    supports_streaming: bool = True        # implements stream_generate
+    supports_embeddings: bool = False       # exposes an embeddings endpoint
+    supports_pull: bool = False             # can download/install a model locally
+
+    def capabilities(self) -> dict:
+        """A provider-agnostic capabilities object (see the class attributes)."""
+        return {
+            "supports_delete": self.supports_deletion,
+            "supports_metadata": self.supports_metadata,
+            "supports_context_length": self.supports_context_length,
+            "supports_streaming": self.supports_streaming,
+            "supports_embeddings": self.supports_embeddings,
+            "supports_pull": self.supports_pull,
+        }
+
+    async def pull_model(self, model: str):
+        """Download/install a model, yielding progress dicts
+        ``{"status", "completed"?, "total"?}``. Only providers with
+        ``supports_pull`` implement this (e.g. Ollama)."""
+        raise NotImplementedError(f"provider '{self.name}' cannot pull models")
+        yield  # pragma: no cover - makes this an async generator
 
     @abstractmethod
     async def generate(self, model: str, prompt: str) -> GenerationResult: ...
@@ -65,7 +103,7 @@ class Provider(ABC):
 
     @abstractmethod
     async def list_models_raw(self) -> list[dict]:
-        """Return the provider's native model entries (dicts)."""
+        """Return the provider's native model entries (dicts, each with a name)."""
         ...
 
     async def list_models(self) -> list[str]:
@@ -74,94 +112,6 @@ class Provider(ABC):
 
     @abstractmethod
     async def show_model(self, model: str) -> Optional[dict]: ...
-
-
-class OllamaProvider(Provider):
-    name = "ollama"
-
-    def __init__(self, base_url: Optional[str] = None) -> None:
-        self.base_url = (base_url or settings.OLLAMA_BASE_URL).rstrip("/")
-
-    def _timeout(self, read: float) -> httpx.Timeout:
-        return httpx.Timeout(read, connect=settings.RUNTIME_CONNECT_TIMEOUT)
-
-    @staticmethod
-    def _map_error(exc: Exception, model: str = "") -> RuntimeLLMError:
-        if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)):
-            return OllamaUnavailable(f"Ollama is offline or unreachable")
-        if isinstance(exc, httpx.TimeoutException):
-            return ConnectionFailure("Ollama request timed out")
-        if isinstance(exc, httpx.HTTPStatusError):
-            if exc.response.status_code == 404:
-                return ModelNotFound(f"model '{model}' not found")
-            return ProviderUnavailable(f"Ollama returned HTTP {exc.response.status_code}")
-        return ProviderUnavailable(f"Ollama error: {exc}")
-
-    async def generate(self, model: str, prompt: str) -> GenerationResult:
-        start = time.monotonic()
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT)) as client:
-                resp = await client.post(
-                    f"{self.base_url}/api/generate",
-                    json={"model": model, "prompt": prompt, "stream": False},
-                )
-                resp.raise_for_status()
-                data = resp.json()
-        except Exception as exc:  # noqa: BLE001 - normalize every transport error
-            raise self._map_error(exc, model) from exc
-        latency_ms = int((time.monotonic() - start) * 1000)
-        return GenerationResult(
-            model=model,
-            text=data.get("response", ""),
-            latency_ms=latency_ms,
-            eval_count=data.get("eval_count"),
-            done_reason=data.get("done_reason"),
-        )
-
-    async def stream_generate(self, model: str, prompt: str) -> AsyncIterator[dict]:
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT)) as client:
-                async with client.stream(
-                    "POST",
-                    f"{self.base_url}/api/generate",
-                    json={"model": model, "prompt": prompt, "stream": True},
-                ) as resp:
-                    resp.raise_for_status()
-                    async for line in resp.aiter_lines():
-                        if not line.strip():
-                            continue
-                        import json
-
-                        yield json.loads(line)
-        except Exception as exc:  # noqa: BLE001
-            raise self._map_error(exc, model) from exc
-
-    async def health(self) -> bool:
-        try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_HEALTH_TIMEOUT) as client:
-                resp = await client.get(f"{self.base_url}/api/version")
-                return resp.status_code == 200
-        except Exception:  # noqa: BLE001
-            return False
-
-    async def list_models_raw(self) -> list[dict]:
-        try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_TAGS_TIMEOUT) as client:
-                resp = await client.get(f"{self.base_url}/api/tags")
-                resp.raise_for_status()
-                data = resp.json()
-        except Exception as exc:  # noqa: BLE001
-            raise self._map_error(exc) from exc
-        return data.get("models", [])
-
-    async def show_model(self, model: str) -> Optional[dict]:
-        try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_SHOW_TIMEOUT) as client:
-                resp = await client.post(f"{self.base_url}/api/show", json={"name": model})
-                resp.raise_for_status()
-                return resp.json()
-        except Exception:  # noqa: BLE001 - metadata is best-effort
-            return None
 
 
 # ---------------------------------------------------------------------------

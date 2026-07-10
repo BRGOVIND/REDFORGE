@@ -16,6 +16,16 @@
   <img src="https://img.shields.io/badge/tests-260%20passing-brightgreen" alt="Tests"/>
   <a href="https://redforgelabs.vercel.app"><img src="https://img.shields.io/badge/website-redforgelabs.vercel.app-orange" alt="Website"/></a>
 </p>
+Everything runs on your own machine by default. Nothing is sent to a cloud API
+unless you explicitly configure a cloud provider.
+
+> **v1.2.0** — one command to launch, a single process serving the API and UI.
+> A multi-provider runtime (Ollama, LM Studio, llama.cpp, vLLM, OpenAI,
+> Anthropic, Gemini, Groq, OpenRouter), a cross-provider Model Manager, and a
+> centralized System Health Engine. End users need only **Python 3.11+** and a
+> local runtime such as **Ollama**. Node.js is a development-only dependency.
+> See [docs/providers.md](docs/providers.md) to use a different provider.
+(feat: release RedForge v1.2.0)
 
 ---
 

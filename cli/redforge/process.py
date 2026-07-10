@@ -1,9 +1,11 @@
 """Process lifecycle: start (one process), stop, status.
 
-`redforge start` launches a single backend process that serves the API *and* the
-built frontend, waits until it is healthy, then opens the browser once. If a
-build is missing and Node is available it is built first; otherwise the API still
-starts (the packaged release always ships a build).
+`redforge start` is the primary launcher. It detects an existing instance,
+validates the environment through the centralized **System Health Engine**
+(reused, never duplicated), starts a single backend process that serves the API
+*and* the built frontend, waits until it is healthy, verifies backend health, and
+opens the browser once (the SPA routes to onboarding on first run, else the
+dashboard).
 """
 from __future__ import annotations
 
@@ -78,42 +80,189 @@ def _ensure_frontend_built() -> Path | None:
         except Exception as exc:
             print(yellow(f"Frontend build failed ({exc}); starting API only."))
         return paths.static_dir()
-    print(yellow("No frontend build and Node.js not available — starting API only."))
-    print(dim("  (Packaged releases include the build; developers can `npm run build`.)"))
     return None
 
 
+# ---------------------------------------------------------------------------
+# Startup progress + health (reuses the Health Engine via diagnostics.collect)
+# ---------------------------------------------------------------------------
+
+def _step(msg: str) -> None:
+    print(cyan("→") + f" {msg}")
+
+
+def _ok(msg: str) -> None:
+    print(green("✓") + f" {msg}")
+
+
+def _warn(msg: str) -> None:
+    print(yellow("!") + f" {msg}")
+
+
+def _fail(msg: str) -> None:
+    print(red("✕") + f" {msg}")
+
+
+def _hint(check, label: str) -> None:
+    """Surface a non-blocking, actionable hint for a non-ok check."""
+    if check is not None and check.level != "ok":
+        _warn(f"{label}: {check.detail}")
+
+
+def _preflight() -> bool:
+    """Validate the environment through the System Health Engine (single source
+    of truth). Returns False only for genuinely blocking problems; missing
+    runtime/models are surfaced as hints but never block launch — the onboarding
+    flow guides the user through those.
+    """
+    from . import diagnostics
+
+    checks = diagnostics.collect()
+    by_id = {getattr(c, "id", ""): c for c in checks}
+
+    # Backend dependencies not installed → the engine ran in bootstrap mode.
+    if "deps" in by_id:
+        _fail("Backend dependencies are not installed.")
+        print(dim("   Fix: ") + "redforge install")
+        return False
+
+    # Blocking: any critical-severity failure (e.g. Python too old).
+    critical = [c for c in checks if c.level == "fail" and c.severity == "critical"]
+    if critical:
+        for c in critical:
+            _fail(f"{c.label}: {c.detail}")
+        print(dim("   Fix: ") + "resolve the above, then run: redforge start")
+        return False
+
+    _ok("System checks passed")
+    # Non-blocking, actionable hints (onboarding will also guide these).
+    _hint(by_id.get("provider_health"), "Runtime")
+    _hint(by_id.get("installed_models"), "Models")
+    _hint(by_id.get("database"), "Database")
+    return True
+
+
+def _diagnose_startup_failure(log: Path) -> tuple[str, str, bool]:
+    """(message, fix, retryable) inferred from the backend log tail."""
+    tail = ""
+    try:
+        tail = log.read_text(encoding="utf-8", errors="ignore")[-4000:].lower()
+    except Exception:
+        pass
+    if any(s in tail for s in ("address already in use", "10048", "only one usage of each socket")):
+        return ("The port is already in use by another process.",
+                "Stop it, or start on another port: redforge start --port 8100", False)
+    if "modulenotfounderror" in tail or "no module named" in tail:
+        return ("A backend dependency is missing.", "Install dependencies: redforge install", False)
+    if "unable to open database" in tail or "database is locked" in tail:
+        return ("The database could not be opened.",
+                "Check write permissions for the RedForge data directory, then retry.", False)
+    if "permission denied" in tail or "winerror 5" in tail:
+        return ("Permission was denied while starting.",
+                "Run from a writable location or adjust permissions.", False)
+    return ("The backend failed to start.", f"See the log for details: {log}", True)
+
+
+def _verify_backend_health(port: int) -> None:
+    """Backend is up — confirm via the Health Engine over HTTP (reuse, never a
+    second implementation). Non-blocking: warnings are shown, never fatal."""
+    try:
+        report = _http_json(f"http://127.0.0.1:{port}/api/health", timeout=10.0)
+    except Exception:
+        return
+    status = report.get("status", "unknown")
+    s = report.get("summary", {})
+    mark = {"healthy": green("✓"), "warning": yellow("!"), "error": red("✕")}.get(status, dim("•"))
+    print(f"{mark} Backend health: {status} "
+          + dim(f"({s.get('healthy', 0)} ok · {s.get('warning', 0)} warning · {s.get('error', 0)} error)"))
+    for c in report.get("checks", []):
+        if c.get("status") == "error" and c.get("severity") in ("critical", "high"):
+            fix = c.get("suggested_fix")
+            _warn(f"{c.get('name')}: {c.get('message')}" + (f" — {fix}" if fix else ""))
+
+
+# ---------------------------------------------------------------------------
+# Start
+# ---------------------------------------------------------------------------
+
 def start(host: str = "127.0.0.1", port: int = 8000, *, dev: bool = False, open_browser: bool = True) -> int:
     url = f"http://{host}:{port}"
+
+    # 1. Detect an existing instance / port conflict (prevent duplicate launches).
     if is_up(port):
-        print(green(f"RedForge is already running at {url}"))
+        _ok(f"RedForge is already running at {bold(url)}")
         if open_browser:
             webbrowser.open(url)
         return 0
+    if _port_open(port):
+        _fail(f"Port {port} is already in use by another process.")
+        print(dim("   Fix: ") + "stop it, or choose another port: redforge start --port 8100")
+        return 1
 
+    print(bold("\nStarting RedForge\n"))
+
+    # 2. Environment validation via the Health Engine (single source of truth).
+    _step("Running system checks…")
+    if not _preflight():
+        return 1
+
+    # 3. Interface (built frontend).
+    _step("Preparing interface…")
     static = _ensure_frontend_built()
     env = dict(os.environ)
     if static is not None:
         env["REDFORGE_STATIC_DIR"] = str(static)
-
-    log = paths.log_file()
-    logf = open(log, "w", encoding="utf-8")
+        _ok("Interface ready")
+    else:
+        _warn("No prebuilt interface found — serving the API only (dev builds on demand)")
 
     if dev:
-        return _start_dev(host, port, env, logf)
+        return _start_dev(host, port, env)
 
-    print(cyan(f"Starting RedForge (single process) on {url} …"))
-    cmd = [sys.executable, "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(port)]
-    proc = subprocess.Popen(cmd, cwd=str(paths.backend_dir()), env=env, stdout=logf, stderr=subprocess.STDOUT)
-    _write_pid(proc.pid)
+    # 4. Start the backend, retrying once on a transient failure.
+    log = paths.log_file()
+    proc: subprocess.Popen | None = None
+    logf = None
+    for attempt in (1, 2):
+        _step("Starting backend…" if attempt == 1 else "Retrying backend start…")
+        logf = open(log, "w", encoding="utf-8")
+        # Use the dedicated venv from `redforge install` if present (falls back to
+        # this interpreter for source checkouts). Single resolution point.
+        cmd = [paths.backend_python(), "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(port)]
+        proc = subprocess.Popen(cmd, cwd=str(paths.backend_dir()), env=env, stdout=logf, stderr=subprocess.STDOUT)
+        _write_pid(proc.pid)
+        _step("Waiting for the backend to become ready…")
+        if _wait_healthy(port, proc):
+            break
 
-    if not _wait_healthy(port, proc):
-        print(red("RedForge failed to start. See logs:"), dim(str(log)))
+        message, fix, retryable = _diagnose_startup_failure(log)
+        _terminate(proc.pid)
+        _clear_pid()
+        try:
+            logf.close()
+        except Exception:
+            pass
+        proc, logf = None, None
+        if attempt == 1 and retryable:
+            time.sleep(1.0)
+            continue
+        _fail(message)
+        print(dim("   Fix: ") + fix)
+        print(dim("   Log: ") + str(log))
         return 1
 
-    print(green(f"✓ RedForge is running at {bold(url)}"))
+    assert proc is not None
+    _ok("Backend is ready")
+
+    # 5. Verify backend health (Health Engine over HTTP).
+    _verify_backend_health(port)
+
+    # 6. Ready → open the browser (SPA routes to onboarding on first run).
+    print()
+    _ok(f"RedForge is ready at {bold(url)}")
     print(dim(f"  logs: {log}   ·   stop with: redforge stop"))
     if open_browser:
+        _step("Opening your browser…")
         webbrowser.open(url)
 
     try:
@@ -122,16 +271,17 @@ def start(host: str = "127.0.0.1", port: int = 8000, *, dev: bool = False, open_
         print(dim("\nStopping…"))
         _terminate(proc.pid)
     finally:
-        logf.close()
+        if logf is not None:
+            logf.close()
         _clear_pid()
     return 0
 
 
-def _start_dev(host: str, port: int, env: dict, logf) -> int:
+def _start_dev(host: str, port: int, env: dict) -> int:
     """Developer mode: backend with reload + Vite dev server (two processes)."""
     print(cyan("Starting RedForge in DEV mode (backend + Vite, hot reload)…"))
     backend = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(port), "--reload"],
+        [paths.backend_python(), "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(port), "--reload"],
         cwd=str(paths.backend_dir()), env=env,
     )
     _write_pid(backend.pid)

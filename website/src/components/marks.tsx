@@ -25,10 +25,9 @@ export function Wordmark({ className }: { className?: string }) {
   );
 }
 
-export function SectionLabel({ index, children }: { index: string; children: React.ReactNode }) {
+export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="label text-forge/80">{index}</span>
       <span className="h-px w-8 bg-steel-600" />
       <span className="label">{children}</span>
     </div>

@@ -13,16 +13,18 @@ import urllib.request
 from pathlib import Path
 
 from . import paths, process
+from ._version import __version__
 from .colors import bold, cyan, dim, green, red, status_mark, yellow
 from .diagnostics import RECOMMENDED_MODELS, as_plaintext, collect, is_ready
 
-__version__ = "1.0.0"
-
 
 def _version() -> str:
+    """Prefer the VERSION of the installation we are driving (REDFORGE_HOME-aware)."""
     vf = paths.root() / "VERSION"
     if vf.is_file():
-        return vf.read_text().strip()
+        text = vf.read_text(encoding="utf-8").strip()
+        if text:
+            return text
     return __version__
 
 
@@ -75,7 +77,45 @@ def cmd_doctor(args) -> int:
     return 0 if ready else 1
 
 
+_LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1", ""}
+
+
+def _is_loopback(host: str) -> bool:
+    return host.strip().lower() in _LOOPBACK_HOSTS
+
+
+def _confirm_network_exposure(host: str, assume_yes: bool) -> bool:
+    """Warn before binding to a non-loopback address. Returns True to continue."""
+    print()
+    print(red("⚠  Network exposure warning"))
+    print(f"   You are binding RedForge to {bold(host)}, not localhost.")
+    print()
+    print("   " + yellow("RedForge has no authentication."))
+    print("   Anyone who can reach this machine on the network will be able to")
+    print("   use the API — start evaluations, delete models, change settings.")
+    print("   This is not recommended unless you understand and accept the risk.")
+    print()
+    print(dim("   To keep RedForge private, start it without --host (defaults to 127.0.0.1)."))
+    print()
+    if assume_yes:
+        print(dim("   --yes supplied; continuing."))
+        return True
+    if not sys.stdin.isatty():
+        print(red("   Refusing to bind to a public interface non-interactively."))
+        print(dim("   Re-run with --yes if you are sure."))
+        return False
+    try:
+        answer = input("   Continue anyway? [y/N] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer in ("y", "yes")
+
+
 def cmd_start(args) -> int:
+    if not _is_loopback(args.host) and not _confirm_network_exposure(args.host, args.yes):
+        print(dim("Cancelled. RedForge was not started."))
+        return 1
     return process.start(args.host, args.port, dev=args.dev, open_browser=not args.no_browser)
 
 
@@ -142,52 +182,35 @@ def cmd_benchmark(args) -> int:
     return _run_evaluation(args.model, "thorough", args.port)
 
 
-def cmd_install(args) -> int:
-    print(bold("\nInstalling RedForge\n"))
-    v = sys.version_info
-    if (v.major, v.minor) < (3, 11):
-        print(red(f"✕ Python {v.major}.{v.minor} found — RedForge needs Python ≥ 3.11."))
-        return 1
-    print(green(f"✓ Python {v.major}.{v.minor}.{v.micro}"))
+def cmd_install(_args) -> int:
+    from . import installer
 
-    req = paths.backend_dir() / "requirements.txt"
-    if req.is_file() and not args.skip_deps:
-        print(cyan("Installing backend dependencies…"))
-        rc = subprocess.call([sys.executable, "-m", "pip", "install", "-q", "-r", str(req)])
-        print(green("✓ Backend dependencies") if rc == 0 else yellow("⚠ pip reported an issue"))
-
-    # Frontend build (developers / from-source only; releases ship a build).
-    static = paths.static_dir()
-    fe = paths.frontend_dir()
-    if static is None and (fe / "package.json").is_file() and __import__("shutil").which("node"):
-        print(cyan("Building frontend assets…"))
-        subprocess.call(process.npm_cmd(["install"]), cwd=str(fe))
-        subprocess.call(process.npm_cmd(["run", "build"]), cwd=str(fe))
-    print(green("✓ Frontend assets") if paths.static_dir() else dim("• Frontend build skipped (no Node)"))
-
-    # Initialize the database (idempotent; the backend also does this on start).
-    print(cyan("Initializing database…"))
-    init = "import asyncio; from app.db.database import init_db; asyncio.run(init_db())"
-    subprocess.call([sys.executable, "-c", init], cwd=str(paths.backend_dir()))
-    print(green("✓ Database initialized"))
-
-    # Datasets are shipped statically; verify.
-    bench = paths.datasets_dir() / "redforge-bench-v1"
-    n = len(list(bench.glob("*.json"))) if bench.is_dir() else 0
-    print(green(f"✓ Benchmark dataset ({n} categories)") if n >= 5 else red("✕ Benchmark dataset missing"))
-
-    print(bold("\nVerifying…"))
-    return cmd_doctor(argparse.Namespace(copy=False))
+    return installer.install()
 
 
-def cmd_update(_args) -> int:
-    if (paths.root() / ".git").exists():
-        print(cyan("Updating from git…"))
-        subprocess.call(["git", "pull"], cwd=str(paths.root()))
-        return cmd_install(argparse.Namespace(skip_deps=False))
-    print(yellow("Not a git checkout. Download the latest release from:"))
-    print("  https://github.com/BRGOVIND/REDFORGE/releases")
-    return 0
+def cmd_uninstall(args) -> int:
+    from . import installer
+
+    return installer.uninstall(purge=args.purge)
+
+
+def cmd_repair(_args) -> int:
+    from . import installer
+
+    return installer.repair()
+
+
+def cmd_update(args) -> int:
+    from . import updater
+
+    return updater.update(check_only=args.check)
+
+
+def cmd_diagnose(args) -> int:
+    from . import diagnose
+
+    out = Path(args.output) if args.output else None
+    return diagnose.diagnose(port=args.port, output=out)
 
 
 # ---------------------------------------------------------------------------
@@ -204,10 +227,13 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--copy", action="store_true", help="also print copyable diagnostics")
 
     s = sub.add_parser("start", help="start RedForge and open the browser")
-    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--host", default="127.0.0.1",
+                   help="bind address (default: 127.0.0.1; non-local values prompt a warning)")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--dev", action="store_true", help="developer mode (backend + Vite hot reload)")
     s.add_argument("--no-browser", action="store_true", help="do not open the browser")
+    s.add_argument("--yes", action="store_true",
+                   help="skip the network-exposure confirmation when binding a non-local host")
 
     for name, help_ in [("stop", "stop RedForge"), ("status", "show run status")]:
         sp = sub.add_parser(name, help=help_)
@@ -227,17 +253,28 @@ def build_parser() -> argparse.ArgumentParser:
     bm.add_argument("model")
     bm.add_argument("--port", type=int, default=8000)
 
-    inst = sub.add_parser("install", help="install/verify RedForge")
-    inst.add_argument("--skip-deps", action="store_true")
+    sub.add_parser("install", help="install RedForge (venv, deps, shortcuts, health)")
 
-    sub.add_parser("update", help="update RedForge")
+    un = sub.add_parser("uninstall", help="remove the venv and shortcuts")
+    un.add_argument("--purge", action="store_true",
+                    help="also delete data (database, logs, settings)")
+
+    sub.add_parser("repair", help="repair an existing installation (idempotent)")
+
+    up = sub.add_parser("update", help="update to the latest GitHub release")
+    up.add_argument("--check", action="store_true", help="only check; do not install")
+
+    dg = sub.add_parser("diagnose", help="write a diagnostics.zip support bundle")
+    dg.add_argument("--port", type=int, default=8000)
+    dg.add_argument("-o", "--output", default=None, help="output path (default: ./diagnostics.zip)")
     return p
 
 
 _DISPATCH = {
     "version": cmd_version, "doctor": cmd_doctor, "start": cmd_start, "stop": cmd_stop,
     "status": cmd_status, "logs": cmd_logs, "models": cmd_models, "evaluate": cmd_evaluate,
-    "benchmark": cmd_benchmark, "install": cmd_install, "update": cmd_update,
+    "benchmark": cmd_benchmark, "install": cmd_install, "uninstall": cmd_uninstall,
+    "repair": cmd_repair, "update": cmd_update, "diagnose": cmd_diagnose,
 }
 
 

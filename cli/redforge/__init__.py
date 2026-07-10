@@ -1,2 +1,4 @@
 """RedForge command-line interface."""
-__version__ = "1.0.0"
+from ._version import __version__, read_version
+
+__all__ = ["__version__", "read_version"]

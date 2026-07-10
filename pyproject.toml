@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redforge"
-version = "1.0.0"
+# Single source of truth: the repo-root VERSION file (see docs/architecture/release-engineering.md).
+dynamic = ["version"]
 description = "RedForge — local AI security evaluation (CLI)"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,3 +22,6 @@ redforge = "redforge.cli:main"
 # installs the CLI and its `redforge` console script.
 package-dir = { "" = "cli" }
 packages = ["redforge"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }

@@ -10,10 +10,10 @@ const HORIZON = [
 
 export function Future() {
   return (
-    <section className="relative border-t border-steel-800 py-32 sm:py-40">
+    <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <SectionLabel index="11">The Horizon</SectionLabel>
+          <SectionLabel>The Horizon</SectionLabel>
         </Reveal>
         <Reveal delay={120}>
           <h2 className="display mt-8 max-w-2xl text-5xl text-bone sm:text-6xl">
@@ -27,10 +27,9 @@ export function Future() {
             {HORIZON.map((h, i) => (
               <Reveal key={h.k} delay={i * 140}>
                 <div className="relative lg:pr-6">
-                  <span className="mb-6 block h-3.5 w-3.5 rounded-full border border-forge bg-ink lg:-mt-[1px]">
+                  <span className="mb-5 block h-3.5 w-3.5 rounded-full border border-forge bg-ink lg:-mt-[1px]">
                     <span className="mx-auto mt-[3px] block h-1.5 w-1.5 rounded-full bg-forge" />
                   </span>
-                  <p className="label mb-3 text-steel-500">0{i + 1}</p>
                   <h3 className="display text-xl text-bone">{h.k}</h3>
                   <p className="mt-3 text-[14px] leading-relaxed text-steel-400">{h.v}</p>
                 </div>

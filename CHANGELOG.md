@@ -3,6 +3,46 @@
 All notable changes to RedForge. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0]
+
+Multi-provider runtime, model management, a single source of truth for system
+health, and a reproducible release pipeline. No breaking API changes — every
+V1.0 endpoint keeps its path and response shape.
+
+### Added
+- **Multi-provider runtime** — a provider registry with nine built-ins: Ollama
+  (default), LM Studio, llama.cpp, vLLM, OpenAI, Anthropic, Gemini, Groq, and
+  OpenRouter. Select at startup (`REDFORGE_RUNTIME_PROVIDER`), from the Runtime
+  page, or via `POST /api/providers/default`. See [docs/providers.md](docs/providers.md).
+- **Runtime Manager** (`/api/providers`) — list, health-probe, live-test, and
+  switch the default provider. API keys are read from the environment and never
+  stored or logged.
+- **Model Manager** (`/api/models/catalog`, `/detail`, `DELETE /instance`) — a
+  provider-agnostic catalog with basic + on-demand extended metadata, and
+  capability-gated deletion.
+- **System Health Engine** (`/api/health`) — one registry of provider-agnostic
+  checks, consumed by the API, `redforge doctor`, first-run onboarding, and
+  startup logging.
+- **First-run onboarding**, rebuilt on the Health Engine.
+- **Network-exposure warning** — binding `redforge start` to a non-loopback host
+  now prompts a clear no-authentication warning before continuing.
+- **Release engineering** — a single source of truth for the version (the
+  `VERSION` file), a drift guard (`scripts/version.py --check`), SHA-256
+  checksums, GitHub Actions CI, and a tag-driven release workflow. See
+  [docs/architecture/release-engineering.md](docs/architecture/release-engineering.md)
+  (developer docs; not shipped in the release).
+
+### Changed
+- Backend dependencies are now pinned (`requirements.txt` / `requirements.lock`)
+  with test tools split into `requirements-dev.txt`, for reproducible installs.
+- Startup health validation runs in the background so the server becomes ready
+  immediately.
+- `GET /api/models` now reports a provider-agnostic offline message.
+
+### Notes
+- Default behavior is unchanged: local-only, no authentication, `127.0.0.1`.
+  Cloud providers are opt-in and require you to set the relevant API key.
+
 ## [1.0.0] — First public release
 
 The first installable, self-contained release. Runs with **Python + Ollama only**

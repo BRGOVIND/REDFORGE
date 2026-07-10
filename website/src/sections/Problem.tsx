@@ -30,11 +30,11 @@ export function Problem() {
   const [active, setActive] = useState<number | null>(null);
 
   return (
-    <section id="problem" className="relative border-t border-steel-800 py-32 sm:py-44">
-      <div className="mx-auto grid max-w-editorial grid-cols-1 gap-16 px-6 sm:px-10 lg:grid-cols-12">
+    <section id="problem" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+      <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-4">
           <Reveal>
-            <SectionLabel index="03">The Problem</SectionLabel>
+            <SectionLabel>The Problem</SectionLabel>
           </Reveal>
           <Reveal delay={120}>
             <h2 className="display mt-8 text-5xl text-bone sm:text-6xl">
@@ -60,7 +60,7 @@ export function Problem() {
                   onFocus={() => setActive(i)}
                   onBlur={() => setActive(null)}
                   className={cn(
-                    'focus-ring group relative w-full border-t border-steel-800 py-8 text-left transition-all duration-500 ease-forge',
+                    'focus-ring group relative w-full border-t border-steel-800 py-7 text-left transition-all duration-500 ease-forge sm:py-8',
                     active === i ? 'pl-6' : 'pl-0',
                     i === FAILURES.length - 1 && 'border-b'
                   )}
@@ -69,19 +69,14 @@ export function Problem() {
                     className="absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 bg-forge transition-all duration-500 ease-forge"
                     style={{ height: active === i ? '58%' : '0%' }}
                   />
-                  <div className="flex items-baseline justify-between gap-6">
-                    <div className="flex items-baseline gap-6">
-                      <span className="label text-steel-500">{f.n}</span>
-                      <span
-                        className={cn(
-                          'display text-3xl transition-colors duration-500 sm:text-5xl',
-                          active === i ? 'text-bone' : 'text-steel-300'
-                        )}
-                      >
-                        {f.title}
-                      </span>
-                    </div>
-                  </div>
+                  <span
+                    className={cn(
+                      'display text-3xl transition-colors duration-500 sm:text-5xl',
+                      active === i ? 'text-bone' : 'text-steel-300'
+                    )}
+                  >
+                    {f.title}
+                  </span>
                   <p
                     className="mt-4 max-w-lg text-[14px] leading-relaxed text-steel-400 transition-all duration-500 ease-forge"
                     style={{

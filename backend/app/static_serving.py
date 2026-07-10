@@ -76,8 +76,11 @@ def mount_frontend(app: FastAPI) -> bool:
     async def _spa(full_path: str) -> FileResponse:
         if full_path.startswith("api/") or full_path in ("openapi.json", "docs", "redoc", "healthz"):
             raise HTTPException(status_code=404, detail="Not found")
-        candidate = static_dir / full_path
-        if full_path and candidate.is_file() and candidate.resolve().is_relative_to(static_dir):
+        # Resolve BOTH sides so ``..`` / symlinks can never escape the static root,
+        # regardless of how ``static_dir`` was configured (e.g. a relative env var).
+        root = static_dir.resolve()
+        candidate = (static_dir / full_path).resolve()
+        if full_path and candidate.is_file() and candidate.is_relative_to(root):
             return FileResponse(candidate)
         return FileResponse(index_file)
 

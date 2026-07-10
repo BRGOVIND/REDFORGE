@@ -1,51 +1,83 @@
-# Installation Guide
+# Installation
 
-RedForge runs on **Windows** and **Linux** (macOS from source). It needs only
-**Python 3.11+** and **Ollama** — no Node.js.
+RedForge runs on **Windows, macOS, and Linux**. It needs only **Python 3.11+**
+and a local LLM **runtime** (Ollama by default). Node.js is not required to run.
 
-## 1. Install Ollama
-Download from **https://ollama.com/download** and install it. Then pull a model:
+## Requirements
 
-```bash
-ollama pull qwen3:8b     # recommended starter (also: llama3, gemma, mistral)
-```
+| Requirement | Details |
+|-------------|---------|
+| Operating system | Windows 10/11, macOS 12+, modern Linux |
+| Python | 3.11 or newer |
+| Runtime | Ollama, LM Studio, llama.cpp, or vLLM (see [providers.md](providers.md)) |
+| Disk | ~500 MB for RedForge; models are separate |
+| Memory | 8 GB RAM is comfortable for small/medium models; more for larger ones |
 
-Make sure Ollama is running (`ollama serve`, or it starts automatically on most
-systems).
-
-## 2. Install RedForge
-
-### Option A — Release download (recommended)
-1. Download the release for your OS from the
-   [Releases page](https://github.com/BRGOVIND/REDFORGE/releases):
-   - **Windows:** `RedForge-Setup-<ver>.exe` (installer) or `redforge-<ver>-windows.zip`
-   - **Linux:** `RedForge-<ver>-x86_64.AppImage` or `redforge-<ver>.tar.gz`
-2. Unzip (if using the archive), then run `install.cmd` (Windows) or `./install.sh`
-   (Linux). This installs the Python dependencies.
-
-### Option B — From source (developers)
-Requires Python, Node.js, and Git.
+## Option A — pip (recommended)
 
 ```bash
-git clone https://github.com/BRGOVIND/REDFORGE.git
-cd REDFORGE
-pip install -e cli
-redforge install        # installs backend deps, builds the frontend, inits the DB
+pip install redforge
+redforge install
+redforge start
 ```
 
-## 3. Start RedForge
+- `pip install redforge` installs the command-line interface.
+- `redforge install` creates a dedicated virtual environment, installs the
+  backend, detects hardware and providers, creates shortcuts, and runs a health
+  check. It is **idempotent** — re-running it repairs an existing install.
+- `redforge start` launches RedForge and opens your browser.
+
+## Option B — self-contained release
+
+1. Download the release for your OS from
+   [GitHub Releases](https://github.com/BRGOVIND/REDFORGE/releases). Each release
+   ships with a `SHA256SUMS.txt` you can use to verify the download.
+2. Install:
+   - **Windows:** run `install.cmd`, or the `RedForge-Setup-*.exe` installer.
+   - **Linux:** run `./install.sh`, or the `RedForge-*.AppImage`.
+   - **macOS:** extract the `.tar.gz` and run `./install.sh`.
+3. Start with `start.cmd` / `./start.sh`, or `redforge start`.
+
+### Verifying a download
 
 ```bash
-redforge start          # or: start.cmd / ./start.sh from a release
+sha256sum -c SHA256SUMS.txt          # Linux
+shasum -a 256 -c SHA256SUMS.txt      # macOS
+certutil -hashfile <file> SHA256     # Windows
 ```
 
-One process starts, your browser opens automatically at
-`http://127.0.0.1:8000`, and the first-run setup appears. Follow it, then run
-your first evaluation.
+## Installing a runtime
 
-## Verify anytime
+RedForge does not install a model runtime for you. The default is Ollama:
+
+1. Install [Ollama](https://ollama.com/download).
+2. Start it: `ollama serve`.
+3. Pull a model: `ollama pull llama3.1:8b` — or use RedForge's onboarding to
+   download a model that fits your hardware.
+
+See [providers.md](providers.md) for LM Studio, llama.cpp, vLLM, and cloud
+providers.
+
+## Maintaining an installation
 
 ```bash
-redforge doctor         # green/yellow/red system check
-redforge status         # is it running? ports, sessions, models
+redforge repair        # fix a broken or partial install (idempotent)
+redforge update        # update to the latest release (verifies checksums)
+redforge uninstall     # remove the environment and shortcuts (keeps your data)
 ```
+
+`redforge update` preserves your evaluation history and settings and rolls back
+automatically if anything goes wrong. See the
+[updater](architecture/updater.md) notes for details.
+
+## Network exposure
+
+By default RedForge binds to `127.0.0.1` and is reachable only from your machine.
+It has **no authentication**. If you bind it to a non-local address
+(`redforge start --host 0.0.0.0`), it warns you first, because anyone on your
+network would then be able to use the API. Only do this on a trusted network.
+
+## Troubleshooting
+
+If install or start fails, run `redforge doctor` for a diagnosis, and see
+[troubleshooting.md](troubleshooting.md).

@@ -4,7 +4,16 @@
 ;           Inno Setup 6 (https://jrsoftware.org/isinfo.php).
 ; Runtime: end users need Python 3.11+ and Ollama. Node.js is NOT required.
 
-#define AppVersion "1.0.0"
+; Version comes from the repo-root VERSION file (single source of truth).
+; CI overrides it explicitly with:  iscc /DAppVersion=X.Y.Z installers\windows\redforge.iss
+#ifndef AppVersion
+  #define VersionFile FileOpen(SourcePath + "..\..\VERSION")
+  #define AppVersion Trim(FileRead(VersionFile))
+  #expr FileClose(VersionFile)
+  #if AppVersion == ""
+    #error Could not read the repo-root VERSION file
+  #endif
+#endif
 #define AppName "RedForge"
 #define StageDir "..\..\releases\redforge-" + AppVersion
 

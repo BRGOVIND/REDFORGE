@@ -20,8 +20,19 @@ EXPECTED_COMMANDS = {
 }
 
 
-def test_version_is_1_0_0():
-    assert _version() == "1.0.0"
+def _version_file() -> str:
+    return (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
+
+
+def test_version_matches_version_file():
+    """VERSION is the single source of truth — no literal may drift from it."""
+    assert _version() == _version_file()
+
+
+def test_cli_package_version_matches_version_file():
+    from redforge import __version__
+
+    assert __version__ == _version_file()
 
 
 def test_parser_exposes_all_commands():
@@ -34,7 +45,7 @@ def test_main_version_runs(capsys):
     rc = main(["version"])
     out = capsys.readouterr().out
     assert rc == 0
-    assert "RedForge" in out and "1.0.0" in out
+    assert "RedForge" in out and _version_file() in out
 
 
 def test_paths_root_resolves_to_repo():
@@ -45,8 +56,10 @@ def test_paths_root_resolves_to_repo():
 
 
 def test_diagnostics_collect_returns_valid_checks():
+    # doctor now consumes the centralized System Health Engine (provider-agnostic).
     checks = diagnostics.collect()
     assert checks, "doctor produced no checks"
     labels = {c.label for c in checks}
-    assert "Python" in labels and "Ollama installed" in labels
+    assert "Python" in labels
     assert all(c.level in ("ok", "warn", "fail") for c in checks)
+    assert all(c.severity in ("critical", "high", "medium", "low", "info") for c in checks)

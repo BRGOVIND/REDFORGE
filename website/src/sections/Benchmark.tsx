@@ -29,11 +29,11 @@ const CAPABILITIES = [
 
 export function Benchmark() {
   return (
-    <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-32 sm:py-44">
-      <div className="mx-auto grid max-w-editorial grid-cols-1 gap-16 px-6 sm:px-10 lg:grid-cols-12">
+    <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+      <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
           <Reveal>
-            <SectionLabel index="07">Benchmark Engine</SectionLabel>
+            <SectionLabel>Benchmark Engine</SectionLabel>
           </Reveal>
           <Reveal delay={120}>
             <div className="mt-10 display leading-none text-bone">
@@ -54,14 +54,9 @@ export function Benchmark() {
           <div className="flex flex-col">
             {CAPABILITIES.map((c, i) => (
               <Reveal key={c.k} delay={i * 120}>
-                <div className="border-t border-steel-800 py-8 last:border-b">
-                  <div className="flex items-baseline gap-6">
-                    <span className="label text-steel-500">{String(i + 1).padStart(2, '0')}</span>
-                    <div>
-                      <h3 className="display text-2xl text-bone sm:text-3xl">{c.k}</h3>
-                      <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-steel-400">{c.v}</p>
-                    </div>
-                  </div>
+                <div className="border-t border-steel-800 py-7 last:border-b sm:py-8">
+                  <h3 className="display text-2xl text-bone sm:text-3xl">{c.k}</h3>
+                  <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-steel-400">{c.v}</p>
                 </div>
               </Reveal>
             ))}

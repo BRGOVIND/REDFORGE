@@ -288,6 +288,8 @@ export interface SystemChecksResponse {
   installed_models: string[];
   recommended_models: string[];
   ollama_download_url: string;
+  /** Present only when requested with `?include_health=true`. */
+  health?: HealthReport | null;
 }
 
 // --- Live terminal (Sprint 5) ----------------------------------------------
@@ -306,4 +308,194 @@ export interface TerminalResponse {
   status: string;
   cursor: number;
   lines: TerminalLine[];
+}
+
+// --- Runtime Manager (V1.2) -------------------------------------------------
+
+export interface ProviderHealth {
+  name: string;
+  online: boolean;
+  healthy: boolean;
+  version: string | null;
+  model_count: number | null;
+  models: string[];
+  base_url: string | null;
+  latency_ms: number | null;
+  checked_at: string | null;
+  error: string | null;
+}
+
+export interface ProviderInfo {
+  name: string;
+  label: string;
+  is_default: boolean;
+  base_url: string | null;
+  requires_api_key: boolean;
+  api_key_env: string | null;
+  api_key_present: boolean;
+  health: ProviderHealth | null;
+}
+
+export interface ProvidersResponse {
+  default: string;
+  providers: ProviderInfo[];
+}
+
+export interface RuntimeStatusResponse {
+  provider: string;
+  concurrency_per_model: number;
+  metrics: Record<string, number>;
+}
+
+export interface RuntimeLogLine {
+  ts: string | null;
+  level: string;
+  logger: string;
+  message: string;
+}
+
+export interface RuntimeLogsResponse {
+  lines: RuntimeLogLine[];
+}
+
+// --- Model Manager (V1.2) ---------------------------------------------------
+
+export interface ModelCapabilities {
+  supports_delete: boolean;
+  supports_metadata: boolean;
+  supports_context_length: boolean;
+  supports_streaming: boolean;
+  supports_embeddings: boolean;
+}
+
+export interface CatalogModel {
+  name: string;
+  provider: string;
+  provider_label: string;
+  size: number | null;
+  quantization: string | null;
+  family: string | null;
+  modified_at: string | null;
+  digest: string | null;
+  status: string;
+  capabilities: ModelCapabilities;
+}
+
+export interface ProviderGroup {
+  provider: string;
+  label: string;
+  online: boolean;
+  healthy: boolean;
+  can_delete: boolean;
+  capabilities: ModelCapabilities;
+  error: string | null;
+  model_count: number;
+  models: CatalogModel[];
+}
+
+export interface ModelCatalogResponse {
+  providers: ProviderGroup[];
+  total: number;
+  default: string;
+}
+
+export interface ModelDetail extends CatalogModel {
+  context_length: number | null;
+  parameter_count: string | null;
+  architecture: string | null;
+  template: string | null;
+  license: string | null;
+  families: string[] | null;
+  tokenizer: string | null;
+  modelfile: string | null;
+  stop_tokens: string[];
+  provider_metadata: Record<string, unknown>;
+}
+
+// --- System Health Engine (V1.2) -------------------------------------------
+
+export type HealthStatus = 'healthy' | 'warning' | 'error';
+export type HealthSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+export interface HealthCheck {
+  id: string;
+  name: string;
+  status: HealthStatus;
+  severity: HealthSeverity;
+  message: string;
+  suggested_fix: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface HealthSummary {
+  total: number;
+  healthy: number;
+  warning: number;
+  error: number;
+}
+
+export interface HealthReport {
+  status: HealthStatus;
+  ready: boolean;
+  generated_at: string;
+  summary: HealthSummary;
+  checks: HealthCheck[];
+}
+
+// --- Onboarding recommendations (V1.2.1) -----------------------------------
+
+export interface HardwareInfo {
+  python_version: string;
+  python_ok: boolean;
+  platform: string;
+  cpu_count: number | null;
+  ram_total_mb: number | null;
+  ram_available_mb: number | null;
+  gpu: {
+    available: boolean;
+    name: string | null;
+    vram_total_mb: number | null;
+    backend: string | null;
+  };
+}
+
+export interface RuntimeRecommendation {
+  provider: string;
+  state: 'running' | 'not_running' | 'missing';
+  reason: string;
+  action: string | null;
+}
+
+export interface ModelRecommendation {
+  name: string;
+  label: string;
+  params_b: number;
+  estimated_ram_mb: number;
+  fits: boolean;
+  note: string;
+  recommended: boolean;
+}
+
+export interface ModelRecommendations {
+  budget_mb: number | null;
+  budget_source: string;
+  usable_mb: number | null;
+  recommended: string | null;
+  models: ModelRecommendation[];
+}
+
+export interface OnboardingRecommendations {
+  hardware: HardwareInfo;
+  runtime: RuntimeRecommendation;
+  models: ModelRecommendations;
+}
+
+export interface PullStatus {
+  model: string;
+  status: string;
+  percent: number | null;
+  completed_mb: number | null;
+  total_mb: number | null;
+  done: boolean;
+  error: string | null;
 }

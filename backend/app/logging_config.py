@@ -10,11 +10,41 @@ formatter. Example line::
 from __future__ import annotations
 
 import logging
+from collections import deque
+from datetime import datetime, timezone
 from typing import Optional
 
 from app.config import settings
 
 _configured = False
+
+# Bounded in-memory ring buffer of recent log records, so the Runtime Manager can
+# expose read-only logs over the API without touching disk or the CLI log file.
+_LOG_BUFFER: "deque[dict]" = deque(maxlen=1000)
+
+
+class _RingBufferHandler(logging.Handler):
+    """Capture each ``redforge`` log record as a small dict in ``_LOG_BUFFER``."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            _LOG_BUFFER.append(
+                {
+                    "ts": datetime.fromtimestamp(record.created, timezone.utc).isoformat(),
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "message": record.getMessage(),
+                }
+            )
+        except Exception:  # noqa: BLE001 - logging must never raise
+            pass
+
+
+def get_recent_logs(limit: int = 200) -> list[dict]:
+    """Return up to ``limit`` most-recent captured log lines (oldest → newest)."""
+    limit = max(1, min(limit, _LOG_BUFFER.maxlen or 1000))
+    items = list(_LOG_BUFFER)
+    return items[-limit:]
 
 
 def configure_logging() -> None:
@@ -33,6 +63,7 @@ def configure_logging() -> None:
             )
         )
         logger.addHandler(handler)
+        logger.addHandler(_RingBufferHandler())
     logger.propagate = False
     _configured = True
 

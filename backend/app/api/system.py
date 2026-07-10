@@ -10,13 +10,14 @@ from __future__ import annotations
 import platform
 import shutil
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db.models import Attack
 from app.dataset import benchmark_loader
+from app.health import health_service
 from app.resources.resource_monitor import detect_gpu
 from app.runtime.manager import get_runtime
 
@@ -50,7 +51,10 @@ async def _ollama_tags() -> tuple[bool, list[str]]:
 
 
 @router.get("/checks")
-async def system_checks(db: AsyncSession = Depends(get_db)) -> dict:
+async def system_checks(
+    db: AsyncSession = Depends(get_db),
+    include_health: bool = Query(False, description="embed the full System Health Engine report"),
+) -> dict:
     checks: list[dict] = []
 
     # --- Ollama installed -------------------------------------------------
@@ -137,6 +141,17 @@ async def system_checks(db: AsyncSession = Depends(get_db)) -> dict:
         if c["key"] in {"ollama_installed", "ollama_running", "database", "dataset", "models"}
     )
 
+    # Consume the centralized System Health Engine on demand: the onboarding keys
+    # above stay Ollama-specific (this is the Ollama wizard) and the endpoint stays
+    # cheap to poll; pass ?include_health=true to embed the full provider-agnostic
+    # report (or call GET /api/health directly). Best-effort; never blocks.
+    health = None
+    if include_health:
+        try:
+            health = (await health_service.run()).model_dump()
+        except Exception:  # noqa: BLE001
+            health = None
+
     return {
         "ready": ready,
         "platform": platform.system(),
@@ -144,4 +159,5 @@ async def system_checks(db: AsyncSession = Depends(get_db)) -> dict:
         "installed_models": models,
         "recommended_models": RECOMMENDED_MODELS,
         "ollama_download_url": OLLAMA_DOWNLOAD_URL,
+        "health": health,
     }

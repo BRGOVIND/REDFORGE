@@ -13,11 +13,11 @@ const STEPS = [
 
 export function InstallSteps() {
   return (
-    <section id="install" className="relative overflow-hidden border-t border-steel-800 py-32 sm:py-40">
+    <section id="install" className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-30" />
       <div className="relative mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <SectionLabel index="10.5">Installation</SectionLabel>
+          <SectionLabel>Installation</SectionLabel>
         </Reveal>
         <Reveal delay={120}>
           <h2 className="display mt-8 max-w-2xl text-5xl text-bone sm:text-6xl">
@@ -38,10 +38,7 @@ export function InstallSteps() {
                 <span className="absolute -left-[46px] flex h-8 w-8 items-center justify-center rounded-full border border-forge/40 bg-ink text-forge sm:-left-[54px]">
                   <Icon size={15} />
                 </span>
-                <div className="flex flex-wrap items-baseline gap-x-4">
-                  <span className="label text-steel-500">{String(i + 1).padStart(2, '0')}</span>
-                  <h3 className="display text-2xl text-bone sm:text-3xl">{s.k}</h3>
-                </div>
+                <h3 className="display text-2xl text-bone sm:text-3xl">{s.k}</h3>
                 <p className="mt-2 max-w-md text-[15px] leading-relaxed text-steel-300">{s.v}</p>
                 <code className="mt-2 inline-block rounded border border-steel-800 bg-char/60 px-2 py-1 font-mono text-[12px] text-steel-400">
                   {s.cmd}

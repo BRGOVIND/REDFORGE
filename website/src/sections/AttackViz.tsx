@@ -19,12 +19,12 @@ function pathFor(x: number, y: number): string {
 
 export function AttackViz() {
   return (
-    <section className="relative border-t border-steel-800 py-32 sm:py-40">
+    <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <SectionLabel index="06">Under Attack</SectionLabel>
+          <SectionLabel>Under Attack</SectionLabel>
         </Reveal>
-        <div className="mt-8 grid grid-cols-1 items-center gap-12 lg:grid-cols-12">
+        <div className="mt-8 grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
             <Reveal delay={120}>
               <h2 className="display text-5xl text-bone sm:text-6xl">

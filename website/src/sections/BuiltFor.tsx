@@ -15,12 +15,12 @@ export function BuiltFor() {
   const [active, setActive] = useState(0);
 
   return (
-    <section className="relative border-t border-steel-800 py-32 sm:py-44">
+    <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <SectionLabel index="08">Built For</SectionLabel>
+          <SectionLabel>Built For</SectionLabel>
         </Reveal>
-        <div className="mt-12 grid grid-cols-1 gap-14 lg:grid-cols-12">
+        <div className="mt-10 grid grid-cols-1 gap-12 sm:mt-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <ul className="flex flex-col">
               {AUDIENCES.map((a, i) => (
@@ -29,21 +29,13 @@ export function BuiltFor() {
                     onMouseEnter={() => setActive(i)}
                     onFocus={() => setActive(i)}
                     className={cn(
-                      'focus-ring group flex w-full items-center gap-5 border-b border-steel-800 py-6 text-left transition-all duration-500 ease-forge',
+                      'focus-ring group flex w-full items-center gap-5 border-b border-steel-800 py-5 text-left transition-all duration-500 ease-forge sm:py-6',
                       active === i ? 'pl-4' : 'pl-0'
                     )}
                   >
                     <span
                       className={cn(
-                        'label transition-colors duration-300',
-                        active === i ? 'text-forge' : 'text-steel-600'
-                      )}
-                    >
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span
-                      className={cn(
-                        'display text-3xl transition-colors duration-500 sm:text-5xl',
+                        'display text-[26px] leading-tight transition-colors duration-500 sm:text-5xl',
                         active === i ? 'text-bone' : 'text-steel-500'
                       )}
                     >

@@ -1,9 +1,18 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
+
+
+def _utcnow() -> datetime:
+    """Timezone-aware UTC now (replaces the deprecated naive datetime.utcnow).
+
+    Matches the aware timestamps the app already writes explicitly elsewhere; the
+    stored/read SQLite value is unchanged.
+    """
+    return datetime.now(timezone.utc)
 
 
 class ModelRecord(Base):
@@ -13,7 +22,7 @@ class ModelRecord(Base):
     name = Column(String(200), unique=True, nullable=False)
     provider = Column(String(100))
     version = Column(String(50))
-    last_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=_utcnow)
 
 
 class Attack(Base):
@@ -31,6 +40,7 @@ class Attack(Base):
 
 class TestRun(Base):
     __tablename__ = "test_runs"
+    __test__ = False  # ORM model, not a pytest test class (silences collection warning)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     model_name = Column(String(200), nullable=False)
@@ -41,7 +51,7 @@ class TestRun(Base):
     verdict = Column(String(20))  # PASS/FAIL/UNCERTAIN
     reason = Column(String(500))
     latency_ms = Column(Integer)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=_utcnow)
 
     attack = relationship("Attack", back_populates="test_runs")
 
@@ -52,7 +62,7 @@ class Report(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     model_name = Column(String(200), nullable=False)
     report_data = Column(JSON, nullable=False)
-    generated_at = Column(DateTime, default=datetime.utcnow)
+    generated_at = Column(DateTime, default=_utcnow)
 
 
 class BenchmarkRun(Base):
@@ -63,7 +73,7 @@ class BenchmarkRun(Base):
     model_list = Column(JSON, nullable=False)   # list[str]
     attack_suite = Column(JSON, nullable=False)  # list[int] attack IDs
     status = Column(String(30), nullable=False, default="pending")  # pending/running/completed/failed
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
     completed_at = Column(DateTime, nullable=True)
 
     model_scores = relationship("ModelScore", back_populates="benchmark_run", cascade="all, delete-orphan")
@@ -81,7 +91,7 @@ class ModelScore(Base):
     data_leakage_rate = Column(Float, default=0.0)
     avg_latency_ms = Column(Float, default=0.0)
     overall_score = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     benchmark_run = relationship("BenchmarkRun", back_populates="model_scores")
 
@@ -99,7 +109,7 @@ class AgentRun(Base):
     # compromised / rounds_exhausted / token_budget_exceeded / timeout / strategies_exhausted
     outcome = Column(String(30), nullable=True)
     rounds_completed = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
     completed_at = Column(DateTime, nullable=True)
 
     findings = relationship("AgentFinding", back_populates="agent_run", cascade="all, delete-orphan")
@@ -119,7 +129,7 @@ class AgentFinding(Base):
     strategy = Column(String(50), nullable=True)         # adaptive agent: which strategy was used
     failure_reason = Column(Text, nullable=True)         # judge's reason when model resisted
     escalation_tier = Column(Integer, nullable=True)     # strategy tier (1=simplest, 4=most complex)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     agent_run = relationship("AgentRun", back_populates="findings")
 
@@ -142,7 +152,7 @@ class EvaluationSession(Base):
     selected_tier = Column(String(50), nullable=True)
     total_tasks = Column(Integer, nullable=False, default=0)
     completed_tasks = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     estimated_seconds = Column(Float, nullable=True)
@@ -172,7 +182,7 @@ class EvaluationEvent(Base):
     session_id = Column(
         String(36), ForeignKey("evaluation_sessions.id"), nullable=False, index=True
     )
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=_utcnow)
     event_type = Column(String(50), nullable=False)
     # session_created / model_started / attack_started / response_received /
     # verdict_generated / session_completed / session_failed
@@ -199,4 +209,4 @@ class DatasetEntry(Base):
     model_response = Column(Text)
     ground_truth_verdict = Column(String(20), nullable=False)  # PASS/FAIL/UNCERTAIN
     source = Column(String(50), default="auto")  # auto / manual
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)

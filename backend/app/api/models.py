@@ -28,10 +28,11 @@ class PingResult(BaseModel):
 async def list_models():
     try:
         raw = await get_runtime().list_models_raw()
-    except RuntimeLLMError:
+    except RuntimeLLMError as exc:
+        # Provider-agnostic: the runtime may be Ollama or any registered provider.
         return {
-            "error": "Ollama is offline",
-            "detail": "Cannot connect to Ollama. Ensure it is running.",
+            "error": "The runtime provider is offline",
+            "detail": exc.message or "Cannot reach the active runtime provider. Ensure it is running.",
             "models": [],
         }
     models = [

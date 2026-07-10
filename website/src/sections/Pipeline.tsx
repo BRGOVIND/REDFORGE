@@ -21,14 +21,11 @@ export function Pipeline() {
     <section id="how" ref={ref} className="relative" style={{ height: '360vh' }}>
       <div className="sticky top-0 flex h-screen items-center overflow-hidden border-t border-steel-800">
         <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-40" />
-        <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-16 px-6 sm:px-10 lg:grid-cols-2">
+        <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
           {/* Left — the active stage, cross-fading */}
           <div>
-            <SectionLabel index="05">How RedForge Works</SectionLabel>
-            <p className="label mt-10 text-steel-500">
-              Stage {String(active + 1).padStart(2, '0')} / 06
-            </p>
-            <div className="relative mt-4 h-[280px]">
+            <SectionLabel>How RedForge Works</SectionLabel>
+            <div className="relative mt-10 h-[220px] sm:h-[280px]">
               {STAGES.map((s, i) => (
                 <div
                   key={s.k}
@@ -41,8 +38,8 @@ export function Pipeline() {
                     pointerEvents: i === active ? 'auto' : 'none',
                   }}
                 >
-                  <h2 className="display text-6xl text-bone sm:text-7xl">{s.k}</h2>
-                  <p className="mt-6 max-w-md text-[16px] leading-relaxed text-steel-300">{s.d}</p>
+                  <h2 className="display text-5xl text-bone sm:text-6xl lg:text-7xl">{s.k}</h2>
+                  <p className="mt-6 max-w-md text-[15px] leading-relaxed text-steel-300 sm:text-[16px]">{s.d}</p>
                 </div>
               ))}
             </div>
@@ -59,7 +56,7 @@ export function Pipeline() {
                 boxShadow: '0 0 12px rgba(229,72,77,0.5)',
               }}
             />
-            <div className="flex flex-col gap-9">
+            <div className="flex flex-col gap-6 sm:gap-9">
               {STAGES.map((s, i) => {
                 const lit = i <= active;
                 const Icon = s.icon;

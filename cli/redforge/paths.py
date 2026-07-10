@@ -62,7 +62,7 @@ def db_path() -> Path:
 
 
 def runtime_home() -> Path:
-    """A writable directory for pid/log files."""
+    """A writable directory for pid/log/venv/state files."""
     base = root()
     try:
         (base / ".redforge").mkdir(exist_ok=True)
@@ -79,3 +79,42 @@ def pid_file() -> Path:
 
 def log_file() -> Path:
     return runtime_home() / "redforge.log"
+
+
+# ---------------------------------------------------------------------------
+# Dedicated virtual environment (created by `redforge install`)
+# ---------------------------------------------------------------------------
+
+def venv_dir() -> Path:
+    """Where `redforge install` places the backend virtual environment."""
+    return runtime_home() / "venv"
+
+
+def venv_python(venv: Path | None = None) -> Path:
+    """Path to the interpreter inside a venv (cross-platform)."""
+    base = venv or venv_dir()
+    if os.name == "nt":
+        return base / "Scripts" / "python.exe"
+    return base / "bin" / "python"
+
+
+def backend_python() -> str:
+    """Interpreter used to run the backend (uvicorn, health engine, pip).
+
+    Prefers the dedicated venv created by `redforge install`; falls back to the
+    current interpreter (source checkouts / developers who installed deps
+    globally). This is the single resolution point — nothing hardcodes a python.
+    """
+    import sys
+
+    vp = venv_python()
+    return str(vp) if vp.is_file() else sys.executable
+
+
+def state_file() -> Path:
+    """Records the last successful install (venv path, version, timestamp)."""
+    return runtime_home() / "install.json"
+
+
+def requirements_file() -> Path:
+    return backend_dir() / "requirements.txt"

@@ -1,0 +1,206 @@
+name: Release
+
+# Tag-driven. Push a tag matching the VERSION file to cut a release:
+#   git tag v$(cat VERSION) && git push origin v$(cat VERSION)
+# Or run manually (workflow_dispatch) to dry-run the artifact build.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write        # required to create the GitHub Release
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Gate: the pushed tag must equal the VERSION file, and CI must be green.
+  # -------------------------------------------------------------------------
+  verify:
+    name: Verify tag matches VERSION
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Read VERSION and check single-sourcing
+        id: v
+        run: |
+          version="$(python scripts/version.py)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          python scripts/version.py --check
+
+      - name: Tag must equal VERSION
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "${{ steps.v.outputs.version }}" ]; then
+            echo "::error::tag v$tag does not match VERSION ${{ steps.v.outputs.version }}"
+            exit 1
+          fi
+
+  # -------------------------------------------------------------------------
+  # The cross-platform payload (.zip/.tar.gz + SHA256SUMS) — one build, reused.
+  # -------------------------------------------------------------------------
+  package:
+    name: Build release payload
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      # Builds the frontend, bundles it into backend static, stages, and
+      # archives (.zip + .tar.gz) + writes SHA256SUMS.txt. No Node.js at runtime.
+      - name: Build release
+        run: python scripts/build_release.py
+
+      - name: Upload payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: payload
+          path: |
+            releases/redforge-${{ needs.verify.outputs.version }}.zip
+            releases/redforge-${{ needs.verify.outputs.version }}.tar.gz
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # Windows installer (.exe) via Inno Setup, from the staged payload.
+  # -------------------------------------------------------------------------
+  windows-installer:
+    name: Windows installer (.exe)
+    needs: [verify, package]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      # Re-stage on Windows so the installer packages a native tree.
+      - name: Build release (stage tree)
+        run: python scripts/build_release.py
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $version = "${{ needs.verify.outputs.version }}"
+          & "$iscc" "/DAppVersion=$version" installers\windows\redforge.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: releases/RedForge-Setup-${{ needs.verify.outputs.version }}.exe
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # Linux AppImage from the staged payload.
+  # -------------------------------------------------------------------------
+  linux-appimage:
+    name: Linux AppImage
+    needs: [verify, package]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build release (stage tree)
+        run: python scripts/build_release.py
+
+      - name: Install appimagetool
+        run: |
+          sudo apt-get update && sudo apt-get install -y libfuse2
+          curl -L -o /usr/local/bin/appimagetool \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /usr/local/bin/appimagetool
+
+      - name: Build AppImage
+        run: bash installers/linux/build-appimage.sh
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: releases/RedForge-${{ needs.verify.outputs.version }}-x86_64.AppImage
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # Collect every artifact, (re)compute checksums over all of them, publish.
+  # -------------------------------------------------------------------------
+  publish:
+    name: Publish GitHub Release
+    needs: [verify, package, windows-installer, linux-appimage]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksum every artifact
+        run: python scripts/checksums.py dist -o dist/SHA256SUMS.txt
+
+      - name: Show artifacts
+        run: ls -la dist && cat dist/SHA256SUMS.txt
+
+      - name: Create / update GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: RedForge ${{ needs.verify.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/redforge-${{ needs.verify.outputs.version }}.zip
+            dist/redforge-${{ needs.verify.outputs.version }}.tar.gz
+            dist/RedForge-Setup-${{ needs.verify.outputs.version }}.exe
+            dist/RedForge-${{ needs.verify.outputs.version }}-x86_64.AppImage
+            dist/SHA256SUMS.txt

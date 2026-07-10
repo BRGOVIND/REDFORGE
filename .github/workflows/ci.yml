@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  version:
+    name: Version is single-sourced
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # No third-party deps: the guard is standard library only.
+      - run: python scripts/version.py --check
+
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+
+      - name: Install backend dependencies (pinned lock + test tools)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.lock -r backend/requirements-dev.txt
+
+      - name: Verify the CLI installs from the dynamic version
+        run: |
+          python -m pip install .
+          test "$(python -c 'import redforge; print(redforge.__version__)')" = "$(cat VERSION)"
+          python -m pip uninstall -y redforge
+
+      # Tests never reach a live provider; the runtime is faked via the
+      # generate_fn / judge_fn seams (see tests/conftest.py).
+      - name: pytest
+        working-directory: backend
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend (tsc + vite build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npx vite build
+
+      - name: Assert the bundle carries the VERSION string
+        run: grep -rq "$(cat VERSION)" frontend/dist/assets || (echo "__APP_VERSION__ not injected" && exit 1)

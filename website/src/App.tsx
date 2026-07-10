@@ -9,6 +9,7 @@ import { AttackViz } from './sections/AttackViz';
 import { Benchmark } from './sections/Benchmark';
 import { BuiltFor } from './sections/BuiltFor';
 import { Local } from './sections/Local';
+import { QuickInstall } from './sections/QuickInstall';
 import { Download } from './sections/Download';
 import { InstallSteps } from './sections/InstallSteps';
 import { Future } from './sections/Future';
@@ -31,6 +32,7 @@ export default function App() {
         <Benchmark />
         <BuiltFor />
         <Local />
+        <QuickInstall />
         <Download />
         <InstallSteps />
         <Future />

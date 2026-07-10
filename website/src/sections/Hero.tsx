@@ -16,7 +16,7 @@ export function Hero({ started }: { started: boolean }) {
   return (
     <section id="top" className="relative flex min-h-screen items-center overflow-hidden">
       <Parallax distance={120} className="pointer-events-none absolute inset-0">
-        <div className="blueprint-grid absolute inset-0 opacity-60" />
+        <div className="blueprint-grid absolute inset-0 opacity-50" />
         <div
           className="absolute inset-0"
           style={{ background: 'radial-gradient(120% 80% at 50% 0%, transparent 40%, #050506 100%)' }}
@@ -30,15 +30,7 @@ export function Hero({ started }: { started: boolean }) {
       />
 
       <div className="relative mx-auto w-full max-w-editorial px-6 sm:px-10">
-        <div
-          className="label mb-8 flex items-center gap-3"
-          style={{ opacity: started ? 0.8 : 0, transition: 'opacity 1s ease 200ms' }}
-        >
-          <span className="h-1.5 w-1.5 animate-ember-flicker rounded-full bg-forge" />
-          Adversarial evaluation for local LLMs
-        </div>
-
-        <h1 className="display text-bone text-[15vw] leading-[0.9] sm:text-[12vw] lg:text-[9.5vw]">
+        <h1 className="display text-bone text-[14vw] leading-[0.92] sm:text-[12vw] lg:text-[9.5vw]">
           <span className="block">
             {words.map((w, i) => (
               <span key={w} className="inline-block" style={wordStyle(i)}>
@@ -60,11 +52,11 @@ export function Hero({ started }: { started: boolean }) {
         </h1>
 
         <div
-          className="mt-12 flex max-w-xl items-start gap-4"
+          className="mt-10 flex max-w-xl items-start gap-4 sm:mt-14"
           style={{ opacity: started ? 1 : 0, transition: 'opacity 1.2s ease 900ms' }}
         >
-          <span className="mt-1 h-10 w-px bg-forge" />
-          <p className="text-[15px] leading-relaxed text-steel-200">
+          <span className="mt-1 h-10 w-px shrink-0 bg-forge" />
+          <p className="text-[15px] leading-relaxed text-steel-200 sm:text-base">
             A red-teaming laboratory that lives on your machine. Throw thousands of adversarial
             prompts at any Ollama model and watch exactly where it breaks — before someone else finds out.
           </p>

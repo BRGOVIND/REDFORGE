@@ -58,16 +58,16 @@ export function Download() {
   const primary = primaryFor(os);
 
   return (
-    <section id="download" className="relative border-t border-steel-800 py-32 sm:py-44">
+    <section id="download" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
-        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           {/* Primary download */}
           <div className="lg:col-span-6">
             <Reveal>
-              <SectionLabel index="10">Download</SectionLabel>
+              <SectionLabel>Download</SectionLabel>
             </Reveal>
             <Reveal delay={120}>
-              <h2 className="display mt-8 text-6xl text-bone sm:text-7xl">
+              <h2 className="display mt-8 text-5xl text-bone sm:text-6xl lg:text-7xl">
                 Forge it<br />yourself.
               </h2>
             </Reveal>
@@ -84,27 +84,27 @@ export function Download() {
                 <a
                   href={primary.asset.url}
                   download={primary.asset.filename}
-                  className="focus-ring group mt-8 flex items-center gap-4 rounded-xl border border-forge/40 bg-forge/10 px-5 py-4 transition-colors hover:bg-forge/20"
+                  className="focus-ring group mt-8 flex w-full items-center gap-4 rounded-xl border border-forge/50 bg-forge/10 px-5 py-4 transition-all duration-300 ease-forge hover:border-forge/70 hover:bg-forge/20 sm:px-6 sm:py-5"
                   aria-label={`${primary.label} — ${primary.asset.filename}`}
                 >
                   <DownloadIcon size={22} className="shrink-0 text-forge" />
                   <div className="flex-1">
-                    <div className="display text-lg text-bone">{primary.label}</div>
-                    <div className="text-xs text-steel-300">{primary.sub}</div>
+                    <div className="display text-lg text-bone sm:text-xl">{primary.label}</div>
+                    <div className="mt-0.5 text-xs text-steel-300">{primary.sub}</div>
                   </div>
-                  <ArrowUpRight size={18} className="text-forge transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  <ArrowUpRight size={18} className="shrink-0 text-forge transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </a>
               ) : (
                 <button
                   onClick={() => setShowOther(true)}
-                  className="focus-ring group mt-8 flex w-full items-center gap-4 rounded-xl border border-forge/40 bg-forge/10 px-5 py-4 text-left transition-colors hover:bg-forge/20"
+                  className="focus-ring group mt-8 flex w-full items-center gap-4 rounded-xl border border-forge/50 bg-forge/10 px-5 py-4 text-left transition-all duration-300 ease-forge hover:border-forge/70 hover:bg-forge/20 sm:px-6 sm:py-5"
                 >
                   <DownloadIcon size={22} className="shrink-0 text-forge" />
                   <div className="flex-1">
-                    <div className="display text-lg text-bone">Download RedForge</div>
-                    <div className="text-xs text-steel-300">Choose your platform · v{VERSION}</div>
+                    <div className="display text-lg text-bone sm:text-xl">Download RedForge</div>
+                    <div className="mt-0.5 text-xs text-steel-300">Choose your platform · v{VERSION}</div>
                   </div>
-                  <ChevronDown size={18} className="text-forge" />
+                  <ChevronDown size={18} className="shrink-0 text-forge" />
                 </button>
               )}
             </Reveal>
@@ -168,7 +168,7 @@ export function Download() {
                 <p className="label mb-4 flex items-center gap-2 text-steel-400">
                   <Cpu size={13} /> Requirements
                 </p>
-                <ul className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <ul className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
                   {REQUIREMENTS.map((r) => (
                     <li key={r} className="flex items-center gap-2 text-[14px] text-steel-200">
                       <Check size={15} className="shrink-0 text-forge" />

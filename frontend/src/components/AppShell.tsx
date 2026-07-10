@@ -1,10 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  Boxes,
   Clock,
   FlaskConical,
   LayoutDashboard,
   Plus,
   ScrollText,
+  Server,
   Trophy,
   Zap,
 } from 'lucide-react';
@@ -25,6 +27,8 @@ const NAV: NavItem[] = [
   { to: '/reports', label: 'Reports', icon: <ScrollText size={17} /> },
   { to: '/leaderboard', label: 'Leaderboard', icon: <Trophy size={17} /> },
   { to: '/history', label: 'History', icon: <Clock size={17} /> },
+  { to: '/runtime', label: 'Runtime', icon: <Server size={17} /> },
+  { to: '/models', label: 'Models', icon: <Boxes size={17} /> },
 ];
 
 function SystemStatus() {
@@ -57,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <img src="/logo-mark.png" alt="RedForge" width={32} height={32} className="h-8 w-8 rounded-lg" />
           <div className="leading-tight">
             <p className="text-sm font-semibold text-content">RedForge</p>
-            <p className="font-mono text-[10px] text-content-faint">v3 · evaluation</p>
+            <p className="font-mono text-[10px] text-content-faint">v{__APP_VERSION__} · evaluation</p>
           </div>
         </div>
 
