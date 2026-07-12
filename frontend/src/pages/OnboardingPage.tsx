@@ -38,9 +38,10 @@ export const ONBOARDED_KEY = 'redforge_onboarded';
 const STEPS = ['Welcome', 'System Scan', 'Runtime', 'Models', 'Ready'];
 
 const SUPPORTED_RUNTIMES = [
-  { name: 'Ollama', url: 'https://ollama.com/download', hint: 'Install, then run: ollama serve' },
+  { name: 'Ollama', url: 'https://ollama.com/download', hint: 'Recommended · install, then run: ollama serve' },
   { name: 'LM Studio', url: 'https://lmstudio.ai', hint: 'Enable its local server (port 1234)' },
   { name: 'llama.cpp', url: 'https://github.com/ggml-org/llama.cpp', hint: 'Run llama-server (port 8080)' },
+  { name: 'vLLM', url: 'https://docs.vllm.ai', hint: 'Start its OpenAI-compatible server (port 8000)' },
 ];
 
 async function copy(text: string) {
@@ -557,23 +558,27 @@ function ModelDetection({
         <Card className="mt-6 p-5">
           <div className="flex items-center gap-2">
             <Boxes size={16} className="text-content-muted" />
-            <span className="text-sm font-medium text-content">No local models were found.</span>
+            <span className="text-sm font-medium text-content">No models were found.</span>
           </div>
           <p className="mb-3 mt-2 text-sm text-content-muted">
-            Pull at least one model with your runtime, then continue. For Ollama:
+            {canPull
+              ? 'Download one of the recommended models above, then continue.'
+              : 'Add at least one model to your runtime, then continue. Loading a model differs by runtime — see your runtime’s docs.'}
           </p>
-          <div className="space-y-2">
-            {['ollama pull qwen3:8b', 'ollama pull llama3'].map((c) => (
-              <CommandRow key={c} command={c} />
-            ))}
-          </div>
+          {canPull && (
+            <div className="space-y-2">
+              {['ollama pull llama3.2:3b', 'ollama pull llama3.1:8b'].map((c) => (
+                <CommandRow key={c} command={c} />
+              ))}
+            </div>
+          )}
           <a
             href="https://ollama.com/library"
             target="_blank"
             rel="noreferrer"
             className="mt-3 inline-flex items-center gap-1 text-xs text-content-subtle hover:text-content rf-focus"
           >
-            Browse the model library <ExternalLink size={12} />
+            Browse the Ollama model library <ExternalLink size={12} />
           </a>
         </Card>
       ) : (

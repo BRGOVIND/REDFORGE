@@ -1,14 +1,15 @@
 # Runtime Architecture
 
 The **runtime** is the single layer through which every RedForge feature talks to
-a language model. Nothing else imports `httpx` or knows about Ollama — evaluation,
-benchmarking, the judge, mutations, the agent, profiling, and the models/health
-endpoints all go through one client.
+a language model. Nothing else imports `httpx` or talks to a provider directly —
+evaluation, benchmarking, the judge, mutations, the agent, profiling, and the
+models/health endpoints all go through one client, whichever provider is active.
 
 ```
 app/runtime/
 ├── manager.py    get_runtime() — the shared client; provider chosen from config
-├── client.py     Provider (ABC) + OllamaProvider + RuntimeClient
+├── client.py     Provider (ABC) + RuntimeClient
+├── providers/    OllamaProvider, LM Studio, llama.cpp, vLLM, OpenAI, Anthropic, Gemini, Groq, OpenRouter
 ├── stream.py     token streaming engine (with graceful fallback)
 ├── queue.py      per-model concurrency limiter
 ├── cancel.py     one CancellationToken + CancelRegistry for the whole app
@@ -32,9 +33,9 @@ app/runtime/
         │  → metrics.complete/fail/cancel → log                 │
         └────────────┬─────────────────────────────────────────┘
                      ▼
-              Provider (OllamaProvider today)
+              Provider (the active provider, chosen from config)
                      ▼
-              httpx → Ollama  (only place httpx lives)
+              httpx → provider endpoint  (only place httpx lives)
 ```
 
 Every transport error from the provider is mapped to a runtime exception, so no

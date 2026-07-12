@@ -58,6 +58,13 @@ class Provider(ABC):
     """
 
     name: str = "provider"
+    label: str = "Provider"          # human-facing name (override per provider)
+
+    # -- setup guidance (declarative, provider-owned) -----------------------
+    # Surfaced by onboarding / the Setup page / the CLI so guidance always comes
+    # from the *active* provider — never hardcoded per call site.
+    docs_url: str = ""               # where to install / get a key
+    setup_hint: str = ""             # one-line "how to make this provider ready"
 
     # -- capabilities -------------------------------------------------------
     # Lightweight, declarative feature flags. Providers override the class

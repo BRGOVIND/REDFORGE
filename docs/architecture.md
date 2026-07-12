@@ -1,8 +1,9 @@
 # RedForge Architecture
 
-RedForge is a **local** AI-security evaluation platform: point it at an Ollama
-model, run adversarial evaluations, and get a structured security report — all on
-your own machine. This document is the map of the system for a new engineer.
+RedForge is a **local** AI-security evaluation platform: point it at a model served
+by a local runtime (Ollama by default; LM Studio, llama.cpp, and vLLM also
+supported), run adversarial evaluations, and get a structured security report — all
+on your own machine. This document is the map of the system for a new engineer.
 
 For deep dives, see the focused docs:
 [session-architecture](session-architecture.md) ·

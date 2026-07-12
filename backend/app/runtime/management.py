@@ -50,6 +50,7 @@ class ProviderManager:
 
     def _static(self, name: str) -> dict:
         provider = manager.build_provider(name)
+        caps = provider.capabilities() if hasattr(provider, "capabilities") else {}
         return {
             "name": name,
             "label": getattr(provider, "label", name),
@@ -58,6 +59,9 @@ class ProviderManager:
             "requires_api_key": bool(getattr(provider, "requires_api_key", False)),
             "api_key_env": getattr(provider, "api_key_env", None),
             "api_key_present": bool(getattr(provider, "api_key", None)),
+            "docs_url": getattr(provider, "docs_url", "") or None,
+            "setup_hint": getattr(provider, "setup_hint", "") or None,
+            "supports_pull": bool(caps.get("supports_pull", False)),
             "health": self._cache.get(name),
         }
 

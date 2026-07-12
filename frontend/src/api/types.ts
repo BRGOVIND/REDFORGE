@@ -281,13 +281,27 @@ export interface SystemCheck {
   hint: string;
 }
 
+export interface SystemProvider {
+  name: string;
+  label: string;
+  base_url: string | null;
+  reachable: boolean;
+  requires_api_key: boolean;
+  api_key_present: boolean;
+  supports_pull: boolean;
+  docs_url: string | null;
+  setup_hint: string | null;
+}
+
 export interface SystemChecksResponse {
   ready: boolean;
   platform: string;
+  /** The active runtime provider (from the Runtime Manager). */
+  provider: SystemProvider;
   checks: SystemCheck[];
   installed_models: string[];
+  /** Starter models — only populated for providers that can download models. */
   recommended_models: string[];
-  ollama_download_url: string;
   /** Present only when requested with `?include_health=true`. */
   health?: HealthReport | null;
 }

@@ -97,10 +97,14 @@ def _bootstrap() -> list[Check]:
         "Operating System", "ok", f"{platform.system()} {platform.release()}",
         severity="info", id="os",
     ))
-    ollama = shutil.which("ollama") is not None
+    # Pre-install bootstrap: the Runtime Manager isn't importable yet, so we can
+    # only do a best-effort presence check for a local runtime on PATH. The full,
+    # provider-agnostic health check runs via the Health Engine once deps exist.
+    runtime = next((r for r in ("ollama", "lms", "llama-server", "vllm") if shutil.which(r)), None)
     checks.append(Check(
-        "Ollama", "ok" if ollama else "warn",
-        "found on PATH" if ollama else "not found — https://ollama.com/download",
+        "Runtime", "ok" if runtime else "warn",
+        f"{runtime} found on PATH" if runtime
+        else "no local runtime found — install one (Ollama recommended: https://ollama.com/download)",
         severity="high", id="provider_health",
     ))
     checks.append(Check(

@@ -1,7 +1,10 @@
 # Model Installation
 
-RedForge evaluates models served by **Ollama**. Install Ollama first
-(https://ollama.com/download), then pull models.
+RedForge evaluates models served by a local **runtime** — Ollama (recommended),
+LM Studio, llama.cpp, or vLLM (see [providers.md](providers.md)). The examples
+below use Ollama: install it first (https://ollama.com/download), then pull models.
+With other runtimes, load models the runtime's own way (LM Studio's model browser,
+a llama.cpp/vLLM model path, etc.).
 
 ## Recommended starters
 

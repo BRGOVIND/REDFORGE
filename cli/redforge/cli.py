@@ -138,23 +138,93 @@ def cmd_logs(args) -> int:
     return 0
 
 
-def cmd_models(_args) -> int:
+_MODELS_SNAPSHOT_CODE = (
+    "import json, asyncio\n"
+    "from app.runtime.manager import get_runtime\n"
+    "rt = get_runtime(); p = rt.provider\n"
+    "async def go():\n"
+    "    online = False; models = []\n"
+    "    try: online = await p.health()\n"
+    "    except Exception: online = False\n"
+    "    if online:\n"
+    "        try: models = await rt.list_models(use_cache=False)\n"
+    "        except Exception: models = []\n"
+    "    return online, models\n"
+    "online, models = asyncio.run(go())\n"
+    "print(json.dumps({'provider': getattr(p,'name','runtime'), 'label': getattr(p,'label','Runtime'),\n"
+    "  'supports_pull': bool(p.capabilities().get('supports_pull', False)),\n"
+    "  'setup_hint': getattr(p,'setup_hint','') or None, 'online': online, 'models': models}))\n"
+)
+
+
+def _models_snapshot(port: int) -> dict | None:
+    """Active-provider model list via the Runtime Manager.
+
+    Prefers the running backend (its shared RuntimeClient); falls back to running
+    the Runtime Manager in-process through the backend interpreter. Never queries
+    a provider API directly and never assumes Ollama.
+    """
+    if process.is_up(port):
+        try:
+            info = _get_json(f"http://127.0.0.1:{port}/api/providers")
+            active = next((p for p in info.get("providers", []) if p.get("is_default")), {})
+            data = _get_json(f"http://127.0.0.1:{port}/api/models")
+            models = [m["name"] for m in data.get("models", []) if m.get("name")]
+            return {
+                "label": active.get("label", "Runtime"),
+                "supports_pull": bool(active.get("supports_pull")),
+                "setup_hint": active.get("setup_hint"),
+                "online": not data.get("error"),
+                "models": models,
+            }
+        except Exception:  # noqa: BLE001 - fall through to in-process
+            pass
+    # Backend not running — use the Runtime Manager in-process.
+    import json as _json
+    import os as _os
+
+    env = dict(_os.environ)
+    env["PYTHONPATH"] = str(paths.backend_dir()) + _os.pathsep + env.get("PYTHONPATH", "")
     try:
-        data = _get_json("http://localhost:11434/api/tags")
-        installed = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
-    except Exception:
-        print(red("Ollama is not reachable. Start it with: ollama serve"))
-        installed = []
-    print(bold("\nInstalled models"))
+        proc = subprocess.run(
+            [paths.backend_python(), "-c", _MODELS_SNAPSHOT_CODE],
+            cwd=str(paths.backend_dir()), env=env, capture_output=True, text=True, timeout=30,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return _json.loads(proc.stdout.strip().splitlines()[-1])
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def cmd_models(_args) -> int:
+    snap = _models_snapshot(getattr(_args, "port", 8000))
+    if snap is None:
+        print(red("Could not reach the runtime. Start RedForge (redforge start) or check: redforge doctor"))
+        return 1
+
+    label = snap.get("label", "Runtime")
+    installed = snap.get("models", [])
+    print(bold(f"\nModels · {label}"))
+    if not snap.get("online"):
+        print(red(f"  {label} is not reachable."))
+        if snap.get("setup_hint"):
+            print(dim("  ") + snap["setup_hint"])
+        return 1
     if installed:
         for m in installed:
             print(f"  {green('✓')} {m}")
     else:
-        print(dim("  (none)"))
-    print(bold("\nRecommended"))
-    for m in RECOMMENDED_MODELS:
-        mark = green("✓") if m in installed else dim("○")
-        print(f"  {mark} {m:<12} {dim('ollama pull ' + m)}")
+        print(dim("  (no models available)"))
+
+    # Only providers that can download models get pull suggestions.
+    if snap.get("supports_pull"):
+        print(bold("\nRecommended (download with your runtime)"))
+        for m in RECOMMENDED_MODELS:
+            mark = green("✓") if m in installed else dim("○")
+            print(f"  {mark} {m:<14} {dim('ollama pull ' + m)}")
+    elif not installed:
+        print(dim("\n  Load a model into your runtime, then re-run: redforge models"))
     return 0
 
 

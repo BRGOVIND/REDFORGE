@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/BRGOVIND/REDFORGE/releases"><img src="https://img.shields.io/badge/version-1.0.0-red" alt="Version"/></a>
+  <a href="https://github.com/BRGOVIND/REDFORGE/releases"><img src="https://img.shields.io/badge/version-1.2.0-red" alt="Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-yellow" alt="Python 3.11+"/>
-  <img src="https://img.shields.io/badge/tests-260%20passing-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/tests-369%20passing-brightgreen" alt="Tests"/>
   <a href="https://redforgelabs.vercel.app"><img src="https://img.shields.io/badge/website-redforgelabs.vercel.app-orange" alt="Website"/></a>
 </p>
 Everything runs on your own machine by default. Nothing is sent to a cloud API
@@ -25,13 +25,12 @@ unless you explicitly configure a cloud provider.
 > centralized System Health Engine. End users need only **Python 3.11+** and a
 > local runtime such as **Ollama**. Node.js is a development-only dependency.
 > See [docs/providers.md](docs/providers.md) to use a different provider.
-(feat: release RedForge v1.2.0)
 
 ---
 
 ## What is this?
 
-RedForge points a library of adversarial attacks at any LLM you run through [Ollama](https://ollama.com), watches how the model holds up, and hands you a structured security report — overall score, category breakdowns, ranked vulnerabilities, and recommendations.
+RedForge points a library of adversarial attacks at any LLM you serve through a local runtime — [Ollama](https://ollama.com) (the recommended default), LM Studio, llama.cpp, or vLLM — watches how the model holds up, and hands you a structured security report: overall score, category breakdowns, ranked vulnerabilities, and recommendations.
 
 **Everything is local.** No cloud, no API keys, nothing leaves your device. If your model folds under a prompt injection, only you will know.
 
@@ -49,15 +48,15 @@ RedForge points a library of adversarial attacks at any LLM you run through [Oll
 - 📄 **Exportable reports** — executive summary, scores, findings, recommendations, as JSON / Markdown / PDF
 - 💾 **Resumable sessions** — survive page refreshes *and* backend restarts; pause, resume, cancel
 - 🏆 **Leaderboard & history** — rank your models and track score changes over time
-- 🔌 **Unified runtime** — streaming, per-model queue, cancellation, retries, metrics. Provider-agnostic by design; Ollama today
+- 🔌 **Multi-provider runtime** — one client for streaming, per-model queue, cancellation, retries, metrics. Nine providers: Ollama (default), LM Studio, llama.cpp, vLLM, OpenAI, Anthropic, Gemini, Groq, OpenRouter
 
 ---
 
 ## 🚀 Quick start
 
-You need exactly two things: **Python 3.11+** and **Ollama**. (Node.js is only for development.)
+You need **Python 3.11+** and one local **runtime**. Ollama is the recommended default; LM Studio, llama.cpp, and vLLM also work (see [docs/providers.md](docs/providers.md)). Node.js is only for development.
 
-**1. Install [Ollama](https://ollama.com/download) and pull a model:**
+**1. Install a runtime — [Ollama](https://ollama.com/download) is easiest — and pull a model:**
 
 ```bash
 ollama pull qwen3:8b     # or llama3, gemma, mistral — anything works
@@ -86,7 +85,7 @@ More detail in [docs/quickstart.md](docs/quickstart.md) and [docs/installation.m
 
 ## 🛠️ Install from source (developers)
 
-Requires Python 3.11+, Node.js, Git, and Ollama.
+Requires Python 3.11+, Node.js, Git, and a local runtime (Ollama recommended).
 
 ```bash
 git clone https://github.com/BRGOVIND/REDFORGE.git
@@ -105,7 +104,7 @@ redforge start --dev
 Building release artifacts:
 
 ```bash
-python scripts/build_release.py   # → redforge-1.0.0.zip / .tar.gz, self-contained, no Node.js needed to run
+python scripts/build_release.py   # → redforge-<version>.zip / .tar.gz, self-contained, no Node.js needed to run
 ```
 
 ---
@@ -120,7 +119,7 @@ Pure Python standard library — no extra dependencies.
 | `redforge stop` | Stop it |
 | `redforge status` | Running state, sessions, models |
 | `redforge doctor` | Full environment health check |
-| `redforge models` | List available Ollama models |
+| `redforge models` | List models from the active runtime provider |
 | `redforge evaluate <model> <profile>` | Run an evaluation from the terminal |
 | `redforge benchmark <model>` | Run RedForge-Bench-V1 |
 | `redforge logs` | Tail the logs |
@@ -158,18 +157,18 @@ Errors come back in a structured envelope: `{success, error: {code, message, det
 
 ## 🏗️ Architecture
 
-One FastAPI process serves both the API and the built React dashboard. SQLite underneath. Ollama does the model serving.
+One FastAPI process serves both the API and the built React dashboard. SQLite underneath. A local runtime (Ollama by default) does the model serving.
 
 | Layer | Tech |
 |---|---|
 | API | FastAPI (async) — single process also serves the built UI (SPA catch-all + `/healthz`) |
 | Database | SQLite via SQLAlchemy 2.0 async, Alembic migrations |
-| Runtime | Unified LLM client → Ollama at `localhost:11434` |
+| Runtime | Unified multi-provider client (Ollama, LM Studio, llama.cpp, vLLM, and cloud APIs) via the Runtime Manager |
 | Frontend | React 18, TypeScript, Vite, Tailwind, Recharts |
 | CLI | Python standard library only |
 
 ```
-backend/     FastAPI app, runtime, evaluation engine, tests (260 tests)
+backend/     FastAPI app, runtime, evaluation engine, tests (369 tests)
 frontend/    React dashboard (Vite)
 website/     Marketing site (Vite) — deployed to Vercel
 cli/         redforge CLI (stdlib Python)
@@ -207,7 +206,7 @@ RedForge is **localhost-only, single-user, and unauthenticated by design** — i
 Issues and PRs are welcome. If you're adding attacks or benchmark cases, keep them in `datasets/` and make sure the test suite stays green:
 
 ```bash
-cd backend && pytest    # 260 tests, in-memory SQLite
+cd backend && pytest    # 369 tests, in-memory SQLite
 ```
 
 ---

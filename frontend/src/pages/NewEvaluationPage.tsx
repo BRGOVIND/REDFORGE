@@ -93,7 +93,7 @@ export default function NewEvaluationPage() {
                 <EmptyState
                   icon={<Cpu size={26} />}
                   title="No models found"
-                  description={models.data?.error ?? 'Pull a model with `ollama pull llama3` and refresh.'}
+                  description={models.data?.error ?? 'Add a model to your runtime (for Ollama: `ollama pull llama3`), then refresh.'}
                 />
               ) : (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

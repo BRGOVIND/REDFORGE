@@ -41,7 +41,12 @@ async function exists(url: string): Promise<boolean> {
   }
 }
 
-const REQUIREMENTS = ['Python 3.11+', 'Ollama', 'Windows / Linux / macOS', 'Local AI models'];
+const REQUIREMENTS = [
+  'Python 3.11+',
+  'A local runtime (Ollama, LM Studio, llama.cpp, or vLLM)',
+  'Windows / Linux / macOS',
+  'Local AI models',
+];
 
 export function Download() {
   const [os, setOs] = useState<OS>('other');

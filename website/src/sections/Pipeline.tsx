@@ -4,7 +4,7 @@ import { SectionLabel } from '../components/marks';
 import { cn, clamp } from '../lib/cn';
 
 const STAGES = [
-  { k: 'Model', icon: Cpu, d: 'Point RedForge at any model you have pulled in Ollama. Nothing is downloaded, nothing is sent away.' },
+  { k: 'Model', icon: Cpu, d: 'Point RedForge at any model served by your local runtime — Ollama, LM Studio, llama.cpp, or vLLM. Nothing is sent away.' },
   { k: 'Planner', icon: Brain, d: 'It profiles the model and drafts a deterministic attack plan — categories, ordering, and escalation, tuned to the target.' },
   { k: 'Attack Engine', icon: Crosshair, d: 'Adversarial prompts are fired in waves. When one is resisted, it mutates and escalates — automatically.' },
   { k: 'Judge', icon: Scale, d: 'Each response is scored — by heuristics or an LLM-as-judge — into PASS, FAIL, or UNCERTAIN, with a reason.' },

@@ -190,6 +190,8 @@ class LMStudioProvider(OpenAICompatibleProvider):
     name = "lmstudio"
     label = "LM Studio"
     default_base_url = "http://localhost:1234"
+    docs_url = "https://lmstudio.ai"
+    setup_hint = "Start LM Studio's local server (Developer tab → Start Server, port 1234)"
 
 
 class LlamaCppProvider(OpenAICompatibleProvider):
@@ -198,6 +200,8 @@ class LlamaCppProvider(OpenAICompatibleProvider):
     name = "llamacpp"
     label = "llama.cpp"
     default_base_url = "http://localhost:8080"
+    docs_url = "https://github.com/ggml-org/llama.cpp"
+    setup_hint = "Run llama-server with a model (default port 8080)"
 
 
 class VLLMProvider(OpenAICompatibleProvider):
@@ -206,6 +210,8 @@ class VLLMProvider(OpenAICompatibleProvider):
     name = "vllm"
     label = "vLLM"
     default_base_url = "http://localhost:8000"
+    docs_url = "https://docs.vllm.ai/en/latest/getting_started/quickstart.html"
+    setup_hint = "Start vLLM's OpenAI-compatible server (default port 8000)"
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +223,8 @@ class OpenAIProvider(OpenAICompatibleProvider):
     label = "OpenAI"
     default_base_url = "https://api.openai.com"
     api_key_env = "OPENAI_API_KEY"
+    docs_url = "https://platform.openai.com/api-keys"
+    setup_hint = "Set your OPENAI_API_KEY environment variable"
 
 
 class GroqProvider(OpenAICompatibleProvider):
@@ -224,6 +232,8 @@ class GroqProvider(OpenAICompatibleProvider):
     label = "Groq"
     default_base_url = "https://api.groq.com/openai"
     api_key_env = "GROQ_API_KEY"
+    docs_url = "https://console.groq.com/keys"
+    setup_hint = "Set your GROQ_API_KEY environment variable"
 
 
 class OpenRouterProvider(OpenAICompatibleProvider):
@@ -232,3 +242,5 @@ class OpenRouterProvider(OpenAICompatibleProvider):
     default_base_url = "https://openrouter.ai/api"
     api_key_env = "OPENROUTER_API_KEY"
     extra_headers = {"HTTP-Referer": "https://redforge.local", "X-Title": "RedForge"}
+    docs_url = "https://openrouter.ai/keys"
+    setup_hint = "Set your OPENROUTER_API_KEY environment variable"

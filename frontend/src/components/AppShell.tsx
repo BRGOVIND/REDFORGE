@@ -11,7 +11,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
-import { useModels } from '../hooks/queries';
+import { useModels, useProviders } from '../hooks/queries';
 
 interface NavItem {
   to: string;
@@ -33,7 +33,13 @@ const NAV: NavItem[] = [
 
 function SystemStatus() {
   const { data, isError } = useModels();
+  const providers = useProviders();
   const online = !isError && !data?.error;
+  // Show the active runtime provider (from the Runtime Manager), not a hardcode.
+  const providerLabel =
+    providers.data?.providers.find((p) => p.is_default)?.label ??
+    providers.data?.default ??
+    'Runtime';
   return (
     <NavLink
       to="/setup"
@@ -47,7 +53,7 @@ function SystemStatus() {
           online && 'animate-pulse-dot'
         )}
       />
-      {online ? `Ollama · ${data?.models?.length ?? 0} models` : 'Setup required'}
+      {online ? `${providerLabel} · ${data?.models?.length ?? 0} models` : 'Setup required'}
     </NavLink>
   );
 }

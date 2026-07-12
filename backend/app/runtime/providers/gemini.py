@@ -40,6 +40,8 @@ class GeminiProvider(HttpProvider):
     label = "Gemini"
     default_base_url = "https://generativelanguage.googleapis.com"
     api_key_env = "GEMINI_API_KEY"
+    docs_url = "https://aistudio.google.com/app/apikey"
+    setup_hint = "Set your GEMINI_API_KEY environment variable"
 
     # The models list reports display name, description, and token limits.
     supports_metadata = True

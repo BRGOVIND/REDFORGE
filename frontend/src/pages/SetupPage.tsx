@@ -17,12 +17,11 @@ import { cn } from '../lib/cn';
 import type { CheckStatus, SystemCheck } from '../api/types';
 
 const EXPECTED: { key: string; label: string }[] = [
-  { key: 'ollama_installed', label: 'Ollama Installed' },
-  { key: 'ollama_running', label: 'Ollama Running' },
+  { key: 'runtime_running', label: 'Runtime Provider' },
   { key: 'gpu', label: 'GPU Detected' },
-  { key: 'database', label: 'SQLite Ready' },
+  { key: 'database', label: 'Database Ready' },
   { key: 'dataset', label: 'Dataset Loaded' },
-  { key: 'models', label: 'Models Installed' },
+  { key: 'models', label: 'Models Available' },
 ];
 
 function StatusIcon({ status }: { status: CheckStatus | 'waiting' }) {
@@ -67,11 +66,11 @@ export default function SetupPage() {
   const byKey = new Map<string, SystemCheck>((data?.checks ?? []).map((c) => [c.key, c]));
   const rows = EXPECTED.map((e) => ({ ...e, check: byKey.get(e.key) }));
 
-  const get = (key: string) => byKey.get(key);
-  const ollamaInstalled = get('ollama_installed')?.status === 'ok';
-  const ollamaRunning = get('ollama_running')?.status === 'ok';
-  const hasModels = get('models')?.status === 'ok';
+  const provider = data?.provider;
+  const runtimeReady = provider?.reachable ?? false;
+  const hasModels = byKey.get('models')?.status === 'ok';
   const ready = data?.ready ?? false;
+  const needsApiKey = !!provider?.requires_api_key && !provider?.api_key_present;
 
   const launch = () => {
     localStorage.setItem('redforge_launched', '1');
@@ -126,43 +125,55 @@ export default function SetupPage() {
         </ul>
       </Card>
 
-      {/* Guidance */}
+      {/* Guidance — always driven by the ACTIVE provider */}
       <div className="mt-5 space-y-5">
-        {data && !ollamaInstalled && (
+        {data && provider && !runtimeReady && (
           <Card className="p-5">
-            <h3 className="text-sm font-semibold text-content">Install Ollama</h3>
+            <h3 className="text-sm font-semibold text-content">
+              {needsApiKey ? `Add your ${provider.label} API key` : `Start a runtime`}
+            </h3>
             <p className="mt-1 text-sm text-content-muted">
-              RedForge runs models locally through Ollama. Install it, then this page updates on its own.
+              {needsApiKey
+                ? `RedForge is set to use ${provider.label}. Set its API key, then this page updates on its own.`
+                : `RedForge is set to use ${provider.label} but it isn't reachable yet. Supported runtimes: Ollama (recommended), LM Studio, llama.cpp, vLLM.`}
             </p>
-            <a href={data.ollama_download_url} target="_blank" rel="noreferrer" className="mt-3 inline-block">
-              <Button>
-                <Download size={16} /> Download Ollama
-              </Button>
-            </a>
+            {provider.setup_hint && !needsApiKey && (
+              <div className="mt-3">
+                <CopyRow command={provider.setup_hint} />
+              </div>
+            )}
+            {provider.docs_url && (
+              <a href={provider.docs_url} target="_blank" rel="noreferrer" className="mt-3 inline-block">
+                <Button>
+                  <Download size={16} /> {needsApiKey ? `Get a ${provider.label} key` : `Set up ${provider.label}`}
+                </Button>
+              </a>
+            )}
           </Card>
         )}
 
-        {data && ollamaInstalled && !ollamaRunning && (
+        {data && provider && runtimeReady && !hasModels && (
           <Card className="p-5">
-            <h3 className="text-sm font-semibold text-content">Start Ollama</h3>
+            <h3 className="text-sm font-semibold text-content">Add a model</h3>
             <p className="mb-3 mt-1 text-sm text-content-muted">
-              Ollama is installed but not running. Start it, then come back — the check flips to green automatically.
+              {provider.supports_pull
+                ? `You'll need at least one model. Download one with ${provider.label}:`
+                : `Load at least one model into ${provider.label}, then come back.`}
             </p>
-            <CopyRow command={get('ollama_running')?.hint || 'ollama serve'} />
-          </Card>
-        )}
-
-        {data && ollamaRunning && !hasModels && (
-          <Card className="p-5">
-            <h3 className="text-sm font-semibold text-content">Pull a model</h3>
-            <p className="mb-3 mt-1 text-sm text-content-muted">
-              You'll need at least one model. These are good places to start:
-            </p>
-            <div className="space-y-2">
-              {data.recommended_models.map((m) => (
-                <CopyRow key={m} command={`ollama pull ${m}`} />
-              ))}
-            </div>
+            {provider.supports_pull && (
+              <div className="space-y-2">
+                {data.recommended_models.map((m) => (
+                  <CopyRow key={m} command={`ollama pull ${m}`} />
+                ))}
+              </div>
+            )}
+            {!provider.supports_pull && provider.docs_url && (
+              <a href={provider.docs_url} target="_blank" rel="noreferrer">
+                <Button variant="secondary" size="sm">
+                  {provider.label} docs
+                </Button>
+              </a>
+            )}
           </Card>
         )}
       </div>

@@ -94,11 +94,14 @@ def recommend_runtime(providers: list[dict], default: str) -> dict:
     ]
     for name in ordered:
         if name in by_name:
+            info = by_name[name]
+            label = info.get("label", name)
+            hint = info.get("setup_hint") or f"Start {label}, then re-scan."
             return {
                 "provider": name,
                 "state": "not_running",
-                "reason": f"{by_name[name].get('label', name)} is registered but not running.",
-                "action": f"Start {name} (e.g. `ollama serve` for Ollama), then re-scan.",
+                "reason": f"{label} is registered but not running.",
+                "action": hint,
             }
     return {
         "provider": default,

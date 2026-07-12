@@ -4,7 +4,7 @@ import { SectionLabel } from '../components/marks';
 const PRINCIPLES = [
   {
     k: 'Local by default',
-    v: 'Every model runs through Ollama on your machine. Prompts, responses, and findings never leave it — there is no server to trust and no API key to leak.',
+    v: 'Every model runs through a local runtime on your machine — Ollama, LM Studio, llama.cpp, or vLLM. Prompts, responses, and findings never leave it: no server to trust, no API key to leak.',
   },
   {
     k: 'You own the data',
@@ -36,8 +36,8 @@ export function About() {
           <Reveal delay={240}>
             <p className="mt-8 max-w-md text-[15px] leading-relaxed text-steel-300">
               RedForge is a local red-teaming laboratory for large language models. It ships a
-              library of adversarial attacks and a benchmark, runs them against any model you have
-              pulled in Ollama, scores the responses, and reports where the model breaks.
+              library of adversarial attacks and a benchmark, runs them against any model served by
+              your local runtime, scores the responses, and reports where the model breaks.
             </p>
           </Reveal>
           <Reveal delay={320}>

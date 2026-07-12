@@ -72,7 +72,7 @@ export default function DashboardPage() {
             <Stat
               label="Installed Models"
               value={models.data?.models?.length ?? 0}
-              hint={models.data?.error ? 'Ollama offline' : 'via Ollama'}
+              hint={models.data?.error ? 'runtime offline' : 'via your runtime'}
               icon={<Cpu size={13} />}
             />
           )}

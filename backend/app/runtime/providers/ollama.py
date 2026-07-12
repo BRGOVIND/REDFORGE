@@ -20,6 +20,9 @@ from app.runtime.transport import map_transport_error
 
 class OllamaProvider(Provider):
     name = "ollama"
+    label = "Ollama"
+    docs_url = "https://ollama.com/download"
+    setup_hint = "Start Ollama with: ollama serve"
 
     # Ollama is the richest local provider: full metadata, context length via
     # /api/show, model deletion via /api/delete, and pull via /api/pull.

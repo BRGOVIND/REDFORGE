@@ -8,13 +8,21 @@ export function Hero({ started }: { started: boolean }) {
 
   const wordStyle = (i: number): React.CSSProperties => ({
     opacity: started ? 1 : 0,
-    transform: started ? 'none' : 'translateY(28px)',
+    transform: started ? 'translate3d(0,0,0)' : 'translate3d(0,28px,0)',
     filter: started ? 'blur(0)' : 'blur(8px)',
     transition: `opacity 1s cubic-bezier(0.16,1,0.3,1) ${300 + i * 90}ms, transform 1s cubic-bezier(0.16,1,0.3,1) ${300 + i * 90}ms, filter 1s ease ${300 + i * 90}ms`,
+    // GPU-composite the entrance so the blur/translate doesn't flicker.
+    willChange: 'transform, opacity, filter',
+    backfaceVisibility: 'hidden',
   });
 
   return (
-    <section id="top" className="relative flex min-h-screen items-center overflow-hidden">
+    // pt clears the fixed navbar so the centered title never underlaps it on the
+    // first paint (no layout shift); 100svh avoids the mobile URL-bar resize jump.
+    <section
+      id="top"
+      className="relative flex min-h-screen min-h-[100svh] items-center overflow-hidden pt-16"
+    >
       <Parallax distance={120} className="pointer-events-none absolute inset-0">
         <div className="blueprint-grid absolute inset-0 opacity-50" />
         <div
@@ -58,7 +66,7 @@ export function Hero({ started }: { started: boolean }) {
           <span className="mt-1 h-10 w-px shrink-0 bg-forge" />
           <p className="text-[15px] leading-relaxed text-steel-200 sm:text-base">
             A red-teaming laboratory that lives on your machine. Throw thousands of adversarial
-            prompts at any Ollama model and watch exactly where it breaks — before someone else finds out.
+            prompts at any local model and watch exactly where it breaks — before someone else finds out.
           </p>
         </div>
       </div>

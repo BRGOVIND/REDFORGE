@@ -17,45 +17,58 @@ It answers two questions for a new user:
 `GET /api/system/checks` (`app/api/system.py`) returns, cross-platform and fast
 (short Ollama timeout so it can be polled):
 
+The checks report the **active runtime provider** (via the Runtime Manager), so
+switching providers switches what is reported and how to fix it — nothing here
+assumes Ollama.
+
 ```jsonc
 {
   "ready": false,
   "platform": "Windows",
+  "provider": {
+    "name": "ollama", "label": "Ollama", "base_url": "http://localhost:11434",
+    "reachable": false, "requires_api_key": false, "api_key_present": false,
+    "supports_pull": true, "docs_url": "https://ollama.com/download",
+    "setup_hint": "Start Ollama with: ollama serve"
+  },
   "checks": [
-    { "key": "ollama_installed", "label": "Ollama Installed", "status": "ok",      "detail": "C:\\...\\ollama.exe", "hint": "" },
-    { "key": "ollama_running",   "label": "Ollama Running",   "status": "failed",  "detail": "not reachable…",      "hint": "ollama serve" },
-    { "key": "gpu",              "label": "GPU Detected",     "status": "ok",      "detail": "NVIDIA RTX 4060" },
-    { "key": "database",         "label": "SQLite Ready",     "status": "ok" },
-    { "key": "dataset",          "label": "Dataset Loaded",   "status": "ok",      "detail": "28 attacks · 800 benchmark cases" },
-    { "key": "models",           "label": "Models Installed", "status": "warning", "detail": "no models pulled yet" }
+    { "key": "runtime_running", "label": "Runtime Provider", "status": "failed",  "detail": "Ollama not reachable…", "hint": "Start Ollama with: ollama serve" },
+    { "key": "gpu",             "label": "GPU Detected",     "status": "ok",      "detail": "NVIDIA RTX 4060" },
+    { "key": "database",        "label": "Database Ready",   "status": "ok" },
+    { "key": "dataset",         "label": "Dataset Loaded",   "status": "ok",      "detail": "28 attacks · 800 benchmark cases" },
+    { "key": "models",          "label": "Models Available", "status": "failed",  "detail": "no models available yet" }
   ],
   "installed_models": [],
-  "recommended_models": ["qwen3:8b", "gemma", "llama3", "mistral"],
-  "ollama_download_url": "https://ollama.com/download"
+  "recommended_models": ["llama3.2:3b", "llama3.1:8b", "mistral:7b", "qwen2.5:7b"]
 }
 ```
 
-- **Ollama installed** — `shutil.which("ollama")` (cross-platform).
-- **Ollama running / reachable** — a 2.5s `GET localhost:11434/api/tags`.
-- **Models installed** — from the same call; `warning` if none, `failed` if Ollama is unreachable.
-- **GPU** — `resource_monitor.detect_gpu()` (NVIDIA / Apple Metal); `warning` only, never blocks.
+- **Runtime Provider** — the active provider's `health()` (via `get_runtime()`);
+  the fix (`setup_hint`) and links (`docs_url`) come from the provider class, so
+  they are correct whether the provider is Ollama, LM Studio, llama.cpp, or vLLM.
+  Cloud providers report "API key not set" when their key is missing.
+- **Models Available** — `runtime.list_models()` on the active provider;
+  `warning` if none while reachable, `failed` if the provider is unreachable.
+- **GPU** — `resource_monitor.detect_gpu()` (NVIDIA / Apple Metal); advisory only.
 - **Database** — a live `COUNT` against the attack table.
 - **Dataset** — attack library seeded **and** RedForge-Bench-V1 loads.
 
-`ready` is `true` only when the blocking checks (`ollama_installed`,
-`ollama_running`, `database`, `dataset`, `models`) are all `ok`. GPU is advisory.
+`recommended_models` is populated only for providers that can download models
+(`supports_pull`). `ready` is `true` only when the blocking checks
+(`runtime_running`, `database`, `dataset`, `models`) are all `ok`; GPU is advisory.
 
 ### The wizard (`frontend/src/pages/SetupPage.tsx`, route `/setup`)
 
 - Polls `useSystemChecks()` every 2.5s, so each row animates **○ waiting →
-  ✓ success / ⚠ warning / ✕ failed** as the user fixes things (start Ollama, pull
-  a model) — no refresh needed.
-- Renders context-sensitive guidance:
-  - Ollama missing → **Download Ollama** button.
-  - Installed but not running → platform-specific start command (`ollama serve`,
-    or `systemctl start ollama` on Linux) with a copy button.
-  - No models → **recommended models** (`qwen3:8b`, `gemma`, `llama3`, `mistral`)
-    each with a one-click `ollama pull …` copy button.
+  ✓ success / ⚠ warning / ✕ failed** as the user fixes things (start the runtime,
+  add a model) — no refresh needed.
+- Renders context-sensitive guidance driven by the **active provider** (its
+  `setup_hint` / `docs_url` come from the provider class, never hardcoded):
+  - Runtime not reachable → **Set up `<provider>`** with the provider's start
+    hint (e.g. `ollama serve`) and a docs/download link. Cloud providers instead
+    prompt to set their API key.
+  - No models, provider supports downloads → recommended models with a copy
+    button; providers without a pull API show import guidance instead.
 - When everything is green → **System Ready · Launch RedForge**.
 
 **First launch** is detected with a `redforge_launched` localStorage flag: the app

@@ -26,6 +26,8 @@ class AnthropicProvider(HttpProvider):
     label = "Anthropic"
     default_base_url = "https://api.anthropic.com"
     api_key_env = "ANTHROPIC_API_KEY"
+    docs_url = "https://console.anthropic.com/settings/keys"
+    setup_hint = "Set your ANTHROPIC_API_KEY environment variable"
 
     # The models list reports display names / creation dates.
     supports_metadata = True

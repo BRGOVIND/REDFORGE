@@ -5,7 +5,7 @@ import { SectionLabel } from '../components/marks';
 const STEPS = [
   { icon: Download, k: 'Download', v: 'Grab the release for your OS.', cmd: 'RedForge-Setup.exe / AppImage' },
   { icon: Package, k: 'Install', v: 'One command installs the Python side.', cmd: 'install.cmd  ·  ./install.sh' },
-  { icon: Server, k: 'Start Ollama', v: 'Your models run locally through Ollama.', cmd: 'ollama serve' },
+  { icon: Server, k: 'Start your runtime', v: 'Models run locally through Ollama (recommended), LM Studio, llama.cpp, or vLLM.', cmd: 'ollama serve' },
   { icon: TerminalSquare, k: 'Run RedForge', v: 'A single process — no Node.js.', cmd: 'redforge start' },
   { icon: Globe, k: 'Browser opens', v: 'Onboarding begins automatically.', cmd: 'localhost:8000' },
   { icon: Play, k: 'Run evaluation', v: 'Pick a model and a profile. Done.', cmd: '→ security report' },
@@ -51,7 +51,8 @@ export function InstallSteps() {
         <Reveal delay={120}>
           <p className="mt-14 text-center text-sm text-steel-400">
             Requires only <span className="text-bone">Python 3.11+</span> and{' '}
-            <span className="text-bone">Ollama</span>. Node.js is never needed to run.
+            <span className="text-bone">one supported runtime</span> (Ollama, LM Studio, llama.cpp,
+            or vLLM). Node.js is never needed to run.
           </p>
         </Reveal>
       </div>

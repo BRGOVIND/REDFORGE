@@ -21,7 +21,8 @@ machine by default. No cloud and no API keys unless you opt into a cloud provide
 
 1. **Get the release** for your OS (or `git clone` for developers).
 2. **Install:** `install.cmd` (Windows) or `./install.sh` (Linux/macOS).
-   Requires Python 3.11+ and [Ollama](https://ollama.com/download).
+   Requires Python 3.11+ and a local runtime — [Ollama](https://ollama.com/download)
+   is the recommended default (LM Studio, llama.cpp, and vLLM also work).
 3. **Start:** `start.cmd` / `./start.sh` — your browser opens automatically.
 
 Then follow the on-screen setup, pull a model if prompted (`ollama pull qwen3:8b`),
@@ -34,7 +35,8 @@ and run your first evaluation.
 - Security reports with findings, recommendations, and export (JSON / Markdown / PDF).
 
 ## Requirements
-- **Python 3.11+** and **Ollama**. Node.js is **not** required to run.
+- **Python 3.11+** and one local **runtime** — Ollama (recommended), LM Studio,
+  llama.cpp, or vLLM. Node.js is **not** required to run.
 
 ## Known limitations
 - macOS: runs from the `.tar.gz`; a signed `.dmg` is planned.
