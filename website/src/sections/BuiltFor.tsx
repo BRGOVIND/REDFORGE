@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 import { cn } from '../lib/cn';
 
 const AUDIENCES = [
@@ -17,10 +15,7 @@ export function BuiltFor() {
   return (
     <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
-        <Reveal>
-          <SectionLabel>Built For</SectionLabel>
-        </Reveal>
-        <div className="mt-10 grid grid-cols-1 gap-12 sm:mt-12 lg:grid-cols-12 lg:gap-16">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <ul className="flex flex-col">
               {AUDIENCES.map((a, i) => (

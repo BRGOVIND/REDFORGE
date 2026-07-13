@@ -1,6 +1,5 @@
 import { Download, Globe, Package, Play, Server, TerminalSquare } from 'lucide-react';
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 const STEPS = [
   { icon: Download, k: 'Download', v: 'Grab the release for your OS.', cmd: 'RedForge-Setup.exe / AppImage' },
@@ -16,11 +15,8 @@ export function InstallSteps() {
     <section id="install" className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-30" />
       <div className="relative mx-auto max-w-editorial px-6 sm:px-10">
-        <Reveal>
-          <SectionLabel>Installation</SectionLabel>
-        </Reveal>
         <Reveal delay={120}>
-          <h2 className="display mt-8 max-w-2xl text-5xl text-bone sm:text-6xl">
+          <h2 className="display max-w-2xl text-5xl text-bone sm:text-6xl">
             From download to first report<span className="text-forge">.</span>
           </h2>
         </Reveal>
@@ -29,7 +25,7 @@ export function InstallSteps() {
         <div className="relative mt-16 border-l border-steel-700 pl-8 sm:pl-10">
           <div
             className="absolute left-0 top-0 h-full w-px"
-            style={{ background: 'linear-gradient(180deg, #FF7A45, #E5484D 50%, transparent)' }}
+            style={{ background: 'linear-gradient(180deg, #D12A2A, #A11212 50%, transparent)' }}
           />
           {STEPS.map((s, i) => {
             const Icon = s.icon;

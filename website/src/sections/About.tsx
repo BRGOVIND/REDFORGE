@@ -1,5 +1,4 @@
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 const PRINCIPLES = [
   {
@@ -21,11 +20,8 @@ export function About() {
     <section id="about" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
-          <Reveal>
-            <SectionLabel>About RedForge</SectionLabel>
-          </Reveal>
           <Reveal delay={120}>
-            <h2 className="display mt-8 text-5xl leading-[1.02] text-bone sm:text-6xl">
+            <h2 className="display text-5xl leading-[1.02] text-bone sm:text-6xl">
               A security lab
               <br />
               that never leaves

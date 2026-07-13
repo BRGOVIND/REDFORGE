@@ -12,7 +12,7 @@ export function Local() {
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden border-t border-steel-800">
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[160px]"
-          style={{ background: 'radial-gradient(circle, rgba(229,72,77,0.12), transparent 60%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(90,0,0,0.16), transparent 60%)' }}
         />
         <div className="relative text-center">
           {LINES.map((line, i) => (

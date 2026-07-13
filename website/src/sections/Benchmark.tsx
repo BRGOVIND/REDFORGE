@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Reveal, useInView } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 function CountUp({ to, duration = 1600 }: { to: number; duration?: number }) {
   const [ref, inView] = useInView<HTMLSpanElement>({ once: true });
@@ -32,11 +31,8 @@ export function Benchmark() {
     <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
-          <Reveal>
-            <SectionLabel>Benchmark Engine</SectionLabel>
-          </Reveal>
           <Reveal delay={120}>
-            <div className="mt-10 display leading-none text-bone">
+            <div className="display leading-none text-bone">
               <span className="block text-[24vw] text-ember-gradient sm:text-[13vw] lg:text-[11vw]">
                 <CountUp to={800} />
               </span>

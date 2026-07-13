@@ -10,7 +10,6 @@ import {
   ScrollText,
 } from 'lucide-react';
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 import {
   CHECKSUMS_URL,
   DOWNLOAD_BASE_URL,
@@ -68,11 +67,8 @@ export function Download() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           {/* Primary download */}
           <div className="lg:col-span-6">
-            <Reveal>
-              <SectionLabel>Download</SectionLabel>
-            </Reveal>
             <Reveal delay={120}>
-              <h2 className="display mt-8 text-5xl text-bone sm:text-6xl lg:text-7xl">
+              <h2 className="display text-5xl text-bone sm:text-6xl lg:text-7xl">
                 Forge it<br />yourself.
               </h2>
             </Reveal>

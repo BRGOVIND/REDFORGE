@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 import { cn } from '../lib/cn';
 
 const FAILURES = [
@@ -33,11 +32,8 @@ export function Problem() {
     <section id="problem" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-4">
-          <Reveal>
-            <SectionLabel>The Problem</SectionLabel>
-          </Reveal>
           <Reveal delay={120}>
-            <h2 className="display mt-8 text-5xl text-bone sm:text-6xl">
+            <h2 className="display text-5xl text-bone sm:text-6xl">
               Every model has a<br />
               <span className="text-ember-gradient">breaking point.</span>
             </h2>

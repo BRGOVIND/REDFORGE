@@ -25,8 +25,9 @@ machine by default. No cloud and no API keys unless you opt into a cloud provide
    is the recommended default (LM Studio, llama.cpp, and vLLM also work).
 3. **Start:** `start.cmd` / `./start.sh` — your browser opens automatically.
 
-Then follow the on-screen setup, pull a model if prompted (`ollama pull qwen3:8b`),
-and run your first evaluation.
+Then follow the on-screen setup. When prompted, install or download a model using
+your selected runtime — or let RedForge recommend and download one for you during
+onboarding — then run your first evaluation.
 
 ## What you get
 - One-command launch (`redforge start`) — a single process serving everything.

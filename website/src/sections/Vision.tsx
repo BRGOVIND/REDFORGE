@@ -1,5 +1,4 @@
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 const PRINCIPLES = [
   { k: 'No cloud', v: 'Inference never leaves the machine. There is no server to trust.' },
@@ -12,15 +11,12 @@ export function Vision() {
     <section className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div
         className="pointer-events-none absolute right-[-10%] top-0 h-[500px] w-[500px] rounded-full blur-[140px]"
-        style={{ background: 'radial-gradient(circle, rgba(229,72,77,0.10), transparent 65%)' }}
+        style={{ background: 'radial-gradient(circle, rgba(90,0,0,0.14), transparent 65%)' }}
       />
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
         <div>
-          <Reveal>
-            <SectionLabel>Why RedForge Exists</SectionLabel>
-          </Reveal>
           <Reveal delay={120}>
-            <h2 className="display mt-8 text-5xl leading-[1.02] text-bone sm:text-6xl">
+            <h2 className="display text-5xl leading-[1.02] text-bone sm:text-6xl">
               Serious security testing
               <br />
               shouldn't require

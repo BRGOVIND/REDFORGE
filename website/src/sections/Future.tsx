@@ -1,5 +1,4 @@
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 const HORIZON = [
   { k: 'Enterprise', v: 'Team workspaces, SSO, and audit trails for organizations running RedForge at scale.' },
@@ -12,11 +11,8 @@ export function Future() {
   return (
     <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
-        <Reveal>
-          <SectionLabel>The Horizon</SectionLabel>
-        </Reveal>
         <Reveal delay={120}>
-          <h2 className="display mt-8 max-w-2xl text-5xl text-bone sm:text-6xl">
+          <h2 className="display max-w-2xl text-5xl text-bone sm:text-6xl">
             What&apos;s forging next.
           </h2>
         </Reveal>

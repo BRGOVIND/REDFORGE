@@ -1,6 +1,5 @@
 import { Cpu, Brain, Crosshair, Scale, Activity, FileText } from 'lucide-react';
 import { usePinProgress } from '../motion';
-import { SectionLabel } from '../components/marks';
 import { cn, clamp } from '../lib/cn';
 
 const STAGES = [
@@ -24,8 +23,7 @@ export function Pipeline() {
         <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
           {/* Left — the active stage, cross-fading */}
           <div>
-            <SectionLabel>How RedForge Works</SectionLabel>
-            <div className="relative mt-10 h-[220px] sm:h-[280px]">
+            <div className="relative h-[220px] sm:h-[280px]">
               {STAGES.map((s, i) => (
                 <div
                   key={s.k}
@@ -52,8 +50,8 @@ export function Pipeline() {
               className="absolute left-[19px] top-3 w-px origin-top"
               style={{
                 height: `calc((100% - 24px) * ${drawn})`,
-                background: 'linear-gradient(180deg, #FF7A45, #E5484D, #B0242A)',
-                boxShadow: '0 0 12px rgba(229,72,77,0.5)',
+                background: 'linear-gradient(180deg, #D12A2A, #A11212, #5A0000)',
+                boxShadow: '0 0 12px rgba(122,0,0,0.5)',
               }}
             />
             <div className="flex flex-col gap-6 sm:gap-9">
@@ -69,7 +67,7 @@ export function Pipeline() {
                           ? 'border-forge bg-forge/10 text-forge'
                           : 'border-steel-700 bg-char text-steel-500'
                       )}
-                      style={lit ? { boxShadow: '0 0 22px -4px rgba(229,72,77,0.6)' } : undefined}
+                      style={lit ? { boxShadow: '0 0 22px -4px rgba(122,0,0,0.6)' } : undefined}
                     >
                       <Icon size={16} />
                     </span>

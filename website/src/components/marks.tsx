@@ -8,7 +8,7 @@ export function ForgeMark({ size = 28, className }: { size?: number; className?:
       <path d="M6 23 L16 28 L26 23" stroke="#55555F" strokeWidth="1.5" strokeLinecap="round" />
       <path
         d="M16 10 C13 13 13 16 16 18 C19 16 19 13 16 10 Z M16 18 C14.5 19.5 14.5 21.5 16 23 C17.5 21.5 17.5 19.5 16 18 Z"
-        fill="#E5484D"
+        fill="#A11212"
       />
     </svg>
   );

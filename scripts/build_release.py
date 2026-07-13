@@ -57,8 +57,12 @@ END_USER_DOCS = [
 ]
 
 _IGNORE = shutil.ignore_patterns(
+    # caches / build leftovers / local data
     "__pycache__", "*.pyc", "*.pyo", ".pytest_cache", "*.db",
     ".vite", "node_modules", "dist", ".mypy_cache",
+    ".venv", "venv", ".idea", ".vscode", ".DS_Store",
+    # developer-only files — never shipped to end users
+    "tests", "pytest.ini", "requirements-dev.txt", "conftest.py",
 )
 
 

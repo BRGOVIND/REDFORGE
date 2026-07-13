@@ -56,10 +56,10 @@ RedForge points a library of adversarial attacks at any LLM you serve through a 
 
 You need **Python 3.11+** and one local **runtime**. Ollama is the recommended default; LM Studio, llama.cpp, and vLLM also work (see [docs/providers.md](docs/providers.md)). Node.js is only for development.
 
-**1. Install a runtime — [Ollama](https://ollama.com/download) is easiest — and pull a model:**
+**1. Install a runtime and add a model.** [Ollama](https://ollama.com/download) is the easiest default — install it and pull a model, or choose another supported runtime (see [docs/providers.md](docs/providers.md)). RedForge can also recommend and download a model for you during onboarding.
 
 ```bash
-ollama pull qwen3:8b     # or llama3, gemma, mistral — anything works
+ollama pull qwen3:8b     # example, using the recommended default runtime
 ```
 
 **2. Get RedForge.** Grab the release for your OS from the [Download portal](https://redforgelabs.vercel.app) or [GitHub Releases](https://github.com/BRGOVIND/REDFORGE/releases), then unpack it.

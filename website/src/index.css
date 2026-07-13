@@ -38,7 +38,7 @@
   }
 
   ::selection {
-    background: rgba(229, 72, 77, 0.28);
+    background: rgba(161, 18, 18, 0.34);
     color: #fff;
   }
 
@@ -95,21 +95,21 @@
   }
 
   .text-ember-gradient {
-    background: linear-gradient(180deg, #ff7a45 0%, #e5484d 55%, #b0242a 100%);
+    background: linear-gradient(180deg, #d12a2a 0%, #a11212 55%, #5a0000 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
   }
 
   .glow-forge {
-    box-shadow: 0 0 0 1px rgba(229, 72, 77, 0.25), 0 0 40px -8px rgba(229, 72, 77, 0.45);
+    box-shadow: 0 0 0 1px rgba(161, 18, 18, 0.28), 0 0 32px -10px rgba(122, 0, 0, 0.5);
   }
 
   .focus-ring {
     outline: none;
   }
   .focus-ring:focus-visible {
-    outline: 2px solid rgba(229, 72, 77, 0.7);
+    outline: 2px solid rgba(209, 42, 42, 0.75);
     outline-offset: 3px;
   }
 }

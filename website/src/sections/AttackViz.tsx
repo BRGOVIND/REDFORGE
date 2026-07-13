@@ -1,5 +1,4 @@
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 const NODES = [
   { id: 'pi', x: 90, y: 78, label: 'Prompt Injection', delay: '0s' },
@@ -21,10 +20,7 @@ export function AttackViz() {
   return (
     <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
-        <Reveal>
-          <SectionLabel>Under Attack</SectionLabel>
-        </Reveal>
-        <div className="mt-8 grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-4">
             <Reveal delay={120}>
               <h2 className="display text-5xl text-bone sm:text-6xl">
@@ -45,9 +41,9 @@ export function AttackViz() {
               <svg viewBox="-72 0 744 400" className="w-full overflow-visible" role="img" aria-label="Attacks travelling into a model core">
                 <defs>
                   <radialGradient id="core" cx="50%" cy="50%">
-                    <stop offset="0%" stopColor="#FFD9A0" />
-                    <stop offset="45%" stopColor="#FF7A45" />
-                    <stop offset="100%" stopColor="#B0242A" />
+                    <stop offset="0%" stopColor="#D12A2A" />
+                    <stop offset="45%" stopColor="#A11212" />
+                    <stop offset="100%" stopColor="#5A0000" />
                   </radialGradient>
                 </defs>
 
@@ -57,7 +53,7 @@ export function AttackViz() {
                   return (
                     <g key={n.id}>
                       <path d={d} fill="none" stroke="#2A2A31" strokeWidth="1" />
-                      <circle r="3.5" fill="#FF7A45">
+                      <circle r="3.5" fill="#A11212">
                         <animateMotion dur="2.4s" begin={n.delay} repeatCount="indefinite" path={d} />
                         <animate attributeName="opacity" values="0;1;1;0" dur="2.4s" begin={n.delay} repeatCount="indefinite" />
                       </circle>
@@ -69,7 +65,7 @@ export function AttackViz() {
                 {NODES.map((n) => (
                   <g key={`node-${n.id}`}>
                     <circle cx={n.x} cy={n.y} r="7" fill="#0B0B0D" stroke="#3A3A42" strokeWidth="1.5" />
-                    <circle cx={n.x} cy={n.y} r="2.5" fill="#E5484D" />
+                    <circle cx={n.x} cy={n.y} r="2.5" fill="#A11212" />
                     <text
                       x={n.x < CX ? n.x - 14 : n.x + 14}
                       y={n.y + 4}
@@ -80,7 +76,7 @@ export function AttackViz() {
                       {n.label}
                     </text>
                     {/* vuln bar lighting up */}
-                    <rect x={n.x < CX ? n.x - 14 - 60 : n.x + 14} y={n.y + 12} width="0" height="3" rx="1.5" fill="#E5484D" opacity="0.7">
+                    <rect x={n.x < CX ? n.x - 14 - 60 : n.x + 14} y={n.y + 12} width="0" height="3" rx="1.5" fill="#A11212" opacity="0.7">
                       <animate attributeName="width" values="0;60;60;0" dur="4.8s" begin={n.delay} repeatCount="indefinite" />
                     </rect>
                   </g>
@@ -88,7 +84,7 @@ export function AttackViz() {
 
                 {/* core */}
                 <circle cx={CX} cy={CY} r="34" fill="url(#core)" opacity="0.9" />
-                <circle cx={CX} cy={CY} r="34" fill="none" stroke="#FF7A45" strokeWidth="1.5" opacity="0.5">
+                <circle cx={CX} cy={CY} r="34" fill="none" stroke="#A11212" strokeWidth="1.5" opacity="0.5">
                   <animate attributeName="r" values="34;52;34" dur="2.4s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.5;0;0.5" dur="2.4s" repeatCount="indefinite" />
                 </circle>

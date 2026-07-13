@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy, Terminal } from 'lucide-react';
 import { Reveal } from '../motion';
-import { SectionLabel } from '../components/marks';
 
 const COMMANDS: { cmd: string; note: string }[] = [
   { cmd: 'pip install redforge', note: 'Get the CLI (Python 3.11+).' },
@@ -56,11 +55,8 @@ export function QuickInstall() {
     >
       <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-30" />
       <div className="relative mx-auto max-w-editorial px-6 sm:px-10">
-        <Reveal>
-          <SectionLabel>Get started</SectionLabel>
-        </Reveal>
         <Reveal delay={120}>
-          <h2 id="quickstart-heading" className="display mt-8 max-w-2xl text-5xl text-bone sm:text-6xl">
+          <h2 id="quickstart-heading" className="display max-w-2xl text-5xl text-bone sm:text-6xl">
             Install in 60 seconds<span className="text-forge">.</span>
           </h2>
         </Reveal>

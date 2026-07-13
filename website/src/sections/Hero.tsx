@@ -1,5 +1,6 @@
 import { ArrowDown } from 'lucide-react';
 import { Parallax } from '../motion';
+import { HeroSilhouette } from './HeroSilhouette';
 
 /** Section 2 — Hero. Typography is the hero; whitespace does the rest. */
 export function Hero({ started }: { started: boolean }) {
@@ -34,8 +35,11 @@ export function Hero({ started }: { started: boolean }) {
       {/* faint ember bloom */}
       <div
         className="pointer-events-none absolute left-[8%] top-1/3 h-[420px] w-[420px] rounded-full blur-[120px]"
-        style={{ background: 'radial-gradient(circle, rgba(229,72,77,0.16), transparent 65%)' }}
+        style={{ background: 'radial-gradient(circle, rgba(90,0,0,0.20), transparent 65%)' }}
       />
+
+      {/* barely-visible shadow-fortress skyline — depth behind the text */}
+      <HeroSilhouette />
 
       <div className="relative mx-auto w-full max-w-editorial px-6 sm:px-10">
         <h1 className="display text-bone text-[14vw] leading-[0.92] sm:text-[12vw] lg:text-[9.5vw]">

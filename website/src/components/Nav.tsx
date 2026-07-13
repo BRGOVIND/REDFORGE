@@ -73,7 +73,7 @@ export function Nav({ visible }: { visible: boolean }) {
       <div
         className="h-px origin-left"
         style={{
-          background: 'linear-gradient(90deg, #B0242A, #E5484D, #FF7A45)',
+          background: 'linear-gradient(90deg, #5A0000, #A11212, #D12A2A)',
           transform: `scaleX(${progress})`,
           transition: 'transform 120ms linear',
         }}

@@ -64,18 +64,18 @@ export function Entry({ onDone }: { onDone: () => void }) {
         <div
           className="absolute h-px w-full origin-center"
           style={{
-            background: 'linear-gradient(90deg, transparent, #E5484D 20%, #FF7A45 50%, #E5484D 80%, transparent)',
+            background: 'linear-gradient(90deg, transparent, #A11212 20%, #D12A2A 50%, #A11212 80%, transparent)',
             transform: `scaleX(${phase >= 1 ? 1 : 0})`,
             opacity: phase >= 1 ? 1 : 0,
-            boxShadow: '0 0 24px 1px rgba(229,72,77,0.5)',
+            boxShadow: '0 0 24px 1px rgba(122,0,0,0.5)',
             transition: 'transform 1100ms cubic-bezier(0.16,1,0.3,1), opacity 700ms ease',
           }}
         />
         <div
           className="absolute h-2.5 w-2.5 rounded-full"
           style={{
-            background: 'radial-gradient(circle, #FFD9A0, #FF7A45 45%, #E5484D 75%)',
-            boxShadow: '0 0 26px 6px rgba(255,122,69,0.65)',
+            background: 'radial-gradient(circle, #D12A2A, #A11212 45%, #5A0000 75%)',
+            boxShadow: '0 0 24px 6px rgba(122,0,0,0.6)',
             opacity: phase >= 1 ? 1 : 0,
             transform: phase >= 1 ? 'scale(1)' : 'scale(0.3)',
             transition: 'opacity 600ms ease 200ms, transform 900ms cubic-bezier(0.16,1,0.3,1) 200ms',
