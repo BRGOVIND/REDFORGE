@@ -1,10 +1,12 @@
 /**
  * Download configuration — the single source of truth for the website's
- * distribution portal. Nothing here points at GitHub Releases; files are served
- * from a configurable base URL so the site is host-agnostic and version-aware.
+ * distribution portal. Assets are served directly from the **official GitHub
+ * Release** for this version's tag (`v<VERSION>`) — never proxied through Vercel.
+ * The release workflow uploads exactly the filenames below, so the buttons match
+ * the published assets 1:1.
  *
- * To point at a new host: set VITE_DOWNLOAD_BASE_URL at build time.
- * To ship a new version: bump the repo-root VERSION file — filenames follow.
+ * To mirror on a CDN: set VITE_DOWNLOAD_BASE_URL at build time.
+ * To ship a new version: bump the repo-root VERSION file — tag + filenames follow.
  */
 
 // Injected from the repo-root VERSION file at build time (see vite.config.ts).
@@ -12,14 +14,16 @@ declare const __APP_VERSION__: string;
 export const VERSION: string =
   typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
 
-// Where release artifacts are hosted. Defaults to a same-origin /downloads path;
-// override with VITE_DOWNLOAD_BASE_URL (e.g. a CDN) without touching components.
+// Repository + release host.
+export const REPO = 'https://github.com/BRGOVIND/REDFORGE';
+
+// Assets are downloaded straight from the GitHub Release for tag v<VERSION>.
+// Override with VITE_DOWNLOAD_BASE_URL (e.g. a CDN mirror) without touching components.
 const envBase = (import.meta.env as Record<string, string | undefined>)
   .VITE_DOWNLOAD_BASE_URL;
-export const DOWNLOAD_BASE_URL: string = (envBase || '/downloads').replace(/\/$/, '');
-
-// GitHub is secondary — "View Source", never the primary download destination.
-export const REPO = 'https://github.com/BRGOVIND/REDFORGE';
+export const DOWNLOAD_BASE_URL: string = (
+  envBase || `${REPO}/releases/download/v${VERSION}`
+).replace(/\/$/, '');
 
 export type OS = 'windows' | 'linux' | 'mac' | 'other';
 
@@ -84,6 +88,6 @@ export const OTHER_DOWNLOADS: Asset[] = [
   ASSETS.linuxTarGz,
 ];
 
-// Optional artifacts detected at runtime (shown only if present on the host).
-export const CHECKSUMS_URL = assetUrl('checksums.txt');
-export const RELEASE_NOTES_URL = assetUrl('RELEASE_NOTES.md');
+// SHA-256 checksums are a release asset; release notes are the Release page body.
+export const CHECKSUMS_URL = assetUrl('SHA256SUMS.txt');
+export const RELEASE_NOTES_URL = `${REPO}/releases/tag/v${VERSION}`;

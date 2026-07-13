@@ -12,7 +12,6 @@ import {
 import { Reveal } from '../motion';
 import {
   CHECKSUMS_URL,
-  DOWNLOAD_BASE_URL,
   OTHER_DOWNLOADS,
   REPO,
   RELEASE_NOTES_URL,
@@ -30,16 +29,6 @@ function detectOS(): OS {
   return 'other';
 }
 
-/** Best-effort check that an optional artifact is hosted; hide the UI if not. */
-async function exists(url: string): Promise<boolean> {
-  try {
-    const res = await fetch(url, { method: 'HEAD' });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 const REQUIREMENTS = [
   'Python 3.11+',
   'A local runtime (Ollama, LM Studio, llama.cpp, or vLLM)',
@@ -50,13 +39,9 @@ const REQUIREMENTS = [
 export function Download() {
   const [os, setOs] = useState<OS>('other');
   const [showOther, setShowOther] = useState(false);
-  const [hasChecksums, setHasChecksums] = useState(false);
-  const [hasNotes, setHasNotes] = useState(false);
 
   useEffect(() => {
     setOs(detectOS());
-    void exists(CHECKSUMS_URL).then(setHasChecksums);
-    void exists(RELEASE_NOTES_URL).then(setHasNotes);
   }, []);
 
   const primary = primaryFor(os);
@@ -182,30 +167,26 @@ export function Download() {
 
             {/* Secondary actions */}
             <div className="mt-8">
-              {hasChecksums && (
-                <Reveal>
-                  <a href={CHECKSUMS_URL} className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
-                    <FileCheck2 size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
-                    <div className="flex-1">
-                      <h3 className="display text-lg text-bone">Verify Download</h3>
-                      <p className="text-[13px] text-steel-400">SHA-256 checksums</p>
-                    </div>
-                    <ArrowUpRight size={18} className="text-steel-500 transition-all duration-500 ease-forge group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-forge" />
-                  </a>
-                </Reveal>
-              )}
-              {hasNotes && (
-                <Reveal>
-                  <a href={RELEASE_NOTES_URL} className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
-                    <ScrollText size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
-                    <div className="flex-1">
-                      <h3 className="display text-lg text-bone">View Release Notes</h3>
-                      <p className="text-[13px] text-steel-400">What's new in v{VERSION}</p>
-                    </div>
-                    <ArrowUpRight size={18} className="text-steel-500 transition-all duration-500 ease-forge group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-forge" />
-                  </a>
-                </Reveal>
-              )}
+              <Reveal>
+                <a href={CHECKSUMS_URL} className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
+                  <FileCheck2 size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
+                  <div className="flex-1">
+                    <h3 className="display text-lg text-bone">Verify Download</h3>
+                    <p className="text-[13px] text-steel-400">SHA-256 checksums</p>
+                  </div>
+                  <ArrowUpRight size={18} className="text-steel-500 transition-all duration-500 ease-forge group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-forge" />
+                </a>
+              </Reveal>
+              <Reveal>
+                <a href={RELEASE_NOTES_URL} target="_blank" rel="noreferrer" className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
+                  <ScrollText size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
+                  <div className="flex-1">
+                    <h3 className="display text-lg text-bone">View Release Notes</h3>
+                    <p className="text-[13px] text-steel-400">What's new in v{VERSION}</p>
+                  </div>
+                  <ArrowUpRight size={18} className="text-steel-500 transition-all duration-500 ease-forge group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-forge" />
+                </a>
+              </Reveal>
               <Reveal>
                 <a href={REPO} target="_blank" rel="noreferrer" className="focus-ring group flex items-center gap-4 border-t border-b border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
                   <Github size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
@@ -217,7 +198,7 @@ export function Download() {
                 </a>
               </Reveal>
               <p className="mt-4 text-[11px] text-steel-600">
-                Files served from <span className="font-mono">{DOWNLOAD_BASE_URL}</span>.
+                Files served from <span className="font-mono">GitHub Releases</span>.
               </p>
             </div>
           </div>
