@@ -49,11 +49,13 @@ class SessionManager:
     async def _generate(self, model_name: str, prompt: str) -> tuple[str, int]:
         if self._generate_fn is not None:
             return await self._generate_fn(model_name, prompt)
-        # Imported lazily to avoid a circular import with app.api.runs, which
-        # itself depends on the session layer.
-        from app.api.runs import call_ollama
+        # Call the shared runtime directly — the session (domain) layer depends on
+        # the runtime layer, not on the API layer. This removes the former
+        # sessions → api.runs inversion and its lazy-import cycle workaround.
+        from app.runtime.manager import get_runtime
 
-        return await call_ollama(model_name, prompt)
+        result = await get_runtime().generate(model_name, prompt)
+        return result.text, result.latency_ms
 
     # -- read helpers ----------------------------------------------------
 

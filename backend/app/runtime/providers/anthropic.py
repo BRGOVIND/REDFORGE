@@ -60,7 +60,7 @@ class AnthropicProvider(HttpProvider):
             "stream": stream,
         }
 
-    async def generate(self, model: str, prompt: str) -> GenerationResult:
+    async def generate(self, model: str, prompt: str, *, options: Optional[dict] = None) -> GenerationResult:
         self._ensure_ready()
         start = time.monotonic()
         try:

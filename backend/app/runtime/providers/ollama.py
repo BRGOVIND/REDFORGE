@@ -18,6 +18,20 @@ from app.runtime.responses import GenerationResult
 from app.runtime.transport import map_transport_error
 
 
+def _ollama_options(options: dict) -> dict:
+    """Map the canonical Playground sampling params to Ollama's ``options`` keys."""
+    out: dict = {}
+    if options.get("temperature") is not None:
+        out["temperature"] = options["temperature"]
+    if options.get("top_p") is not None:
+        out["top_p"] = options["top_p"]
+    if options.get("max_tokens") is not None:
+        out["num_predict"] = options["max_tokens"]
+    if options.get("seed") is not None:
+        out["seed"] = options["seed"]
+    return out
+
+
 class OllamaProvider(Provider):
     name = "ollama"
     label = "Ollama"
@@ -41,14 +55,18 @@ class OllamaProvider(Provider):
     def _map_error(exc: Exception, model: str = "") -> RuntimeLLMError:
         return map_transport_error(exc, unavailable=OllamaUnavailable, label="Ollama", model=model)
 
-    async def generate(self, model: str, prompt: str) -> GenerationResult:
+    async def generate(self, model: str, prompt: str, *, options: Optional[dict] = None) -> GenerationResult:
         start = time.monotonic()
+        body: dict = {"model": model, "prompt": prompt, "stream": False}
+        if options:
+            # Ollama sampling knobs live under "options" (temperature, top_p,
+            # num_predict, seed, …). Absent keys keep Ollama's defaults.
+            body["options"] = _ollama_options(options)
+            if "system" in options and options["system"]:
+                body["system"] = options["system"]
         try:
             async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT)) as client:
-                resp = await client.post(
-                    f"{self.base_url}/api/generate",
-                    json={"model": model, "prompt": prompt, "stream": False},
-                )
+                resp = await client.post(f"{self.base_url}/api/generate", json=body)
                 resp.raise_for_status()
                 data = resp.json()
         except Exception as exc:  # noqa: BLE001 - normalize every transport error

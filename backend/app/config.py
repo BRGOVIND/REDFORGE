@@ -29,6 +29,53 @@ def _int(key: str, default: int) -> int:
         return default
 
 
+def _app_data_dir() -> "os.PathLike | str":
+    """Per-OS application-data directory for RedForge (created if missing).
+
+    Windows → %LOCALAPPDATA%\\RedForge ; macOS → ~/Library/Application Support/
+    RedForge ; Linux/other → $XDG_DATA_HOME or ~/.local/share/RedForge.
+    """
+    import platform
+    from pathlib import Path
+
+    system = platform.system()
+    if system == "Windows":
+        base = os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")
+    elif system == "Darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or (Path.home() / ".local" / "share")
+    d = Path(base) / "RedForge"
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        d = Path.cwd()  # last-resort; never raise at import time
+    return d
+
+
+def _resolve_database_url() -> str:
+    """Deterministic SQLite location, independent of the working directory.
+
+    Resolution order:
+      1. ``REDFORGE_DATABASE_URL`` if set (unchanged; power users / tests).
+      2. A **legacy** ``./redforge.db`` in the CWD, if it already exists — so
+         existing installs keep their data (backwards compatible).
+      3. An absolute path in the OS app-data directory (the new default).
+    """
+    from pathlib import Path
+
+    explicit = os.environ.get("REDFORGE_DATABASE_URL")
+    if explicit:
+        return explicit
+
+    legacy = Path.cwd() / "redforge.db"
+    if legacy.is_file():
+        return f"sqlite+aiosqlite:///{legacy.as_posix()}"
+
+    target = Path(_app_data_dir()) / "redforge.db"
+    return f"sqlite+aiosqlite:///{target.as_posix()}"
+
+
 class Settings:
     # --- Ollama -----------------------------------------------------------
     OLLAMA_BASE_URL: str = _str("REDFORGE_OLLAMA_URL", "http://localhost:11434")
@@ -86,13 +133,18 @@ class Settings:
     ]
 
     # --- Database ---------------------------------------------------------
-    # SQLAlchemy async URL. Default preserves the historical CWD-relative
-    # SQLite path exactly; override with REDFORGE_DATABASE_URL (e.g. to pin an
-    # absolute path independent of the launch directory).
-    DATABASE_URL: str = _str("REDFORGE_DATABASE_URL", "sqlite+aiosqlite:///./redforge.db")
+    # SQLAlchemy async URL, resolved deterministically (see _resolve_database_url):
+    # honours REDFORGE_DATABASE_URL, then a legacy ./redforge.db, then the OS
+    # app-data dir — so the DB no longer depends on the launch directory.
+    DATABASE_URL: str = _resolve_database_url()
 
     # --- Logging ----------------------------------------------------------
     LOG_LEVEL: str = _str("REDFORGE_LOG_LEVEL", "INFO")
+
+    # --- Dataset Lab uploads ---------------------------------------------
+    # Hard ceiling on an imported dataset file (bytes). Prevents a large/hostile
+    # upload from exhausting memory (files are stored as JSON in SQLite). 50 MB.
+    MAX_UPLOAD_BYTES: int = _int("REDFORGE_MAX_UPLOAD_BYTES", 50 * 1024 * 1024)
 
 
 settings = Settings()

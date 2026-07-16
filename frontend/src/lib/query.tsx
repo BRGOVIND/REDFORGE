@@ -153,10 +153,22 @@ export function useQuery<T>({
 
   useEffect(() => {
     if (!enabled || !refetchInterval) return;
-    const id = window.setInterval(() => {
+    // Pause polling while the tab is hidden — avoids dozens of background timers
+    // burning CPU/network when the user isn't looking. Resumes (and refetches
+    // once immediately) when the tab becomes visible again.
+    const tick = () => {
+      if (document.hidden) return;
       void client.fetch<T>(key, () => fnRef.current()).catch(() => undefined);
-    }, refetchInterval);
-    return () => window.clearInterval(id);
+    };
+    const id = window.setInterval(tick, refetchInterval);
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [client, key, enabled, refetchInterval]);
 
   const entry = client.getEntry<T>(key);

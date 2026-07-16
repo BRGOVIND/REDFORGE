@@ -114,19 +114,31 @@ class OpenAICompatibleProvider(HttpProvider):
     def _models_url(self) -> str:
         return f"{self.base_url}/v1/models"
 
-    def _chat_body(self, model: str, prompt: str, *, stream: bool) -> dict:
-        return {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "stream": stream,
-        }
+    def _chat_body(self, model: str, prompt: str, *, stream: bool, options: Optional[dict] = None) -> dict:
+        messages = []
+        if options and options.get("system"):
+            messages.append({"role": "system", "content": options["system"]})
+        messages.append({"role": "user", "content": prompt})
+        body: dict = {"model": model, "messages": messages, "stream": stream}
+        if options:
+            # OpenAI-compatible sampling params (top-level). Absent keys keep
+            # the server defaults.
+            if options.get("temperature") is not None:
+                body["temperature"] = options["temperature"]
+            if options.get("top_p") is not None:
+                body["top_p"] = options["top_p"]
+            if options.get("max_tokens") is not None:
+                body["max_tokens"] = options["max_tokens"]
+            if options.get("seed") is not None:
+                body["seed"] = options["seed"]
+        return body
 
-    async def generate(self, model: str, prompt: str) -> GenerationResult:
+    async def generate(self, model: str, prompt: str, *, options: Optional[dict] = None) -> GenerationResult:
         self._ensure_ready()
         start = time.monotonic()
         try:
             async with self._client(settings.RUNTIME_READ_TIMEOUT) as client:
-                resp = await client.post(self._chat_url(), json=self._chat_body(model, prompt, stream=False))
+                resp = await client.post(self._chat_url(), json=self._chat_body(model, prompt, stream=False, options=options))
                 resp.raise_for_status()
                 data = resp.json()
         except Exception as exc:  # noqa: BLE001 - normalize every transport error

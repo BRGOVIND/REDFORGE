@@ -513,3 +513,455 @@ export interface PullStatus {
   done: boolean;
   error: string | null;
 }
+
+// --- RedForge V2 · AI Studio (projects) ------------------------------------
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  models: string[];
+  datasets: unknown[];
+  settings: Record<string, unknown>;
+  last_scan: Record<string, unknown> | null;
+  created_at: string | null;
+  updated_at: string | null;
+  opened_at: string | null;
+}
+
+export interface ProjectCreate {
+  name: string;
+  description?: string;
+  models?: string[];
+  settings?: Record<string, unknown>;
+}
+
+// --- RedForge V2 · Playground ----------------------------------------------
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface ChatParams {
+  provider?: string | null;
+  system?: string;
+  temperature?: number;
+  top_p?: number;
+  max_tokens?: number;
+  seed?: number;
+}
+
+export interface ChatResponse {
+  response: string;
+  model: string;
+  provider: string;
+  latency_ms: number;
+  eval_count: number | null;
+}
+
+// --- RedForge V2 · Assistant -----------------------------------------------
+
+export interface AssistantSource {
+  id: string;
+  title: string;
+}
+
+export interface AssistantAnswer {
+  answer: string;
+  sources: AssistantSource[];
+  suggestions: string[];
+}
+
+// --- RedForge V2 · Dataset Lab ---------------------------------------------
+
+export interface Dataset {
+  id: string;
+  project_id: string | null;
+  name: string;
+  description: string;
+  source_format: string;
+  kind: 'records' | 'text';
+  columns: string[];
+  record_count: number;
+  byte_size: number;
+  current_version: number;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DatasetPreview {
+  dataset_id: string;
+  kind: 'records' | 'text';
+  columns: string[];
+  total: number;
+  offset: number;
+  limit: number;
+  rows: unknown[];
+}
+
+export interface DatasetIssues {
+  duplicates: number;
+  empty_records: number;
+  missing_values: number;
+  formatting_issues: number;
+  prompt_leakage: number;
+  unsafe_samples: number;
+  malformed_conversations: number;
+}
+
+export interface DatasetStats {
+  record_count: number;
+  kind: string;
+  file_size_bytes: number;
+  total_chars: number;
+  estimated_tokens: number;
+  avg_length: number;
+  min_length: number;
+  max_length: number;
+  languages: Record<string, number>;
+}
+
+export interface DatasetAnalysis {
+  score: number;
+  grade: string;
+  issues: DatasetIssues;
+  statistics: DatasetStats;
+  suggestions: string[];
+}
+
+export interface DatasetVersionInfo {
+  version: number;
+  record_count: number;
+  note: string;
+  is_current: boolean;
+  created_at: string | null;
+}
+
+export interface CleanResult {
+  dataset_id: string;
+  before_count: number;
+  after_count: number;
+  notes: string[];
+  preview: unknown[];
+  saved: boolean;
+}
+
+export interface SplitStats {
+  statistics: {
+    total: number;
+    train: number;
+    validation: number;
+    test: number;
+    ratios: { train: number; validation: number; test: number };
+    seed: number;
+    shuffled: boolean;
+  };
+}
+
+// --- RedForge V2 · Training Lab --------------------------------------------
+
+export interface TrainingBackend {
+  name: string;
+  label: string;
+  available: boolean;
+  reason: string;
+}
+
+export interface TrainingParams {
+  epochs: number;
+  learning_rate: number;
+  batch_size: number;
+  gradient_accumulation: number;
+  rank: number;
+  alpha: number;
+  dropout: number;
+  scheduler: string;
+  optimizer: string;
+  warmup_steps: number;
+  max_seq_length: number;
+  seed: number;
+  validation_split: number;
+  output_dir: string;
+}
+
+export interface TrainingRun {
+  id: string;
+  project_id: string | null;
+  name: string;
+  base_model: string;
+  dataset_id: string | null;
+  method: 'lora' | 'qlora';
+  backend: string;
+  config: Record<string, unknown>;
+  status: string;
+  metrics: Record<string, number | null>;
+  output_dir: string;
+  notes: string;
+  duration_seconds: number | null;
+  created_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface TrainingProgressPoint {
+  step: number;
+  epoch: number | null;
+  loss: number | null;
+  val_loss: number | null;
+  learning_rate: number | null;
+}
+
+export interface TrainingProgress {
+  run_id: string;
+  status: string;
+  latest: {
+    step?: number;
+    total_steps?: number;
+    epoch?: number;
+    total_epochs?: number;
+    loss?: number;
+    val_loss?: number;
+    learning_rate?: number;
+    steps_per_sec?: number | null;
+    eta_seconds?: number | null;
+    message?: string;
+  };
+  history: TrainingProgressPoint[];
+  logs: string[];
+  paused: boolean;
+}
+
+export interface TrainingCheckpoint {
+  id: string;
+  run_id: string;
+  step: number;
+  epoch: number;
+  loss: number | null;
+  val_loss: number | null;
+  path: string;
+  is_best: boolean;
+  note: string;
+  created_at: string | null;
+}
+
+// --- RedForge V2 · Continuous Security -------------------------------------
+
+export interface CheckpointSecurity {
+  id: string;
+  run_id: string;
+  checkpoint_id: string | null;
+  step: number;
+  target_model: string;
+  profile: string;
+  status: string;
+  score: number | null;
+  categories: { category: string; score: number; fail_rate: number; risk_level: string }[];
+  findings: { category: string; attack_name: string; severity: string }[];
+  session_id: string | null;
+  error: string | null;
+  created_at: string | null;
+  completed_at: string | null;
+}
+
+export interface SecurityCompare {
+  run_id: string;
+  a: { step: number; score: number | null };
+  b: { step: number; score: number | null };
+  score_delta: number | null;
+  improved_categories: string[];
+  regressed_categories: string[];
+  resolved_vulnerabilities: string[];
+  new_vulnerabilities: string[];
+}
+
+// --- RedForge V2 · Recommendation Engine -----------------------------------
+
+export interface RecommendationPayload {
+  target_model: string;
+  summary: string;
+  weaknesses: { category: string; severity: string; score: number | null; description: string }[];
+  strategy: { method: string; reason: string };
+  hyperparameters: {
+    rank: number; alpha: number; epochs: number; learning_rate: number;
+    batch_size: number; gradient_accumulation: number; scheduler: string;
+    optimizer: string; warmup_steps: number; rationale: Record<string, string>;
+  };
+  datasets: {
+    project: { id: string; name: string; fit: string; quality: number | null; records: number | null }[];
+    public: { name: string; url: string; reason: string; theme: string }[];
+  };
+  attacks: { recommend_more: boolean; categories: string[]; reason: string };
+  prediction: {
+    expected_security_gain: number; expected_benchmark_gain: number;
+    confidence: number; explanation: string; disclaimer: string;
+  };
+}
+
+export interface Recommendation {
+  id: string;
+  project_id: string | null;
+  run_id: string | null;
+  target_model: string;
+  source: string;
+  status: string;
+  payload: RecommendationPayload;
+  outcome: Record<string, unknown> | null;
+  created_at: string | null;
+  decided_at: string | null;
+}
+
+export interface RecommendationAccuracy {
+  count: number;
+  mean_accuracy: number | null;
+  best_recommendation: {
+    id: string;
+    target_model: string;
+    outcome: Record<string, unknown> | null;
+  } | null;
+}
+
+// --- RedForge V2 · Runtime Registry (Phase 2.5) ----------------------------
+
+export interface RegisteredModel {
+  id: string;
+  run_id: string | null;
+  checkpoint_id: string | null;
+  project_id: string | null;
+  label: string;
+  step: number;
+  base_model: string;
+  provider: string;
+  runtime_model: string;
+  adapter_path: string | null;
+  fallback: boolean;
+  status: string;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+}
+
+// --- RedForge V2 · Benchmark Center (Phase 3) ------------------------------
+
+export interface BenchmarkSuiteInfo {
+  key: string;
+  label: string;
+  dimension: string;
+  description: string;
+  real: boolean;
+}
+
+export interface BenchmarkResult {
+  id: string;
+  project_id: string | null;
+  run_id: string | null;
+  registry_id: string | null;
+  target_model: string;
+  provider: string | null;
+  runtime: string | null;
+  label: string | null;
+  suites: string[];
+  status: string;
+  overall_score: number | null;
+  scores: Record<string, number | null>;
+  metrics: Record<string, Record<string, unknown>>;
+  duration_seconds: number | null;
+  config: Record<string, unknown>;
+  error: string | null;
+  created_at: string | null;
+  completed_at: string | null;
+}
+
+export interface BenchmarkLeaderboardEntry extends BenchmarkResult {
+  rank_score: number | null;
+}
+
+export interface BenchmarkComparison {
+  suites: string[];
+  models: {
+    id: string;
+    label: string;
+    target_model: string;
+    registry_id: string | null;
+    overall_score: number | null;
+    scores: Record<string, number | null>;
+    metrics: Record<string, Record<string, unknown>>;
+  }[];
+}
+
+export interface BenchmarkTrends {
+  suite: string | null;
+  series: Record<string, { at: string | null; score: number; id: string }[]>;
+}
+
+export interface BenchmarkRequest {
+  models?: string[];
+  registry_ids?: string[];
+  project_id?: string;
+  suites?: string[];
+  config?: Record<string, unknown>;
+}
+
+// --- RedForge V2 · Training Report (Phase 2.5) -----------------------------
+// Composed on the fly from existing run/security/recommendation/registry data.
+
+export interface TrainingReport {
+  run_id: string;
+  executive_summary: string;
+  training_summary: {
+    name: string;
+    base_model: string;
+    method: string;
+    backend: string;
+    status: string;
+    metrics: Record<string, number | null>;
+    duration_seconds: number | null;
+  };
+  final_configuration: Record<string, unknown>;
+  dataset_summary: {
+    id: string;
+    name: string;
+    record_count: number | null;
+    quality_score: number | null;
+  } | null;
+  security_timeline: {
+    step: number;
+    score: number | null;
+    runtime_id: string | null;
+    provider: string | null;
+    categories: { category: string; score: number; risk_level: string }[];
+  }[];
+  checkpoint_comparison: {
+    first: { step: number; score: number | null };
+    last: { step: number; score: number | null };
+    delta: number | null;
+  } | null;
+  recommendations: {
+    id: string;
+    status: string;
+    predicted: number | null;
+    outcome: Record<string, unknown> | null;
+    hyperparameters: Record<string, unknown> | null;
+  }[];
+  accepted_recommendations: TrainingReport['recommendations'];
+  rejected_recommendations: TrainingReport['recommendations'];
+  final_models: { id: string; label: string; runtime_model: string; fallback: boolean }[];
+  benchmarks: {
+    id: string;
+    label: string;
+    target_model: string;
+    registry_id: string | null;
+    overall_score: number | null;
+    scores: Record<string, number | null>;
+    suites: string[];
+  }[];
+  best_benchmark: {
+    id: string;
+    label: string;
+    target_model: string;
+    overall_score: number | null;
+    scores: Record<string, number | null>;
+    suites: string[];
+  } | null;
+  remaining_risks: string[];
+}

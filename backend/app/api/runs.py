@@ -56,15 +56,13 @@ class JobStatus(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Ollama helper
+# Runtime helper (provider-agnostic)
 # ---------------------------------------------------------------------------
 
-async def call_ollama(model_name: str, prompt: str) -> tuple[str, int]:
-    """Thin wrapper over the unified runtime, kept for backward compatibility.
-
-    Returns ``(text, latency_ms)`` and maps runtime errors to HTTP errors so the
-    single/batch endpoints keep their existing behavior.
-    """
+async def generate_via_runtime(model_name: str, prompt: str) -> tuple[str, int]:
+    """Generate through the unified Runtime Manager, mapping runtime errors to
+    HTTP errors so these endpoints keep their existing behavior. Provider-agnostic
+    (was ``call_ollama`` — renamed; RedForge is multi-provider)."""
     try:
         result = await get_runtime().generate(model_name, prompt)
     except RuntimeLLMError as exc:
@@ -87,7 +85,7 @@ async def run_single_attack(
     if attack is None:
         raise HTTPException(status_code=404, detail=f"Attack {req.attack_id} not found")
 
-    response_text, latency_ms = await call_ollama(req.model_name, attack.prompt)
+    response_text, latency_ms = await generate_via_runtime(req.model_name, attack.prompt)
     scored = score_response(attack.prompt, response_text)
 
     test_run = TestRun(

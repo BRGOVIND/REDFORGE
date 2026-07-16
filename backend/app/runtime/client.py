@@ -97,7 +97,11 @@ class Provider(ABC):
         yield  # pragma: no cover - makes this an async generator
 
     @abstractmethod
-    async def generate(self, model: str, prompt: str) -> GenerationResult: ...
+    async def generate(self, model: str, prompt: str, *, options: Optional[dict] = None) -> GenerationResult:
+        """Generate a completion. ``options`` (optional) carries sampling params
+        — ``temperature``, ``top_p``, ``max_tokens``, ``seed``, ``system`` — used
+        by the Playground; providers apply what they support and ignore the rest."""
+        ...
 
     @abstractmethod
     def stream_generate(self, model: str, prompt: str) -> AsyncIterator[dict]:
@@ -152,6 +156,7 @@ class RuntimeClient:
         cancel_token: Optional[CancellationToken] = None,
         request_id: Optional[str] = None,
         retries: Optional[int] = None,
+        options: Optional[dict] = None,
     ) -> GenerationResult:
         request_id = request_id or str(uuid4())
         token = self._cancels.register(request_id, cancel_token)
@@ -167,9 +172,14 @@ class RuntimeClient:
                     token.raise_if_cancelled()
                     start = time.monotonic()
                     try:
-                        result = await self._await_with_cancel(
-                            self.provider.generate(model, prompt), token, gen_timeout
+                        # Pass sampling options only when supplied, so existing
+                        # 2-arg providers/fakes are called exactly as before.
+                        coro = (
+                            self.provider.generate(model, prompt)
+                            if options is None
+                            else self.provider.generate(model, prompt, options=options)
                         )
+                        result = await self._await_with_cancel(coro, token, gen_timeout)
                         result.latency_ms = int((time.monotonic() - start) * 1000)
                         metrics.record_complete(result.latency_ms, result.tokens_per_sec)
                         log_op(logger, logging.INFO, "generation completed", op="generate",

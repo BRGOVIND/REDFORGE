@@ -9,9 +9,10 @@ import {
   ShieldCheck,
   Trophy,
 } from 'lucide-react';
+import { Database, Dumbbell, FolderKanban, Sparkles, Server, Zap } from 'lucide-react';
 import { Button, Card, CardHeader, EmptyState, PageHeader, Skeleton, Stat, StatusBadge } from '../components/ui';
 import { ScoreDonut } from '../components/shared';
-import { useModels, usePlanPreview, useReport, useSessions } from '../hooks/queries';
+import { useDatasets, useModels, usePlanPreview, useProjects, useProviders, useReport, useSessions, useTrainingRuns } from '../hooks/queries';
 import { formatMB, relativeTime, scoreColor, titleCase } from '../lib/format';
 import type { SessionResponse } from '../api/types';
 
@@ -22,6 +23,11 @@ function latestCompleted(sessions: SessionResponse[] | undefined): SessionRespon
 export default function DashboardPage() {
   const models = useModels();
   const sessions = useSessions();
+  const projects = useProjects(4);
+  const datasets = useDatasets();
+  const trainingRuns = useTrainingRuns(undefined, 4);
+  const providers = useProviders();
+  const activeProvider = providers.data?.providers.find((p) => p.is_default);
   const firstModel = models.data?.models?.[0]?.name ?? null;
   // One cached preview call gives us host resource + a cheap system snapshot.
   const preview = usePlanPreview(firstModel ? 'quick_scan' : null, firstModel ? [firstModel] : []);
@@ -93,6 +99,151 @@ export default function DashboardPage() {
             icon={<HardDrive size={13} />}
           />
         </Card>
+      </div>
+
+      {/* Workspace row (V2): recent projects + active runtime + quick actions */}
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Recent Projects"
+            icon={<FolderKanban size={15} />}
+            action={
+              <Link to="/studio" className="text-xs text-content-muted hover:text-content rf-focus">
+                Open Studio
+              </Link>
+            }
+          />
+          <div className="p-2">
+            {projects.isLoading ? (
+              <div className="space-y-2 p-3">
+                {[0, 1].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (projects.data?.length ?? 0) === 0 ? (
+              <div className="p-3">
+                <EmptyState
+                  icon={<FolderKanban size={24} />}
+                  title="No projects yet"
+                  description="Create a workspace to organize models, evaluations, and reports."
+                  action={
+                    <Link to="/studio">
+                      <Button size="sm" variant="secondary">
+                        <FolderKanban size={14} /> Open Studio
+                      </Button>
+                    </Link>
+                  }
+                />
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {projects.data!.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      to={`/studio`}
+                      className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 hover:bg-overlay rf-focus"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-content">{p.name}</p>
+                        <p className="truncate text-xs text-content-subtle">
+                          {p.models.length} model{p.models.length !== 1 ? 's' : ''} · updated {relativeTime(p.updated_at)}
+                        </p>
+                      </div>
+                      <Sparkles size={14} className="shrink-0 text-content-faint" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+
+        <div className="space-y-6">
+          <Card className="p-5">
+            <Stat
+              label="Active Runtime"
+              value={activeProvider?.label ?? providers.data?.default ?? '—'}
+              hint={
+                activeProvider?.health?.online
+                  ? 'reachable'
+                  : providers.isLoading
+                    ? 'checking…'
+                    : 'offline / not checked'
+              }
+              icon={<Server size={13} />}
+            />
+          </Card>
+          <Card className="p-5">
+            <Stat
+              label="Datasets"
+              value={datasets.data?.length ?? 0}
+              hint="local dataset assets"
+              icon={<Database size={13} />}
+            />
+          </Card>
+          <Card>
+            <CardHeader
+              title="Recent Training Runs"
+              icon={<Dumbbell size={15} />}
+              action={
+                <Link to="/training" className="text-xs text-content-muted hover:text-content rf-focus">
+                  Open Training Lab
+                </Link>
+              }
+            />
+            <div className="p-2">
+              {(trainingRuns.data?.length ?? 0) === 0 ? (
+                <p className="px-3 py-4 text-center text-xs text-content-subtle">
+                  No training runs yet.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {trainingRuns.data!.map((r) => (
+                    <li key={r.id}>
+                      <Link
+                        to="/training"
+                        className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 hover:bg-overlay rf-focus"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-content">{r.name}</p>
+                          <p className="truncate text-[11px] text-content-subtle">
+                            {r.method.toUpperCase()} · {r.base_model}
+                          </p>
+                        </div>
+                        <StatusBadge status={r.status} />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Card>
+          <Card className="p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-content-subtle">Quick Actions</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/playground">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Sparkles size={14} /> Playground
+                </Button>
+              </Link>
+              <Link to="/datasets">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Database size={14} /> Datasets
+                </Button>
+              </Link>
+              <Link to="/training">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Dumbbell size={14} /> Train
+                </Button>
+              </Link>
+              <Link to="/new">
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Zap size={14} /> Evaluate
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Main grid */}

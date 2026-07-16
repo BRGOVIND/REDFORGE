@@ -196,3 +196,330 @@ export function useSessionControl() {
   const cancel = useMutation({ mutationFn: api.cancelSession });
   return { pause, resume, cancel };
 }
+
+// --- RedForge V2 · AI Studio (projects) ------------------------------------
+
+export function useProjects(limit?: number) {
+  return useQuery({
+    queryKey: ['projects', limit ?? 'all'],
+    queryFn: () => api.listProjects(limit),
+    staleTime: 4_000,
+  });
+}
+
+export function useProject(id: string | null) {
+  return useQuery({
+    queryKey: ['project', id],
+    queryFn: () => api.getProject(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useCreateProject() {
+  return useMutation({
+    mutationFn: (body: import('../api/types').ProjectCreate) => api.createProject(body),
+    onSuccess: () => queryClient.invalidate(['projects']),
+  });
+}
+
+export function useUpdateProject() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api.updateProject(id, body),
+    onSuccess: () => queryClient.invalidate(['project']),
+  });
+}
+
+export function useDuplicateProject() {
+  return useMutation({
+    mutationFn: (id: string) => api.duplicateProject(id),
+    onSuccess: () => queryClient.invalidate(['projects']),
+  });
+}
+
+export function useDeleteProject() {
+  return useMutation({
+    mutationFn: (id: string) => api.deleteProject(id),
+    onSuccess: () => queryClient.invalidate(['projects']),
+  });
+}
+
+// --- RedForge V2 · Playground ----------------------------------------------
+
+export function usePlaygroundChat() {
+  return useMutation({
+    mutationFn: ({
+      model,
+      messages,
+      params,
+    }: {
+      model: string;
+      messages: import('../api/types').ChatMessage[];
+      params?: import('../api/types').ChatParams;
+    }) => api.playgroundChat(model, messages, params),
+  });
+}
+
+// --- RedForge V2 · Assistant -----------------------------------------------
+
+export function useAssistant() {
+  return useMutation({
+    mutationFn: ({ question, context }: { question: string; context?: string }) =>
+      api.assistantAsk(question, context),
+  });
+}
+
+// --- RedForge V2 · Dataset Lab ---------------------------------------------
+
+export function useDatasets(projectId?: string) {
+  return useQuery({
+    queryKey: ['datasets', projectId ?? 'all'],
+    queryFn: () => api.listDatasets(projectId),
+    staleTime: 4_000,
+  });
+}
+
+export function useDatasetPreview(id: string | null, offset: number, limit: number, search: string) {
+  return useQuery({
+    queryKey: ['dataset-preview', id, offset, limit, search],
+    queryFn: () => api.previewDataset(id as string, offset, limit, search),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useDatasetAnalysis(id: string | null) {
+  return useQuery({
+    queryKey: ['dataset-analysis', id],
+    queryFn: () => api.analyzeDataset(id as string),
+    enabled: !!id,
+    staleTime: 10_000,
+  });
+}
+
+export function useDatasetVersions(id: string | null) {
+  return useQuery({
+    queryKey: ['dataset-versions', id],
+    queryFn: () => api.datasetVersions(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useImportDataset() {
+  return useMutation({
+    mutationFn: ({ file, name, projectId }: { file: File; name?: string; projectId?: string }) =>
+      api.importDataset(file, name, projectId),
+    onSuccess: () => queryClient.invalidate(['datasets']),
+  });
+}
+
+export function useDeleteDataset() {
+  return useMutation({
+    mutationFn: (id: string) => api.deleteDataset(id),
+    onSuccess: () => queryClient.invalidate(['datasets']),
+  });
+}
+
+export function useDuplicateDataset() {
+  return useMutation({
+    mutationFn: (id: string) => api.duplicateDataset(id),
+    onSuccess: () => queryClient.invalidate(['datasets']),
+  });
+}
+
+export function useCleanDataset() {
+  return useMutation({
+    mutationFn: ({ id, operations, save }: { id: string; operations: string[]; save: boolean }) =>
+      api.cleanDataset(id, operations, save),
+    onSuccess: () => {
+      queryClient.invalidate(['datasets']);
+      queryClient.invalidate(['dataset-preview']);
+      queryClient.invalidate(['dataset-versions']);
+      queryClient.invalidate(['dataset-analysis']);
+    },
+  });
+}
+
+export function useRestoreDatasetVersion() {
+  return useMutation({
+    mutationFn: ({ id, version }: { id: string; version: number }) =>
+      api.restoreDatasetVersion(id, version),
+    onSuccess: () => {
+      queryClient.invalidate(['datasets']);
+      queryClient.invalidate(['dataset-versions']);
+      queryClient.invalidate(['dataset-preview']);
+    },
+  });
+}
+
+// --- RedForge V2 · Training Lab --------------------------------------------
+
+export function useTrainingBackends() {
+  return useQuery({ queryKey: ['training-backends'], queryFn: api.trainingBackends, staleTime: 30_000 });
+}
+
+export function useTrainingRuns(projectId?: string, limit?: number) {
+  return useQuery({
+    queryKey: ['training-runs', projectId ?? 'all', limit ?? 'n'],
+    queryFn: () => api.listTrainingRuns(projectId, limit),
+    staleTime: 3_000,
+  });
+}
+
+export function useTrainingProgress(id: string | null, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['training-progress', id],
+    queryFn: () => api.trainingProgress(id as string),
+    enabled: !!id,
+    refetchInterval,
+  });
+}
+
+export function useTrainingCheckpoints(id: string | null, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['training-checkpoints', id],
+    queryFn: () => api.trainingCheckpoints(id as string),
+    enabled: !!id,
+    refetchInterval,
+  });
+}
+
+export function useLaunchTraining() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.launchTraining>[0]) => api.launchTraining(body),
+    onSuccess: () => queryClient.invalidate(['training-runs']),
+  });
+}
+
+export function useCancelTraining() {
+  return useMutation({
+    mutationFn: (id: string) => api.cancelTraining(id),
+    onSuccess: () => queryClient.invalidate(['training-runs']),
+  });
+}
+
+export function useDeleteTraining() {
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTraining(id),
+    onSuccess: () => queryClient.invalidate(['training-runs']),
+  });
+}
+
+// --- RedForge V2 · Continuous Security -------------------------------------
+
+export function useSecurityTimeline(runId: string | null, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['security-timeline', runId],
+    queryFn: () => api.securityTimeline(runId as string),
+    enabled: !!runId,
+    refetchInterval,
+    staleTime: 2_000,
+  });
+}
+
+// --- RedForge V2 · Recommendation Engine -----------------------------------
+
+export function useAnalyzeRecommendation() {
+  return useMutation({
+    mutationFn: (body: { target_model: string; run_id?: string; project_id?: string }) =>
+      api.analyzeRecommendation(body),
+  });
+}
+
+export function useDecideRecommendation() {
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'accepted' | 'rejected' | 'applied' }) =>
+      api.decideRecommendation(id, status),
+  });
+}
+
+export function useProjectRecommendations(projectId?: string) {
+  return useQuery({
+    queryKey: ['project-recommendations', projectId ?? 'all'],
+    queryFn: () => api.listRecommendations(projectId),
+    staleTime: 5_000,
+  });
+}
+
+export function useRecommendationAccuracy(projectId?: string) {
+  return useQuery({
+    queryKey: ['recommendation-accuracy', projectId ?? 'all'],
+    queryFn: () => api.recommendationAccuracy(projectId),
+    staleTime: 10_000,
+  });
+}
+
+// --- RedForge V2 · Runtime Registry (Phase 2.5) ----------------------------
+
+export function useRegisteredModels(params?: { run_id?: string; project_id?: string }) {
+  return useQuery({
+    queryKey: ['registered-models', params?.run_id ?? 'all', params?.project_id ?? 'all'],
+    queryFn: () => api.listRegisteredModels(params),
+    staleTime: 5_000,
+  });
+}
+
+// --- RedForge V2 · Training report (Phase 2.5) -----------------------------
+
+export function useTrainingReport(runId: string | null) {
+  return useQuery({
+    queryKey: ['training-report', runId],
+    queryFn: () => api.trainingReport(runId as string),
+    enabled: !!runId,
+    staleTime: 5_000,
+  });
+}
+
+// --- RedForge V2 · Benchmark Center (Phase 3) ------------------------------
+
+export function useBenchmarkSuites() {
+  return useQuery({
+    queryKey: ['benchmark-suites'],
+    queryFn: api.benchmarkSuites,
+    staleTime: 60_000,
+  });
+}
+
+export function useBenchmarkHistory(
+  params?: { project_id?: string; run_id?: string; model?: string },
+  refetchInterval = 0,
+) {
+  return useQuery({
+    queryKey: ['benchmark-history', params?.project_id ?? 'all', params?.run_id ?? 'all', params?.model ?? 'all'],
+    queryFn: () => api.benchmarkHistory(params),
+    refetchInterval,
+    staleTime: 2_000,
+  });
+}
+
+export function useScheduleBenchmark() {
+  return useMutation({
+    mutationFn: (body: import('../api/types').BenchmarkRequest) => api.scheduleBenchmark(body),
+    onSuccess: () => queryClient.invalidate(['benchmark-history']),
+  });
+}
+
+export function useCancelBenchmark() {
+  return useMutation({
+    mutationFn: (id: string) => api.cancelBenchmark(id),
+    onSuccess: () => queryClient.invalidate(['benchmark-history']),
+  });
+}
+
+export function useBenchmarkLeaderboard(params?: { project_id?: string; suite?: string }) {
+  return useQuery({
+    queryKey: ['benchmark-leaderboard', params?.project_id ?? 'all', params?.suite ?? 'overall'],
+    queryFn: () => api.benchmarkLeaderboard(params),
+    staleTime: 3_000,
+  });
+}
+
+export function useBenchmarkTrends(projectId: string | null, suite?: string) {
+  return useQuery({
+    queryKey: ['benchmark-trends', projectId, suite ?? 'overall'],
+    queryFn: () => api.benchmarkTrends(projectId as string, suite),
+    enabled: !!projectId,
+    staleTime: 5_000,
+  });
+}

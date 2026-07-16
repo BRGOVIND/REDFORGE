@@ -15,6 +15,12 @@ const History = React.lazy(() => import('./pages/HistoryPage'));
 const RuntimeManager = React.lazy(() => import('./pages/RuntimeManagerPage'));
 const ModelManager = React.lazy(() => import('./pages/ModelManagerPage'));
 const Onboarding = React.lazy(() => import('./pages/OnboardingPage'));
+const Studio = React.lazy(() => import('./pages/StudioPage'));
+const ProjectOverview = React.lazy(() => import('./pages/ProjectOverviewPage'));
+const Playground = React.lazy(() => import('./pages/PlaygroundPage'));
+const DatasetLab = React.lazy(() => import('./pages/DatasetLabPage'));
+const TrainingLab = React.lazy(() => import('./pages/TrainingLabPage'));
+const BenchmarkCenter = React.lazy(() => import('./pages/BenchmarkCenterPage'));
 
 /** First-run completion flag. Remove this key to re-run onboarding. */
 const ONBOARDED_KEY = 'redforge_onboarded';
@@ -28,6 +34,10 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/leaderboard')) return 'RedForge • Leaderboard';
   if (pathname.startsWith('/runtime')) return 'RedForge • Runtime Manager';
   if (pathname.startsWith('/models')) return 'RedForge • Model Manager';
+  if (pathname.startsWith('/studio')) return 'RedForge • AI Studio';
+  if (pathname.startsWith('/playground')) return 'RedForge • Playground';
+  if (pathname.startsWith('/datasets')) return 'RedForge • Dataset Lab';
+  if (pathname.startsWith('/training')) return 'RedForge • Training Lab';
   if (pathname.startsWith('/onboarding')) return 'RedForge • Welcome';
   if (pathname.startsWith('/setup')) return 'RedForge • Setup';
   return 'RedForge';
@@ -80,6 +90,12 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/runtime" element={<RuntimeManager />} />
           <Route path="/models" element={<ModelManager />} />
+          <Route path="/studio" element={<Studio />} />
+          <Route path="/projects/:id" element={<ProjectOverview />} />
+          <Route path="/playground" element={<Playground />} />
+          <Route path="/datasets" element={<DatasetLab />} />
+          <Route path="/training" element={<TrainingLab />} />
+          <Route path="/benchmarks" element={<BenchmarkCenter />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

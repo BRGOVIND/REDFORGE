@@ -65,7 +65,7 @@ class GeminiProvider(HttpProvider):
     def _body(prompt: str) -> dict:
         return {"contents": [{"parts": [{"text": prompt}]}]}
 
-    async def generate(self, model: str, prompt: str) -> GenerationResult:
+    async def generate(self, model: str, prompt: str, *, options: Optional[dict] = None) -> GenerationResult:
         self._ensure_ready()
         start = time.monotonic()
         try:

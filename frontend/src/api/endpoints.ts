@@ -151,3 +151,259 @@ export const getLeaderboard = () =>
 
 export const getHistory = (model: string) =>
   http.get<HistoryResponse>(`/history/${encodeURIComponent(model)}`).then((r) => r.data);
+
+// --- RedForge V2 · AI Studio (projects) ------------------------------------
+import type {
+  AssistantAnswer,
+  ChatMessage,
+  ChatParams,
+  ChatResponse,
+  Project,
+  ProjectCreate,
+} from './types';
+
+export const listProjects = (limit?: number) =>
+  http.get<Project[]>('/projects', { params: limit ? { limit } : undefined }).then((r) => r.data);
+
+export const getProject = (id: string) =>
+  http.get<Project>(`/projects/${id}`).then((r) => r.data);
+
+export const createProject = (body: ProjectCreate) =>
+  http.post<Project>('/projects', body).then((r) => r.data);
+
+export const updateProject = (id: string, body: Partial<ProjectCreate> & { last_scan?: unknown }) =>
+  http.patch<Project>(`/projects/${id}`, body).then((r) => r.data);
+
+export const openProject = (id: string) =>
+  http.post<Project>(`/projects/${id}/open`).then((r) => r.data);
+
+export const duplicateProject = (id: string) =>
+  http.post<Project>(`/projects/${id}/duplicate`).then((r) => r.data);
+
+export const deleteProject = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`/projects/${id}`).then((r) => r.data);
+
+// --- RedForge V2 · Playground ----------------------------------------------
+export const playgroundChat = (model: string, messages: ChatMessage[], params: ChatParams = {}) =>
+  http.post<ChatResponse>('/playground/chat', { model, messages, ...params }).then((r) => r.data);
+
+// --- RedForge V2 · Assistant -----------------------------------------------
+export const assistantAsk = (question: string, context?: string, datasetId?: string) =>
+  http
+    .post<AssistantAnswer>('/assistant/ask', { question, context, dataset_id: datasetId })
+    .then((r) => r.data);
+
+export const assistantSuggestions = () =>
+  http.get<{ suggestions: string[] }>('/assistant/suggestions').then((r) => r.data);
+
+// --- RedForge V2 · Dataset Lab ---------------------------------------------
+import type {
+  CleanResult,
+  Dataset,
+  DatasetAnalysis,
+  DatasetPreview,
+  DatasetVersionInfo,
+  SplitStats,
+} from './types';
+
+export const listDatasets = (projectId?: string) =>
+  http
+    .get<Dataset[]>('/datasets', { params: projectId ? { project_id: projectId } : undefined })
+    .then((r) => r.data);
+
+export const getDataset = (id: string) =>
+  http.get<Dataset>(`/datasets/${id}`).then((r) => r.data);
+
+export const importDataset = (file: File, name?: string, projectId?: string) => {
+  const form = new FormData();
+  form.append('file', file);
+  if (name) form.append('name', name);
+  if (projectId) form.append('project_id', projectId);
+  return http
+    .post<Dataset>('/datasets/import', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+    .then((r) => r.data);
+};
+
+export const renameDataset = (id: string, name: string) =>
+  http.patch<Dataset>(`/datasets/${id}`, { name }).then((r) => r.data);
+
+export const duplicateDataset = (id: string) =>
+  http.post<Dataset>(`/datasets/${id}/duplicate`).then((r) => r.data);
+
+export const deleteDataset = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`/datasets/${id}`).then((r) => r.data);
+
+export const previewDataset = (id: string, offset = 0, limit = 50, search = '') =>
+  http
+    .get<DatasetPreview>(`/datasets/${id}/preview`, { params: { offset, limit, search } })
+    .then((r) => r.data);
+
+export const analyzeDataset = (id: string) =>
+  http.get<DatasetAnalysis>(`/datasets/${id}/analyze`).then((r) => r.data);
+
+export const cleanDataset = (id: string, operations: string[], save: boolean) =>
+  http.post<CleanResult>(`/datasets/${id}/clean`, { operations, save }).then((r) => r.data);
+
+export const splitDataset = (id: string, train: number, val: number, test: number) =>
+  http.post<SplitStats>(`/datasets/${id}/split`, { train, val, test }).then((r) => r.data);
+
+export const datasetVersions = (id: string) =>
+  http.get<DatasetVersionInfo[]>(`/datasets/${id}/versions`).then((r) => r.data);
+
+export const restoreDatasetVersion = (id: string, version: number) =>
+  http.post<Dataset>(`/datasets/${id}/restore`, { version }).then((r) => r.data);
+
+export const datasetExportUrl = (id: string, fmt = 'jsonl') =>
+  `/api/datasets/${id}/export?fmt=${fmt}`;
+
+// --- RedForge V2 · Training Lab --------------------------------------------
+import type {
+  TrainingBackend,
+  TrainingCheckpoint,
+  TrainingParams,
+  TrainingProgress,
+  TrainingRun,
+} from './types';
+
+export const trainingBackends = () =>
+  http.get<{ backends: TrainingBackend[]; default: string }>('/training/backends').then((r) => r.data);
+
+export const listTrainingRuns = (projectId?: string, limit?: number) =>
+  http
+    .get<TrainingRun[]>('/training', { params: { project_id: projectId, limit } })
+    .then((r) => r.data);
+
+export const getTrainingRun = (id: string) =>
+  http.get<TrainingRun>(`/training/${id}`).then((r) => r.data);
+
+export const launchTraining = (body: {
+  name: string;
+  base_model: string;
+  dataset_id?: string | null;
+  method: 'lora' | 'qlora';
+  backend?: string;
+  params: Partial<TrainingParams>;
+  project_id?: string | null;
+  continuous_security?: boolean;
+  security_profile?: 'quick' | 'standard' | 'full' | 'custom';
+}) => http.post<{ run: TrainingRun; backend: string }>('/training/launch', body).then((r) => r.data);
+
+export const trainingProgress = (id: string) =>
+  http.get<TrainingProgress>(`/training/${id}/progress`).then((r) => r.data);
+
+export const cancelTraining = (id: string) =>
+  http.post<{ cancelled: boolean }>(`/training/${id}/cancel`).then((r) => r.data);
+
+export const pauseTraining = (id: string, paused: boolean) =>
+  http.post<{ paused: boolean }>(`/training/${id}/pause`, null, { params: { paused } }).then((r) => r.data);
+
+export const deleteTraining = (id: string) =>
+  http.delete<{ deleted: boolean }>(`/training/${id}`).then((r) => r.data);
+
+export const setTrainingNotes = (id: string, notes: string) =>
+  http.patch<TrainingRun>(`/training/${id}/notes`, { notes }).then((r) => r.data);
+
+export const trainingCheckpoints = (id: string) =>
+  http.get<TrainingCheckpoint[]>(`/training/${id}/checkpoints`).then((r) => r.data);
+
+// --- RedForge V2 · Continuous Security -------------------------------------
+import type { CheckpointSecurity, SecurityCompare } from './types';
+
+export const securityTimeline = (runId: string) =>
+  http
+    .get<{ run_id: string; timeline: CheckpointSecurity[] }>(`/training/${runId}/security`)
+    .then((r) => r.data.timeline);
+
+export const securityCompare = (runId: string, a: number, b: number) =>
+  http
+    .get<SecurityCompare>(`/training/${runId}/security/compare`, { params: { a, b } })
+    .then((r) => r.data);
+
+// --- RedForge V2 · Recommendation Engine -----------------------------------
+import type { Recommendation } from './types';
+
+export const analyzeRecommendation = (body: {
+  target_model: string; run_id?: string; project_id?: string;
+}) => http.post<Recommendation>('/recommendations/analyze', body).then((r) => r.data);
+
+export const listRecommendations = (projectId?: string) =>
+  http
+    .get<Recommendation[]>('/recommendations', { params: projectId ? { project_id: projectId } : undefined })
+    .then((r) => r.data);
+
+export const decideRecommendation = (id: string, status: 'accepted' | 'rejected' | 'applied') =>
+  http.post<Recommendation>(`/recommendations/${id}/decision`, { status }).then((r) => r.data);
+
+// --- RedForge V2 · Prediction feedback + accuracy (Phase 2.5) --------------
+import type { RecommendationAccuracy } from './types';
+
+export const recommendationFeedback = (id: string, appliedRunId: string) =>
+  http
+    .post<Recommendation>(`/recommendations/${id}/feedback`, { applied_run_id: appliedRunId })
+    .then((r) => r.data);
+
+export const recommendationAccuracy = (projectId?: string) =>
+  http
+    .get<RecommendationAccuracy>('/recommendations/accuracy', {
+      params: projectId ? { project_id: projectId } : undefined,
+    })
+    .then((r) => r.data);
+
+// --- RedForge V2 · Runtime Registry (Phase 2.5) ----------------------------
+import type { RegisteredModel, TrainingReport } from './types';
+
+export const listRegisteredModels = (params?: { run_id?: string; project_id?: string }) =>
+  http.get<RegisteredModel[]>('/registry', { params }).then((r) => r.data);
+
+export const getRegisteredModel = (id: string) =>
+  http.get<RegisteredModel>(`/registry/${id}`).then((r) => r.data);
+
+// --- RedForge V2 · Training report (Phase 2.5) -----------------------------
+
+export const trainingReport = (runId: string) =>
+  http.get<TrainingReport>(`/training/${runId}/report`).then((r) => r.data);
+
+// --- RedForge V2 · Benchmark Center (Phase 3) ------------------------------
+import type {
+  BenchmarkComparison,
+  BenchmarkLeaderboardEntry,
+  BenchmarkRequest,
+  BenchmarkResult,
+  BenchmarkSuiteInfo,
+  BenchmarkTrends,
+} from './types';
+
+export const benchmarkSuites = () =>
+  http.get<BenchmarkSuiteInfo[]>('/benchmark-center/suites').then((r) => r.data);
+
+export const benchmarkHistory = (params?: { project_id?: string; run_id?: string; model?: string }) =>
+  http.get<BenchmarkResult[]>('/benchmark-center', { params }).then((r) => r.data);
+
+export const scheduleBenchmark = (body: BenchmarkRequest) =>
+  http
+    .post<{ scheduled: { id: string }[]; count: number }>('/benchmark-center', body)
+    .then((r) => r.data);
+
+export const getBenchmark = (id: string) =>
+  http.get<BenchmarkResult>(`/benchmark-center/${id}`).then((r) => r.data);
+
+export const cancelBenchmark = (id: string) =>
+  http.delete<{ cancelled: boolean }>(`/benchmark-center/${id}`).then((r) => r.data);
+
+export const benchmarkLeaderboard = (params?: { project_id?: string; suite?: string }) =>
+  http
+    .get<BenchmarkLeaderboardEntry[]>('/benchmark-center/leaderboard', { params })
+    .then((r) => r.data);
+
+export const benchmarkTrends = (projectId: string, suite?: string) =>
+  http
+    .get<BenchmarkTrends>('/benchmark-center/trends', { params: { project_id: projectId, suite } })
+    .then((r) => r.data);
+
+export const benchmarkCompare = (ids: string[]) =>
+  http
+    .get<BenchmarkComparison>('/benchmark-center/compare', { params: { ids: ids.join(',') } })
+    .then((r) => r.data);
+
+export const benchmarkQueue = () =>
+  http.get<{ pending: string[]; running: string | null; queued: number }>('/benchmark-center/queue').then((r) => r.data);

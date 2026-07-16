@@ -5,50 +5,86 @@
 <h1 align="center">RedForge</h1>
 
 <p align="center">
-  <b>A local red-teaming laboratory for LLMs.</b><br/>
-  Attack your models. Score the damage. Fix what breaks. All on your own machine.
+  <b>A local AI engineering platform for building, evaluating, and hardening LLMs.</b><br/>
+  Manage models, chat, curate datasets, fine-tune, and red-team — all on your own machine.
 </p>
 
 <p align="center">
-  <a href="https://github.com/BRGOVIND/REDFORGE/releases"><img src="https://img.shields.io/badge/version-1.2.0-red" alt="Version"/></a>
+  <a href="https://github.com/BRGOVIND/REDFORGE/releases"><img src="https://img.shields.io/badge/version-2.0.0-red" alt="Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/></a>
   <img src="https://img.shields.io/badge/python-3.11%2B-yellow" alt="Python 3.11+"/>
-  <img src="https://img.shields.io/badge/tests-369%20passing-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/tests-400%2B%20passing-brightgreen" alt="Tests"/>
   <a href="https://redforgelabs.vercel.app"><img src="https://img.shields.io/badge/website-redforgelabs.vercel.app-orange" alt="Website"/></a>
 </p>
-Everything runs on your own machine by default. Nothing is sent to a cloud API
-unless you explicitly configure a cloud provider.
 
-> **v1.2.0** — one command to launch, a single process serving the API and UI.
-> A multi-provider runtime (Ollama, LM Studio, llama.cpp, vLLM, OpenAI,
-> Anthropic, Gemini, Groq, OpenRouter), a cross-provider Model Manager, and a
-> centralized System Health Engine. End users need only **Python 3.11+** and a
-> local runtime such as **Ollama**. Node.js is a development-only dependency.
-> See [docs/providers.md](docs/providers.md) to use a different provider.
+> **v2.0.0** — RedForge grows from a red-teaming lab into a full **local AI
+> engineering platform**: an **AI Studio** for projects, a **Playground** for
+> chat, a **Dataset Lab** for curating training data, and a **Training Lab** for
+> local LoRA/QLoRA fine-tuning — alongside the existing multi-provider runtime,
+> Model Manager, and Security Center. **Local-first, localhost-only, no accounts,
+> no telemetry.** End users need only **Python 3.11+** and a local runtime such as
+> **Ollama**. See [Trust model](#-trust-model) below.
 
 ---
 
 ## What is this?
 
-RedForge points a library of adversarial attacks at any LLM you serve through a local runtime — [Ollama](https://ollama.com) (the recommended default), LM Studio, llama.cpp, or vLLM — watches how the model holds up, and hands you a structured security report: overall score, category breakdowns, ranked vulnerabilities, and recommendations.
+RedForge is a desktop-style workspace for local AI work. You manage the models you
+run through a local runtime (Ollama, LM Studio, llama.cpp, vLLM — or a cloud
+provider with your own key), chat with them, build and clean datasets, run
+LoRA/QLoRA fine-tunes, and red-team any model against a library of adversarial
+attacks to get a structured security report.
 
-**Everything is local.** No cloud, no API keys, nothing leaves your device. If your model folds under a prompt injection, only you will know.
+**Everything is local by default.** No cloud, no accounts, no telemetry. Nothing
+leaves your device unless you explicitly configure a cloud provider.
 
 🌐 **Website & downloads:** [redforgelabs.vercel.app](https://redforgelabs.vercel.app)
 
+> **Screenshots:** _placeholders — add `docs/screenshots/{dashboard,playground,dataset-lab,training-lab,security-report}.png`._
+
 ---
 
-## ✨ Features
+## ✨ What's inside
 
-- ⚔️ **28 adversarial attacks** — prompt injection, jailbreaks, context manipulation, data leakage
-- 📊 **RedForge-Bench-V1** — 800 validated benchmark cases for consistent, comparable scoring
-- 🧠 **Intelligent evaluation pipeline** — profiles the model, plans deterministically, then executes *adaptively* (mutate → escalate → retry), judges every response, and analyzes the results
-- 🎚️ **Five evaluation profiles** — Quick Scan → Standard → Thorough → Comparative → Exhaustive
-- 📡 **Live streaming UI** — stage timeline, running security score, event feed, and a real terminal
-- 📄 **Exportable reports** — executive summary, scores, findings, recommendations, as JSON / Markdown / PDF
-- 💾 **Resumable sessions** — survive page refreshes *and* backend restarts; pause, resume, cancel
-- 🏆 **Leaderboard & history** — rank your models and track score changes over time
-- 🔌 **Multi-provider runtime** — one client for streaming, per-model queue, cancellation, retries, metrics. Nine providers: Ollama (default), LM Studio, llama.cpp, vLLM, OpenAI, Anthropic, Gemini, Groq, OpenRouter
+**AI engineering**
+- 🗂️ **AI Studio** — local projects that group models, datasets, evaluations, reports, and training runs. Create, open, rename, duplicate, delete.
+- 💬 **Playground** — chat with any configured provider; tune system prompt, temperature, top-p, max tokens, seed; run a security evaluation in one click. All generation flows through the Runtime Manager.
+- 📚 **Dataset Lab** — import CSV/JSON/JSONL/TXT/MD/PDF/DOCX, preview, analyze quality (duplicates, missing, length, language, prompt-leakage), clean (dedupe/trim/normalize/drop-empty), split train/val/test, and **version every save**.
+- 🏋️ **Training Lab** — local **LoRA / QLoRA** fine-tuning via a swappable training backend (Unsloth when a GPU + ML stack are present; a dependency-free simulation otherwise). Wizard, live dashboard (loss chart, checkpoints, logs, ETA), and training history.
+
+**Security (the original core)**
+- ⚔️ **Adversarial attack library** across 12 categories — prompt injection, jailbreaks, roleplay, RAG, encoding, and more.
+- 📊 **RedForge-Bench** — validated benchmark cases for consistent, comparable scoring.
+- 🧠 **Intelligent evaluation** — profile → plan → adaptive execute (mutate/escalate/retry) → judge → analyze, with a structured security report (JSON / Markdown / PDF).
+- 🏆 **Leaderboard & history** — rank models and track score changes over time.
+
+**Platform**
+- 🔌 **Multi-provider runtime** — one client for streaming, queue, cancellation, retries, metrics. Nine providers: Ollama (default), LM Studio, llama.cpp, vLLM, OpenAI, Anthropic, Gemini, Groq, OpenRouter.
+- ❤️ **System Health Engine**, **⌘K command palette**, and a local **Assistant** that explains results, attacks, and training from local metadata.
+
+---
+
+## 🔒 Trust model
+
+RedForge is built to be trusted with your most sensitive testing. Its security
+posture is deliberate:
+
+- **Local-first.** Models, datasets, prompts, checkpoints, and results stay on
+  your machine. Nothing is uploaded.
+- **Localhost only.** The server binds to `127.0.0.1` by default. Binding to a
+  non-local address prints a warning first (`redforge start --host …`).
+- **No accounts. No telemetry. No mandatory cloud.** RedForge works fully offline.
+- **Authentication is intentionally absent.** RedForge is a single-user local
+  tool, like a database GUI or a local Jupyter server. There is no login because
+  the trust boundary is *your machine*. **Do not expose RedForge to an untrusted
+  network** — anyone who can reach the port can use the API. Cloud providers are
+  opt-in and require your own API key, which is read from the environment and
+  never stored or logged.
+- **Single process by design.** Live state (runtime cache, training/download
+  progress) is in-memory, so RedForge must run as one process — it refuses to
+  start under a multi-worker configuration.
+
+See [SECURITY.md](SECURITY.md) for the full statement.
 
 ---
 
@@ -80,6 +116,32 @@ redforge status          # running state, sessions, models
 ```
 
 More detail in [docs/quickstart.md](docs/quickstart.md) and [docs/installation.md](docs/installation.md).
+
+---
+
+## 🧭 User guide
+
+Once RedForge is open, the left sidebar is the map and **⌘K / Ctrl-K** is the
+fastest way anywhere. A typical workflow:
+
+1. **Create a project** — *Projects* (AI Studio) → **New Project**. A project
+   groups your models, datasets, evaluations, reports, and training runs.
+2. **Pick a runtime & model** — *Runtime* selects the active provider; *Models*
+   browses and manages installed models. Onboarding can download one for you.
+3. **Chat** — *Playground* to talk to a model, tune parameters, and iterate on a
+   system prompt. Click **Run Security Evaluation** to send it straight into the
+   evaluation engine.
+4. **Curate data** — *Dataset Lab* → **Import** a file, review **Quality**,
+   **Clean** it, and **Split** into train/val/test. Every save is versioned.
+5. **Fine-tune** — *Training Lab* → **New Training Run**, pick a base model,
+   dataset, LoRA/QLoRA, and parameters. Watch loss, checkpoints, and logs live.
+   (Real training needs a GPU + the Unsloth stack; otherwise a simulation runs so
+   you can learn the flow.)
+6. **Red-team** — *Evaluate* runs the attack library against a model; watch it
+   **Live**, then read the **Report** (score, findings, recommendations, export).
+
+The floating **Assistant** (bottom-right) explains scores, attacks, dataset
+quality, and training questions from local metadata — no network required.
 
 ---
 
@@ -157,25 +219,31 @@ Errors come back in a structured envelope: `{success, error: {code, message, det
 
 ## 🏗️ Architecture
 
-One FastAPI process serves both the API and the built React dashboard. SQLite underneath. A local runtime (Ollama by default) does the model serving.
+One FastAPI process serves both the API and the built React SPA. SQLite
+underneath. A local runtime (Ollama by default) does the model serving. Each
+capability is an **isolated, swappable module** — the Runtime Manager, Training
+Manager, Dataset Lab, and Security engine don't reach into each other.
 
 | Layer | Tech |
 |---|---|
 | API | FastAPI (async) — single process also serves the built UI (SPA catch-all + `/healthz`) |
-| Database | SQLite via SQLAlchemy 2.0 async, Alembic migrations |
-| Runtime | Unified multi-provider client (Ollama, LM Studio, llama.cpp, vLLM, and cloud APIs) via the Runtime Manager |
-| Frontend | React 18, TypeScript, Vite, Tailwind, Recharts |
+| Database | SQLite via SQLAlchemy 2.0 async |
+| Runtime | Unified multi-provider client (Ollama, LM Studio, llama.cpp, vLLM, cloud APIs) via the **Runtime Manager** |
+| Training | **Training Manager** with swappable providers (Unsloth for real LoRA/QLoRA; simulation fallback) |
+| Datasets | **Dataset Lab** — isolated parse/analyze/clean/split/version logic |
+| Frontend | React 18, TypeScript, Vite, Tailwind, Recharts — IDE-style shell, ⌘K palette |
 | CLI | Python standard library only |
 
 ```
-backend/     FastAPI app, runtime, evaluation engine, tests (369 tests)
-frontend/    React dashboard (Vite)
+backend/     FastAPI app + modules: runtime/, training/, datasets_lab/,
+             projects/, health/, sessions/, execution/, evaluation engine (400+ tests)
+frontend/    React workspace (Vite) — Studio, Playground, Dataset Lab, Training Lab, Security
 website/     Marketing site (Vite) — deployed to Vercel
 cli/         redforge CLI (stdlib Python)
-datasets/    attacks + RedForge-Bench-V1
+datasets/    attacks + RedForge-Bench
 installers/  Windows (Inno Setup) + Linux (AppImage)
-scripts/     build_release.py, generate_icons.py
-docs/        installation, quickstart, troubleshooting, faq, architecture
+scripts/     build_release.py, version.py, checksums.py
+docs/        installation, quickstart, providers, cli-reference, architecture/
 ```
 
 Deep dives in [docs/architecture.md](docs/architecture.md).
