@@ -1,0 +1,102 @@
+{
+  "name": "redforge-desktop",
+  "productName": "RedForge",
+  "version": "2.0.0",
+  "description": "RedForge — the local AI engineering platform, as a native desktop app.",
+  "author": "RedForge",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "main": "electron/main.js",
+  "homepage": "https://redforge.dev",
+  "scripts": {
+    "start": "electron .",
+    "dev": "REDFORGE_PYTHON=python electron .",
+    "stage-backend": "python scripts/stage-backend.py",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.2.1"
+  },
+  "build": {
+    "appId": "dev.redforge.desktop",
+    "productName": "RedForge",
+    "copyright": "Copyright © RedForge",
+    "directories": {
+      "output": "release-build",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/backend",
+        "to": "backend",
+        "filter": ["**/*"]
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "redforge",
+        "repo": "redforge"
+      }
+    ],
+    "win": {
+      "icon": "../installers/windows/desktop.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "zip", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "artifactName": "RedForge-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "RedForge-Portable-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RedForge",
+      "uninstallDisplayName": "RedForge ${version}",
+      "installerIcon": "../installers/windows/installer.ico",
+      "uninstallerIcon": "../installers/windows/installer.ico"
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "artifactName": "RedForge-${version}-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "RedForge ${version}"
+    },
+    "linux": {
+      "icon": "../installers/linux/redforge.png",
+      "category": "Development",
+      "maintainer": "RedForge <hello@redforge.dev>",
+      "synopsis": "Local AI engineering platform",
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ],
+      "artifactName": "RedForge-${version}-${arch}.${ext}"
+    }
+  }
+}

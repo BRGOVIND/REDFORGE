@@ -1,0 +1,82 @@
+name: Desktop Build
+
+# Builds native RedForge installers for Windows, macOS and Linux.
+#   • Push a tag v* → builds + publishes installers to the GitHub Release (auto-update feed).
+#   • workflow_dispatch → dry-run build, installers uploaded as artifacts (no publish).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Backend deps (so the app graph imports) + PyInstaller to freeze it.
+      - name: Install backend + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pyinstaller
+
+      # 1) Build frontend, 2) freeze backend, 3) assemble desktop/resources/backend
+      - name: Stage backend (frontend build + PyInstaller freeze)
+        run: python desktop/scripts/stage-backend.py
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm ci
+
+      # Package. On a tag, electron-builder publishes to the GitHub Release
+      # (enabling auto-update); otherwise it only builds locally.
+      - name: Build installers
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing (optional — set these repo secrets to sign the builds):
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            npx electron-builder --publish always
+          else
+            npx electron-builder --publish never
+          fi
+
+      - name: Upload installers (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: redforge-${{ matrix.os }}
+          path: |
+            desktop/release-build/*.exe
+            desktop/release-build/*.zip
+            desktop/release-build/*.dmg
+            desktop/release-build/*.AppImage
+            desktop/release-build/*.deb
+          if-no-files-found: ignore
