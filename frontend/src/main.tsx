@@ -5,6 +5,7 @@ import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { QueryProvider } from './lib/query';
 import { ToasterProvider } from './lib/toast';
+import { TaskManagerProvider } from './components/TaskManager';
 import './index.css';
 
 // Injected at build time from the repo-root VERSION file (vite.config.ts).
@@ -16,9 +17,11 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <ErrorBoundary>
       <QueryProvider>
         <ToasterProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <TaskManagerProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </TaskManagerProvider>
         </ToasterProvider>
       </QueryProvider>
     </ErrorBoundary>

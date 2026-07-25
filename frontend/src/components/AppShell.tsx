@@ -6,8 +6,14 @@ import {
   Clock,
   Command,
   Database,
+  Download,
   Dumbbell,
+  FlaskConical,
+  Activity,
   LayoutDashboard,
+  Layers,
+  Microscope,
+  Package,
   PanelLeftClose,
   PanelLeftOpen,
   ScrollText,
@@ -23,6 +29,7 @@ import { cn } from '../lib/cn';
 import { useModels, useProviders, useSessions } from '../hooks/queries';
 import { CommandPalette, openCommandPalette } from './CommandPalette';
 import { Assistant } from './Assistant';
+import { TaskBarButton } from './TaskManager';
 
 interface NavItem {
   to: string;
@@ -30,6 +37,7 @@ interface NavItem {
   icon: React.ReactNode;
   end?: boolean;
   match?: string; // extra pathname prefix that should also mark this item active
+  exp?: boolean;  // mark an experimental workflow with a subtle "Exp" pill
 }
 
 interface NavGroup {
@@ -43,17 +51,30 @@ const NAV: NavGroup[] = [
     title: 'Workspace',
     items: [
       { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} />, end: true },
+      { to: '/experiments', label: 'Experiments', icon: <Microscope size={16} />, match: '/experiments' },
       { to: '/studio', label: 'Projects', icon: <Boxes size={16} /> },
     ],
   },
   {
     title: 'Build',
     items: [
+      { to: '/model-hub', label: 'Model Hub', icon: <Package size={16} />, match: '/model-hub' },
       { to: '/models', label: 'Models', icon: <Server size={16} /> },
+      { to: '/foundation-models', label: 'Foundation', icon: <Package size={16} />, match: '/foundation-models' },
+      { to: '/artifacts', label: 'Artifacts', icon: <Layers size={16} />, match: '/artifacts' },
       { to: '/datasets', label: 'Datasets', icon: <Database size={16} /> },
-      { to: '/training', label: 'Training', icon: <Dumbbell size={16} /> },
+      { to: '/training', label: 'Training', icon: <Dumbbell size={16} />, exp: true },
       { to: '/benchmarks', label: 'Benchmarks', icon: <BarChart3 size={16} />, match: '/benchmarks' },
+      { to: '/workbench', label: 'Workbench', icon: <FlaskConical size={16} />, match: '/workbench' },
       { to: '/playground', label: 'Playground', icon: <Sparkles size={16} /> },
+    ],
+  },
+  {
+    title: 'Pipeline',
+    items: [
+      { to: '/pipeline/datasets', label: 'Datasets', icon: <Database size={16} />, match: '/pipeline/datasets' },
+      { to: '/pipeline/train', label: 'Fine-Tune', icon: <Dumbbell size={16} />, match: '/pipeline/train' },
+      { to: '/pipeline/exports', label: 'Exports', icon: <Download size={16} />, match: '/pipeline/exports' },
     ],
   },
   {
@@ -70,6 +91,7 @@ const NAV: NavGroup[] = [
     title: 'System',
     items: [
       { to: '/runtime', label: 'Runtime', icon: <Server size={16} /> },
+      { to: '/jobs', label: 'Jobs', icon: <Activity size={16} />, match: '/jobs' },
       { to: '/setup', label: 'Settings', icon: <Settings size={16} /> },
     ],
   },
@@ -134,7 +156,16 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
                       <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r bg-red-500" />
                     )}
                     <span className={active ? 'text-red-400' : ''}>{item.icon}</span>
-                    {!collapsed && item.label}
+                    {!collapsed && (
+                      <span className="flex flex-1 items-center gap-1.5">
+                        {item.label}
+                        {item.exp && (
+                          <span className="rounded bg-uncertain/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-uncertain">
+                            Exp
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}
@@ -193,6 +224,8 @@ function TopBar() {
       </button>
 
       <div className="ml-auto flex items-center gap-3">
+        {/* Global task indicator — "Running (N)" opens the task panel from anywhere. */}
+        <TaskBarButton />
         {/* Provider status pill */}
         <div
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-content-muted"

@@ -14,6 +14,7 @@ const Leaderboard = React.lazy(() => import('./pages/LeaderboardPage'));
 const History = React.lazy(() => import('./pages/HistoryPage'));
 const RuntimeManager = React.lazy(() => import('./pages/RuntimeManagerPage'));
 const ModelManager = React.lazy(() => import('./pages/ModelManagerPage'));
+const ModelHub = React.lazy(() => import('./pages/ModelHubPage'));
 const Onboarding = React.lazy(() => import('./pages/OnboardingPage'));
 const Studio = React.lazy(() => import('./pages/StudioPage'));
 const ProjectOverview = React.lazy(() => import('./pages/ProjectOverviewPage'));
@@ -21,6 +22,17 @@ const Playground = React.lazy(() => import('./pages/PlaygroundPage'));
 const DatasetLab = React.lazy(() => import('./pages/DatasetLabPage'));
 const TrainingLab = React.lazy(() => import('./pages/TrainingLabPage'));
 const BenchmarkCenter = React.lazy(() => import('./pages/BenchmarkCenterPage'));
+const EvaluationWorkbench = React.lazy(() => import('./pages/EvaluationWorkbenchPage'));
+const FoundationModels = React.lazy(() => import('./pages/FoundationModelsPage'));
+const Artifacts = React.lazy(() => import('./pages/ArtifactsPage'));
+const ArtifactDetail = React.lazy(() => import('./pages/ArtifactDetailPage'));
+const Jobs = React.lazy(() => import('./pages/JobsPage'));
+const Experiments = React.lazy(() => import('./pages/ExperimentsPage'));
+const ExperimentDetail = React.lazy(() => import('./pages/ExperimentDetailPage'));
+const PipelineDatasets = React.lazy(() => import('./pages/PipelineDatasetsPage'));
+const PipelineTraining = React.lazy(() => import('./pages/PipelineTrainingPage'));
+const PipelineTrainingDetail = React.lazy(() => import('./pages/PipelineTrainingDetailPage'));
+const PipelineExports = React.lazy(() => import('./pages/PipelineExportsPage'));
 
 /** First-run completion flag. Remove this key to re-run onboarding. */
 const ONBOARDED_KEY = 'redforge_onboarded';
@@ -33,11 +45,21 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/history')) return 'RedForge • History';
   if (pathname.startsWith('/leaderboard')) return 'RedForge • Leaderboard';
   if (pathname.startsWith('/runtime')) return 'RedForge • Runtime Manager';
+  if (pathname.startsWith('/model-hub')) return 'RedForge • Model Hub';
   if (pathname.startsWith('/models')) return 'RedForge • Model Manager';
   if (pathname.startsWith('/studio')) return 'RedForge • AI Studio';
   if (pathname.startsWith('/playground')) return 'RedForge • Playground';
   if (pathname.startsWith('/datasets')) return 'RedForge • Dataset Lab';
-  if (pathname.startsWith('/training')) return 'RedForge • Training Lab';
+  if (pathname.startsWith('/training')) return 'RedForge • Training (Experimental)';
+  if (pathname.startsWith('/benchmarks')) return 'RedForge • Benchmark Center';
+  if (pathname.startsWith('/workbench')) return 'RedForge • Evaluation Workbench';
+  if (pathname.startsWith('/foundation-models')) return 'RedForge • Foundation Models';
+  if (pathname.startsWith('/artifacts')) return 'RedForge • Artifacts';
+  if (pathname.startsWith('/jobs')) return 'RedForge • Jobs';
+  if (pathname.startsWith('/experiments')) return 'RedForge • Experiments';
+  if (pathname.startsWith('/pipeline/datasets')) return 'RedForge • Pipeline Datasets';
+  if (pathname.startsWith('/pipeline/train')) return 'RedForge • Fine-Tuning';
+  if (pathname.startsWith('/pipeline/exports')) return 'RedForge • Exports';
   if (pathname.startsWith('/onboarding')) return 'RedForge • Welcome';
   if (pathname.startsWith('/setup')) return 'RedForge • Setup';
   return 'RedForge';
@@ -90,12 +112,24 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/runtime" element={<RuntimeManager />} />
           <Route path="/models" element={<ModelManager />} />
+          <Route path="/model-hub" element={<ModelHub />} />
           <Route path="/studio" element={<Studio />} />
           <Route path="/projects/:id" element={<ProjectOverview />} />
           <Route path="/playground" element={<Playground />} />
           <Route path="/datasets" element={<DatasetLab />} />
           <Route path="/training" element={<TrainingLab />} />
           <Route path="/benchmarks" element={<BenchmarkCenter />} />
+          <Route path="/workbench" element={<EvaluationWorkbench />} />
+          <Route path="/foundation-models" element={<FoundationModels />} />
+          <Route path="/artifacts" element={<Artifacts />} />
+          <Route path="/artifacts/:id" element={<ArtifactDetail />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/experiments" element={<Experiments />} />
+          <Route path="/experiments/:id" element={<ExperimentDetail />} />
+          <Route path="/pipeline/datasets" element={<PipelineDatasets />} />
+          <Route path="/pipeline/train" element={<PipelineTraining />} />
+          <Route path="/pipeline/train/:id" element={<PipelineTrainingDetail />} />
+          <Route path="/pipeline/exports" element={<PipelineExports />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

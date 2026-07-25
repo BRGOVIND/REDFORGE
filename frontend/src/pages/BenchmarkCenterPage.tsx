@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Legend,
   PolarAngleAxis,
@@ -45,10 +45,14 @@ export default function BenchmarkCenterPage() {
   const [selSuites, setSelSuites] = useState<Set<string>>(new Set(['performance', 'security']));
   const [compare, setCompare] = useState<Set<string>>(new Set());
 
-  // Poll while any job is active so the UI updates without a refresh.
-  const history = useBenchmarkHistory(undefined, 2500);
+  // Poll ONLY while a job is active — an idle page makes no background requests.
+  const [pollMs, setPollMs] = useState(0);
+  const history = useBenchmarkHistory(undefined, pollMs);
   const results = history.data ?? [];
   const active = results.some((r) => r.status === 'pending' || r.status === 'running');
+  useEffect(() => {
+    setPollMs(active ? 2500 : 0);
+  }, [active]);
   const leaderboard = useBenchmarkLeaderboard();
 
   const toggle = (set: Set<string>, setter: (s: Set<string>) => void, key: string) => {

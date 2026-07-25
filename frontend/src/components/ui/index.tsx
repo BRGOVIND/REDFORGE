@@ -1,6 +1,6 @@
 /** Shared design-system primitives. Dark-first, neutral grey + red accent. */
 import React from 'react';
-import { AlertTriangle, Inbox, Loader2 } from 'lucide-react';
+import { AlertTriangle, FlaskConical, Inbox, Loader2, Radio } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
 // --- Card ------------------------------------------------------------------
@@ -95,13 +95,16 @@ export function Badge({
   tone = 'neutral',
   className,
   children,
+  title,
 }: {
   tone?: BadgeTone;
   className?: string;
   children: React.ReactNode;
+  title?: string;
 }) {
   return (
     <span
+      title={title}
       className={cn(
         'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium',
         BADGE_TONES[tone],
@@ -110,6 +113,26 @@ export function Badge({
     >
       {children}
     </span>
+  );
+}
+
+/** Marks a workflow that is not yet backed by real infrastructure. Consistent,
+ *  understated — signals "experimental" without shouting or degrading the UI. */
+export function ExperimentalBadge({ className }: { className?: string }) {
+  return (
+    <Badge tone="amber" className={cn('uppercase tracking-wide', className)} title="Experimental — under active development">
+      <FlaskConical size={11} /> Experimental
+    </Badge>
+  );
+}
+
+/** Marks output produced by the local simulation engine (identical UX to real
+ *  execution — it just runs without heavy infrastructure). */
+export function SimulationBadge({ className, label = 'Simulation' }: { className?: string; label?: string }) {
+  return (
+    <Badge tone="grey" className={cn('font-normal', className)} title="Runs locally via the simulation engine — same workflow as real execution">
+      <Radio size={11} /> {label}
+    </Badge>
   );
 }
 
@@ -246,15 +269,20 @@ export function PageHeader({
   title,
   description,
   actions,
+  badge,
 }: {
   title: string;
   description?: string;
   actions?: React.ReactNode;
+  badge?: React.ReactNode;
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-content">{title}</h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-semibold tracking-tight text-content">{title}</h1>
+          {badge}
+        </div>
         {description && <p className="mt-1 text-sm text-content-muted">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

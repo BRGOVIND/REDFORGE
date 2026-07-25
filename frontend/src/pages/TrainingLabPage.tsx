@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   ArrowLeft,
   ArrowRight,
   Boxes,
+  CheckCircle2,
   Cpu,
   Download,
   FileText,
@@ -12,24 +13,29 @@ import {
   Lightbulb,
   Loader2,
   Play,
+  RefreshCw,
   Rocket,
   Shield,
   Square,
   Trash2,
+  XCircle,
 } from 'lucide-react';
 import {
   Badge,
   Button,
   Card,
   EmptyState,
+  ExperimentalBadge,
   PageHeader,
   Progress,
+  SimulationBadge,
   Skeleton,
   StatusBadge,
 } from '../components/ui';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import {
   useTrainingBackends,
+  useTrainingDiagnostics,
   useTrainingRuns,
   useTrainingProgress,
   useTrainingCheckpoints,
@@ -44,7 +50,75 @@ import {
   useTrainingReport,
 } from '../hooks/queries';
 import { toast } from '../lib/toast';
+import { trainingDiagnostics } from '../api/endpoints';
 import type { Recommendation, TrainingParams, TrainingRun } from '../api/types';
+
+/**
+ * Structured, per-layer training diagnostics (PyTorch / CUDA / GPU / Transformers
+ * / PEFT / Unsloth / bitsandbytes). Shows exactly which dependency is missing
+ * instead of collapsing every problem into "No CUDA GPU detected". Refresh
+ * re-probes the environment (after installing a driver or package).
+ */
+function TrainingDiagnosticsPanel() {
+  const diag = useTrainingDiagnostics();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await trainingDiagnostics(true); // re-probe on the server
+      await diag.refetch?.();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const d = diag.data;
+  return (
+    <div className="mt-2 rounded-lg border border-border bg-base p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-semibold text-content-subtle">Environment diagnostics</span>
+        <button
+          onClick={refresh}
+          className="flex items-center gap-1 text-[11px] text-content-subtle hover:text-content rf-focus"
+          title="Re-probe environment"
+        >
+          <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} /> Refresh
+        </button>
+      </div>
+      {diag.isLoading ? (
+        <Skeleton className="h-24" />
+      ) : !d ? (
+        <p className="text-xs text-content-subtle">Diagnostics unavailable.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+            {d.checks.map((c) => (
+              <div key={c.name} className="flex items-center gap-2 text-xs">
+                {c.ok ? (
+                  <CheckCircle2 size={13} className="shrink-0 text-pass" />
+                ) : (
+                  <XCircle size={13} className={`shrink-0 ${c.required ? 'text-fail' : 'text-uncertain'}`} />
+                )}
+                <span className="text-content">{c.name}</span>
+                <span className="min-w-0 truncate text-content-subtle" title={c.detail}>
+                  {c.detail}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div
+            className={`mt-2 rounded-md px-2.5 py-1.5 text-xs font-medium ${
+              d.ready ? 'bg-pass/10 text-pass' : 'bg-uncertain/10 text-uncertain'
+            }`}
+          >
+            {d.status}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 /** Prefill for the wizard — used by one-click "Apply" from a recommendation.
  * Nothing launches automatically; the user still reviews and edits every field. */
@@ -141,8 +215,9 @@ export default function TrainingLabPage() {
   return (
     <div>
       <PageHeader
-        title="Training Lab"
-        description="Fine-tune local models with LoRA / QLoRA. Everything runs and stays on your machine."
+        title="Training"
+        badge={<ExperimentalBadge />}
+        description="Fine-tune local models with LoRA / QLoRA. Everything runs and stays on your machine. Real GPU training is experimental; the simulation engine mirrors the full workflow."
         actions={
           <Button onClick={() => setWizard(true)}>
             <Rocket size={16} /> New Training Run
@@ -190,7 +265,7 @@ function RunCard({ run, onOpen }: { run: TrainingRun; onOpen: () => void }) {
       </div>
       <div className="mt-3 flex items-center gap-2">
         <Badge tone="neutral">{run.method.toUpperCase()}</Badge>
-        <Badge tone="grey">{run.backend}</Badge>
+        {run.backend === 'simulation' ? <SimulationBadge /> : <Badge tone="grey">{run.backend}</Badge>}
         {run.metrics?.final_loss != null && (
           <span className="text-xs text-content-subtle">loss {Number(run.metrics.final_loss).toFixed(3)}</span>
         )}
@@ -243,25 +318,47 @@ function TrainingWizard({
     step === 4;
 
   const doLaunch = async () => {
-    try {
-      const res = await launch.mutate({
-        name,
-        base_model: activeModel,
-        dataset_id: datasetId || null,
-        method,
-        backend: activeBackend,
-        params,
-        continuous_security: continuousSecurity,
-        security_profile: securityProfile,
-      });
-      if (res?.run) {
-        toast.success('Training launched', `${res.run.name} · ${res.backend}`);
-        onLaunched(res.run.id);
-      }
-    } catch {
-      toast.error('Could not launch training');
+    const res = await launch.mutate({
+      name,
+      base_model: activeModel,
+      dataset_id: datasetId || null,
+      method,
+      backend: activeBackend,
+      params,
+      continuous_security: continuousSecurity,
+      security_profile: securityProfile,
+    });
+    if (res?.run) {
+      toast.success('Training launched', `${res.run.name} · ${res.backend}`);
+      onLaunched(res.run.id);
     }
+    // Failures surface via the effect below (mutate() swallows the error and returns
+    // undefined), so a blocked launch is NEVER a silent no-op.
   };
+
+  // Surface a blocked launch (e.g. HTTP 422 from the Hardware Compatibility Engine)
+  // with the concrete reason, required vs available VRAM, and recommended models.
+  useEffect(() => {
+    const err = launch.error as
+      | { message?: string; details?: {
+          message?: string; recommended_models?: string[];
+          assessment?: { usable_mb?: number;
+            estimate_safe?: { total_mb?: number }; estimate_requested?: { total_mb?: number } };
+        } }
+      | undefined;
+    if (!err) return;
+    const d = err.details ?? {};
+    const a = d.assessment;
+    const gb = (mb?: number) => (mb ? `${(mb / 1024).toFixed(1)} GB` : '?');
+    const required = a?.estimate_safe?.total_mb ?? a?.estimate_requested?.total_mb;
+    const lines: string[] = [];
+    if (required || a?.usable_mb) lines.push(`Needs ~${gb(required)} VRAM; this GPU has ~${gb(a?.usable_mb)} usable.`);
+    if (d.recommended_models?.length) lines.push(`Try a smaller model: ${d.recommended_models.join(', ')}.`);
+    toast.error(
+      d.message ? 'Training blocked — insufficient GPU memory' : 'Could not launch training',
+      [d.message ?? err.message, ...lines].filter(Boolean).join(' '),
+    );
+  }, [launch.error]);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -344,6 +441,7 @@ function TrainingWizard({
                   {backendList.find((b) => b.name === activeBackend)?.reason}
                 </p>
               )}
+              {activeBackend === 'unsloth' && <TrainingDiagnosticsPanel />}
             </div>
 
             {/* Continuous Security — auto-evaluate each checkpoint */}
@@ -478,6 +576,7 @@ function RunDashboard({
     <div>
       <PageHeader
         title={runInfo?.name ?? 'Training run'}
+        badge={runInfo?.backend === 'simulation' ? <SimulationBadge /> : undefined}
         description={`${runInfo?.method?.toUpperCase() ?? ''} · ${runInfo?.base_model ?? ''} · ${runInfo?.backend ?? ''}`}
         actions={
           <div className="flex items-center gap-2">
@@ -814,6 +913,37 @@ function ReportCard({ runId }: { runId: string }) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {r.evaluation && (
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">Evaluation</p>
+          <div className="rounded-lg border border-border bg-surface px-3 py-2.5 text-xs">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="text-content">Pass rate <b className="text-pass">{r.evaluation.pass_rate ?? '—'}%</b></span>
+              <span className="text-content-muted">Quality {r.evaluation.quality_score ?? '—'}</span>
+              <span className="text-content-muted">Regression {r.evaluation.regression_score ?? '—'}</span>
+              <span className="text-content-muted">Consistency {r.evaluation.consistency_score ?? '—'}</span>
+              {r.evaluation.best_model && (
+                <span className="text-content-muted">Best <b className="text-content">{r.evaluation.best_model.label}</b></span>
+              )}
+            </div>
+            {Object.keys(r.evaluation.regression_breakdown ?? {}).length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {Object.entries(r.evaluation.regression_breakdown).map(([t, n]) => (
+                  <Badge key={t} tone="amber">{t}: {n}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {r.deployment_recommendation && (
+        <div className="mt-4 rounded-lg border border-border bg-base px-3 py-2.5 text-xs text-content">
+          <span className="font-semibold text-content-subtle">Deployment: </span>
+          {r.deployment_recommendation.replace(/\*\*/g, '')}
         </div>
       )}
 

@@ -359,6 +359,14 @@ export function useTrainingBackends() {
   return useQuery({ queryKey: ['training-backends'], queryFn: api.trainingBackends, staleTime: 30_000 });
 }
 
+export function useTrainingDiagnostics() {
+  return useQuery({
+    queryKey: ['training-diagnostics'],
+    queryFn: () => api.trainingDiagnostics(),
+    staleTime: 30_000,
+  });
+}
+
 export function useTrainingRuns(projectId?: string, limit?: number) {
   return useQuery({
     queryKey: ['training-runs', projectId ?? 'all', limit ?? 'n'],
@@ -521,5 +529,493 @@ export function useBenchmarkTrends(projectId: string | null, suite?: string) {
     queryFn: () => api.benchmarkTrends(projectId as string, suite),
     enabled: !!projectId,
     staleTime: 5_000,
+  });
+}
+
+// --- RedForge V2 · Evaluation Workbench (Phase 4) --------------------------
+
+export function useSimilarityProviders() {
+  return useQuery({ queryKey: ['wb-similarity'], queryFn: api.similarityProviders, staleTime: 60_000 });
+}
+
+export function useCollections(projectId?: string) {
+  return useQuery({
+    queryKey: ['wb-collections', projectId ?? 'all'],
+    queryFn: () => api.listCollections(projectId),
+    staleTime: 3_000,
+  });
+}
+
+export function useCollection(id: string | null) {
+  return useQuery({
+    queryKey: ['wb-collection', id],
+    queryFn: () => api.getCollection(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useCreateCollection() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createCollection>[0]) => api.createCollection(body),
+    onSuccess: () => queryClient.invalidate(['wb-collections']),
+  });
+}
+
+export function useDeleteCollection() {
+  return useMutation({
+    mutationFn: (id: string) => api.deleteCollection(id),
+    onSuccess: () => queryClient.invalidate(['wb-collections']),
+  });
+}
+
+export function usePromptSet(id: string | null) {
+  return useQuery({
+    queryKey: ['wb-prompt-set', id],
+    queryFn: () => api.getPromptSet(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useCreatePromptSet() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createPromptSet>[0]) => api.createPromptSet(body),
+    onSuccess: (s) => {
+      queryClient.invalidate(['wb-collection', s.collection_id]);
+      queryClient.invalidate(['wb-collections']);
+    },
+  });
+}
+
+export function useDeletePromptSet() {
+  return useMutation({
+    mutationFn: (id: string) => api.deletePromptSet(id),
+    onSuccess: () => {
+      queryClient.invalidate(['wb-collection']);
+      queryClient.invalidate(['wb-collections']);
+    },
+  });
+}
+
+export function useCreatePrompt() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createPrompt>[0]) => api.createPrompt(body),
+    onSuccess: (p) => queryClient.invalidate(['wb-prompt-set', p.prompt_set_id]),
+  });
+}
+
+export function useUpdatePrompt() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Parameters<typeof api.updatePrompt>[1] }) =>
+      api.updatePrompt(id, body),
+    onSuccess: (p) => {
+      queryClient.invalidate(['wb-prompt-set', p.prompt_set_id]);
+      queryClient.invalidate(['wb-prompt-versions', p.id]);
+    },
+  });
+}
+
+export function useDeletePrompt() {
+  return useMutation({
+    mutationFn: (id: string) => api.deletePrompt(id),
+    onSuccess: () => queryClient.invalidate(['wb-prompt-set']),
+  });
+}
+
+export function usePromptVersions(id: string | null) {
+  return useQuery({
+    queryKey: ['wb-prompt-versions', id],
+    queryFn: () => api.promptVersions(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useWorkbenchSessions(params?: { project_id?: string; run_id?: string }, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['wb-sessions', params?.project_id ?? 'all', params?.run_id ?? 'all'],
+    queryFn: () => api.listWorkbenchSessions(params),
+    refetchInterval,
+    staleTime: 2_000,
+  });
+}
+
+export function useWorkbenchSession(id: string | null, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['wb-session', id],
+    queryFn: () => api.getWorkbenchSession(id as string),
+    enabled: !!id,
+    refetchInterval,
+    staleTime: 2_000,
+  });
+}
+
+export function useCreateWorkbenchSession() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createWorkbenchSession>[0]) => api.createWorkbenchSession(body),
+    onSuccess: () => queryClient.invalidate(['wb-sessions']),
+  });
+}
+
+export function useCancelWorkbenchSession() {
+  return useMutation({
+    mutationFn: (id: string) => api.cancelWorkbenchSession(id),
+    onSuccess: () => queryClient.invalidate(['wb-sessions']),
+  });
+}
+
+export function useSessionResults(id: string | null) {
+  return useQuery({
+    queryKey: ['wb-results', id],
+    queryFn: () => api.sessionResults(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useSessionRegressions(id: string | null) {
+  return useQuery({
+    queryKey: ['wb-regressions', id],
+    queryFn: () => api.sessionRegressions(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+// --- RedForge V3 · Foundation Platform (Epic 1) ----------------------------
+
+export function useFoundationModels(params?: { status?: string; source?: string }) {
+  return useQuery({
+    queryKey: ['foundation-models', params?.status ?? 'all', params?.source ?? 'all'],
+    queryFn: () => api.listFoundationModels(params),
+    staleTime: 3_000,
+  });
+}
+
+export function useFoundationModel(id: string | null) {
+  return useQuery({
+    queryKey: ['foundation-model', id],
+    queryFn: () => api.getFoundationModel(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useFoundationModelRuntimes(id: string | null) {
+  return useQuery({
+    queryKey: ['foundation-model-runtimes', id],
+    queryFn: () => api.foundationModelRuntimes(id as string),
+    enabled: !!id,
+    staleTime: 3_000,
+  });
+}
+
+export function useFoundationDiscovery(enabled: boolean) {
+  return useQuery({
+    queryKey: ['foundation-discovery'],
+    queryFn: api.discoverFoundationModels,
+    enabled,
+    staleTime: 10_000,
+  });
+}
+
+export function useRegisterFoundationModel() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.registerFoundationModel>[0]) =>
+      api.registerFoundationModel(body),
+    onSuccess: () => queryClient.invalidate(['foundation-models']),
+  });
+}
+
+export function useDeleteFoundationModel() {
+  return useMutation({
+    mutationFn: (id: string) => api.deleteFoundationModel(id),
+    onSuccess: () => queryClient.invalidate(['foundation-models']),
+  });
+}
+
+export function useResolveRuntimeModel() {
+  return useMutation({
+    mutationFn: (runtimeRef: string) => api.resolveRuntimeModel(runtimeRef),
+  });
+}
+
+export function useSyncFoundationModel() {
+  return useMutation({
+    mutationFn: (id: string) => api.syncFoundationModel(id),
+    onSuccess: () => queryClient.invalidate(['foundation-models']),
+  });
+}
+
+// --- RedForge V3 · Automatic Model Discovery (Epic 4.5) --------------------
+
+export function useRuntimeModels(refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['runtime-models'],
+    queryFn: () => api.listRuntimeModels(),
+    refetchInterval,
+    staleTime: 3_000,
+  });
+}
+export function useUnresolvedRuntimeModels() {
+  return useQuery({
+    queryKey: ['runtime-models-unresolved'],
+    queryFn: api.listUnresolvedRuntimeModels,
+    staleTime: 3_000,
+  });
+}
+function invalidateDiscovery() {
+  queryClient.invalidate(['runtime-models']);
+  queryClient.invalidate(['runtime-models-unresolved']);
+  queryClient.invalidate(['foundation-models']);
+}
+export function useDiscoverModels() {
+  return useMutation({ mutationFn: (_: void) => api.discoverAndRegisterModels(), onSuccess: invalidateDiscovery });
+}
+export function useSyncRuntimeModels() {
+  return useMutation({ mutationFn: (_: void) => api.syncRuntimeModels(), onSuccess: invalidateDiscovery });
+}
+export function useResolveRuntimeModelEntry() {
+  return useMutation({
+    mutationFn: ({ id, hfRepo }: { id: string; hfRepo?: string }) => api.resolveRuntimeModelEntry(id, hfRepo),
+    onSuccess: invalidateDiscovery,
+  });
+}
+
+// --- RedForge V3 · Artifact Registry (Epic 2) ------------------------------
+
+export function useArtifactTypes() {
+  return useQuery({ queryKey: ['artifact-types'], queryFn: api.listArtifactTypes, staleTime: 60_000 });
+}
+
+export function useArtifacts(params?: { type?: string; status?: string; project_id?: string; tag?: string; q?: string }) {
+  return useQuery({
+    queryKey: ['artifacts', params?.type ?? 'all', params?.status ?? 'all', params?.q ?? ''],
+    queryFn: () => api.searchArtifacts(params),
+    staleTime: 3_000,
+  });
+}
+
+export function useArtifact(id: string | null) {
+  return useQuery({
+    queryKey: ['artifact', id],
+    queryFn: () => api.getArtifact(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useArtifactLineage(id: string | null) {
+  return useQuery({
+    queryKey: ['artifact-lineage', id],
+    queryFn: () => api.artifactLineage(id as string),
+    enabled: !!id,
+    staleTime: 3_000,
+  });
+}
+
+export function useArtifactVersions(id: string | null) {
+  return useQuery({
+    queryKey: ['artifact-versions', id],
+    queryFn: () => api.artifactVersions(id as string),
+    enabled: !!id,
+    staleTime: 3_000,
+  });
+}
+
+export function useArchiveArtifact() {
+  return useMutation({
+    mutationFn: (id: string) => api.archiveArtifact(id),
+    onSuccess: () => queryClient.invalidate(['artifacts']),
+  });
+}
+
+export function useValidateArtifact() {
+  return useMutation({
+    mutationFn: (id: string) => api.validateArtifact(id),
+    onSuccess: () => queryClient.invalidate(['artifacts']),
+  });
+}
+
+export function useDeleteArtifact() {
+  return useMutation({
+    mutationFn: (id: string) => api.deleteArtifact(id),
+    onSuccess: () => queryClient.invalidate(['artifacts']),
+  });
+}
+
+// --- RedForge V3 · Job System (Epic 2) -------------------------------------
+
+export function useJobTypes() {
+  return useQuery({ queryKey: ['job-types'], queryFn: api.listJobTypes, staleTime: 60_000 });
+}
+
+export function useJobs(params?: { status?: string; type?: string }, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['jobs', params?.status ?? 'all', params?.type ?? 'all'],
+    queryFn: () => api.listJobs(params),
+    refetchInterval,
+    staleTime: 2_000,
+  });
+}
+
+export function useJob(id: string | null, refetchInterval = 0) {
+  return useQuery({
+    queryKey: ['job', id],
+    queryFn: () => api.getJob(id as string),
+    enabled: !!id,
+    refetchInterval,
+    staleTime: 1_000,
+  });
+}
+
+export function useJobLogs(id: string | null) {
+  return useQuery({
+    queryKey: ['job-logs', id],
+    queryFn: () => api.jobLogs(id as string),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useSubmitJob() {
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.submitJob>[0]) => api.submitJob(body),
+    onSuccess: () => queryClient.invalidate(['jobs']),
+  });
+}
+
+export function useCancelJob() {
+  return useMutation({
+    mutationFn: (id: string) => api.cancelJob(id),
+    onSuccess: () => queryClient.invalidate(['jobs']),
+  });
+}
+
+export function useRetryJob() {
+  return useMutation({
+    mutationFn: (id: string) => api.retryJob(id),
+    onSuccess: () => queryClient.invalidate(['jobs']),
+  });
+}
+
+// --- RedForge V3 · Dataset Platform (Epic 3) -------------------------------
+
+export function useV3Datasets(projectId?: string) {
+  return useQuery({ queryKey: ['dp-list', projectId ?? 'all'], queryFn: () => api.dpList(projectId), staleTime: 3_000 });
+}
+export function useV3Dataset(id: string | null) {
+  return useQuery({ queryKey: ['dp-get', id], queryFn: () => api.dpGet(id as string), enabled: !!id, staleTime: 2_000 });
+}
+export function useV3DatasetPreview(id: string | null) {
+  return useQuery({ queryKey: ['dp-preview', id], queryFn: () => api.dpPreview(id as string), enabled: !!id, staleTime: 3_000 });
+}
+export function useV3DatasetValidate(id: string | null) {
+  return useQuery({ queryKey: ['dp-validate', id], queryFn: () => api.dpValidate(id as string), enabled: !!id, staleTime: 5_000 });
+}
+export function useImportV3Dataset() {
+  return useMutation({
+    mutationFn: ({ file, name, projectId }: { file: File; name?: string; projectId?: string }) => api.dpImport(file, name, projectId),
+    onSuccess: () => queryClient.invalidate(['dp-list']),
+  });
+}
+export function useDeleteV3Dataset() {
+  return useMutation({ mutationFn: (id: string) => api.dpDelete(id), onSuccess: () => queryClient.invalidate(['dp-list']) });
+}
+
+// --- RedForge V3 · Training Platform (Epic 3) ------------------------------
+
+export function useTrainingStrategies() {
+  return useQuery({ queryKey: ['tp-strategies'], queryFn: api.tpStrategies, staleTime: 60_000 });
+}
+export function useTrainingProviders() {
+  return useQuery({ queryKey: ['tp-providers'], queryFn: api.tpProviders, staleTime: 30_000 });
+}
+export function useV3TrainingRuns(projectId?: string, refetchInterval = 0) {
+  return useQuery({ queryKey: ['tp-list', projectId ?? 'all'], queryFn: () => api.tpList(projectId), refetchInterval, staleTime: 2_000 });
+}
+export function useV3TrainingRun(id: string | null, refetchInterval = 0) {
+  return useQuery({ queryKey: ['tp-get', id], queryFn: () => api.tpGet(id as string), enabled: !!id, refetchInterval, staleTime: 1_500 });
+}
+export function useV3TrainingCheckpoints(id: string | null, refetchInterval = 0) {
+  return useQuery({ queryKey: ['tp-checkpoints', id], queryFn: () => api.tpCheckpoints(id as string), enabled: !!id, refetchInterval, staleTime: 2_000 });
+}
+export function useEstimateTraining() {
+  return useMutation({ mutationFn: (body: Record<string, unknown>) => api.tpEstimate(body) });
+}
+export function useCreateTrainingRun() {
+  return useMutation({ mutationFn: (body: Record<string, unknown>) => api.tpCreate(body), onSuccess: () => queryClient.invalidate(['tp-list']) });
+}
+export function useLaunchTrainingRun() {
+  return useMutation({ mutationFn: (id: string) => api.tpLaunch(id), onSuccess: () => queryClient.invalidate(['tp-list']) });
+}
+export function useCancelTrainingRun() {
+  return useMutation({ mutationFn: (id: string) => api.tpCancel(id), onSuccess: () => queryClient.invalidate(['tp-list']) });
+}
+
+// --- RedForge V3 · Export Engine (Epic 3) ----------------------------------
+
+export function useExportProviders() {
+  return useQuery({ queryKey: ['ex-providers'], queryFn: api.exProviders, staleTime: 30_000 });
+}
+export function useExportHistory(refetchInterval = 0) {
+  return useQuery({ queryKey: ['ex-history'], queryFn: api.exHistory, refetchInterval, staleTime: 2_000 });
+}
+export function useSubmitExport() {
+  return useMutation({ mutationFn: (body: Parameters<typeof api.exSubmit>[0]) => api.exSubmit(body), onSuccess: () => queryClient.invalidate(['ex-history']) });
+}
+
+// --- RedForge V3 · Experiment Platform (Epic 4) ----------------------------
+
+export function useExperiments(params?: { project_id?: string; status?: string }) {
+  return useQuery({ queryKey: ['xp-list', params?.project_id ?? 'all', params?.status ?? 'all'], queryFn: () => api.xpList(params), staleTime: 3_000 });
+}
+export function useExperiment(id: string | null, refetchInterval = 0) {
+  return useQuery({ queryKey: ['xp-get', id], queryFn: () => api.xpGet(id as string), enabled: !!id, refetchInterval, staleTime: 2_000 });
+}
+export function useExperimentTimeline(id: string | null, refetchInterval = 0) {
+  return useQuery({ queryKey: ['xp-timeline', id], queryFn: () => api.xpTimeline(id as string), enabled: !!id, refetchInterval, staleTime: 2_000 });
+}
+export function useExperimentArtifacts(id: string | null, refetchInterval = 0) {
+  return useQuery({ queryKey: ['xp-artifacts', id], queryFn: () => api.xpArtifacts(id as string), enabled: !!id, refetchInterval, staleTime: 2_000 });
+}
+export function useExperimentJobs(id: string | null, refetchInterval = 0) {
+  return useQuery({ queryKey: ['xp-jobs', id], queryFn: () => api.xpJobs(id as string), enabled: !!id, refetchInterval, staleTime: 2_000 });
+}
+export function useExperimentNotes(id: string | null) {
+  return useQuery({ queryKey: ['xp-notes', id], queryFn: () => api.xpNotes(id as string), enabled: !!id, staleTime: 2_000 });
+}
+export function useExperimentComparison(ids: string[]) {
+  return useQuery({ queryKey: ['xp-compare', ids.join(',')], queryFn: () => api.xpCompare(ids), enabled: ids.length > 0, staleTime: 2_000 });
+}
+export function useCreateExperiment() {
+  return useMutation({ mutationFn: (body: Parameters<typeof api.xpCreate>[0]) => api.xpCreate(body), onSuccess: () => queryClient.invalidate(['xp-list']) });
+}
+export function useUpdateExperiment() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Parameters<typeof api.xpUpdate>[1] }) => api.xpUpdate(id, body),
+    onSuccess: (_r, v) => { queryClient.invalidate(['xp-list']); queryClient.invalidate(['xp-get', v.id]); },
+  });
+}
+export function useDeleteExperiment() {
+  return useMutation({ mutationFn: (id: string) => api.xpDelete(id), onSuccess: () => queryClient.invalidate(['xp-list']) });
+}
+export function useCloneExperiment() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Parameters<typeof api.xpClone>[1] }) => api.xpClone(id, body),
+    onSuccess: () => queryClient.invalidate(['xp-list']),
+  });
+}
+export function useSnapshotExperiment() {
+  return useMutation({
+    mutationFn: (id: string) => api.xpSnapshot(id),
+    onSuccess: (_r, id) => { queryClient.invalidate(['xp-get', id]); queryClient.invalidate(['xp-timeline', id]); },
+  });
+}
+export function useAddExperimentNote() {
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) => api.xpAddNote(id, body),
+    onSuccess: (_r, v) => { queryClient.invalidate(['xp-notes', v.id]); queryClient.invalidate(['xp-timeline', v.id]); },
   });
 }

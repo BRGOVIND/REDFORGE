@@ -669,6 +669,23 @@ export interface TrainingBackend {
   reason: string;
 }
 
+export interface TrainingDiagnosticCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+  required: boolean;
+}
+
+export interface TrainingDiagnostics {
+  backend: string;
+  label: string;
+  checks: TrainingDiagnosticCheck[];
+  ready: boolean;
+  missing_required: string[];
+  status: string;
+  install_hint: string;
+}
+
 export interface TrainingParams {
   epochs: number;
   learning_rate: number;
@@ -902,6 +919,213 @@ export interface BenchmarkRequest {
   config?: Record<string, unknown>;
 }
 
+// --- RedForge V2 · Evaluation Workbench (Phase 4) --------------------------
+
+export interface SimilarityProviderInfo {
+  key: string;
+  label: string;
+  description: string;
+  available: boolean;
+}
+
+export interface EvaluationCollection {
+  id: string;
+  project_id: string | null;
+  name: string;
+  category: string;
+  description: string;
+  tags: string[];
+  notes: string;
+  created_at: string | null;
+  updated_at: string | null;
+  prompt_set_count?: number;
+  prompt_sets?: PromptSet[];
+}
+
+export interface PromptSet {
+  id: string;
+  collection_id: string;
+  project_id: string | null;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[];
+  notes: string;
+  priority: string;
+  owner: string;
+  created_at: string | null;
+  updated_at: string | null;
+  prompt_count?: number;
+  prompts?: Prompt[];
+}
+
+export interface PromptAcceptance {
+  min_similarity?: number;
+  must_include?: string[];
+  must_exclude?: string[];
+  require_json?: boolean;
+  category?: string;
+}
+
+export interface Prompt {
+  id: string;
+  prompt_set_id: string;
+  title: string;
+  prompt: string;
+  system_prompt: string;
+  context: string;
+  expected_behavior: string;
+  expected_output: string;
+  golden_response: string;
+  acceptance_criteria: PromptAcceptance;
+  tags: string[];
+  priority: string;
+  difficulty: string;
+  notes: string;
+  enabled: boolean;
+  current_version: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface PromptVersion {
+  id: number;
+  version: number;
+  note: string;
+  snapshot: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export interface Regression {
+  type: string;
+  label: string;
+  severity: string;
+  summary: string;
+  attribution: string;
+}
+
+export interface EvaluationResult {
+  id: string;
+  session_id: string;
+  prompt_id: string | null;
+  prompt_set_id: string | null;
+  prompt_version: number;
+  prompt_title: string;
+  target_model: string;
+  registry_id: string | null;
+  provider: string | null;
+  runtime: string | null;
+  label: string;
+  response: string;
+  metrics: {
+    latency_ms?: number | null;
+    ttft_ms?: number | null;
+    completion_ms?: number | null;
+    prompt_tokens?: number | null;
+    completion_tokens?: number | null;
+    total_tokens?: number | null;
+  };
+  similarity_score: number | null;
+  baseline_type: string | null;
+  verdict: string;
+  regressions: Regression[];
+  warnings: string[];
+  error: string | null;
+  created_at: string | null;
+}
+
+export interface WorkbenchModelSummary {
+  label: string;
+  target_model: string;
+  registry_id: string | null;
+  pass_rate: number | null;
+  fails: number;
+  regressions: number;
+  mean_similarity: number | null;
+  results: number;
+}
+
+export interface WorkbenchSummary {
+  pass_rate: number | null;
+  fail_rate: number | null;
+  warn_rate: number | null;
+  regression_score: number | null;
+  consistency_score: number | null;
+  quality_score: number | null;
+  overall_score: number | null;
+  total_results: number;
+  graded_results: number;
+  regression_breakdown: Record<string, number>;
+  models: WorkbenchModelSummary[];
+  best_model: WorkbenchModelSummary | null;
+  closest_to_baseline: WorkbenchModelSummary | null;
+}
+
+export interface WorkbenchSession {
+  id: string;
+  project_id: string | null;
+  run_id: string | null;
+  name: string;
+  models: { target_model: string; registry_id?: string | null; provider?: string | null; runtime?: string | null; label?: string }[];
+  prompt_set_ids: string[];
+  similarity: string;
+  status: string;
+  config: Record<string, unknown>;
+  summary: WorkbenchSummary;
+  total_tasks: number;
+  completed_tasks: number;
+  duration_seconds: number | null;
+  error: string | null;
+  created_at: string | null;
+  completed_at: string | null;
+}
+
+export interface SessionRegressions {
+  session_id: string;
+  total: number;
+  by_type: {
+    type: string;
+    label: string;
+    count: number;
+    items: {
+      label: string;
+      severity: string;
+      summary: string;
+      attribution: string;
+      prompt_title: string;
+      target_model: string;
+      result_id: string;
+    }[];
+  }[];
+}
+
+export interface GoldenDiff {
+  unified_diff: string[];
+  missing_content: string[];
+  additional_content: string[];
+  length_delta: number;
+  baseline_is_json: boolean;
+  response_is_json: boolean;
+  json_diff?: { valid: boolean; missing_keys?: string[]; added_keys?: string[]; changed_keys?: string[]; note?: string };
+  formatting: {
+    baseline_has_code_block: boolean;
+    response_has_code_block: boolean;
+    baseline_bullets: number;
+    response_bullets: number;
+  };
+}
+
+export interface SessionCreateRequest {
+  prompt_set_ids: string[];
+  models?: string[];
+  registry_ids?: string[];
+  project_id?: string;
+  run_id?: string;
+  name?: string;
+  similarity?: string;
+  config?: Record<string, unknown>;
+}
+
 // --- RedForge V2 · Training Report (Phase 2.5) -----------------------------
 // Composed on the fly from existing run/security/recommendation/registry data.
 
@@ -963,5 +1187,511 @@ export interface TrainingReport {
     scores: Record<string, number | null>;
     suites: string[];
   } | null;
+  evaluation: {
+    session_id: string;
+    name: string;
+    pass_rate: number | null;
+    fail_rate: number | null;
+    regression_score: number | null;
+    consistency_score: number | null;
+    quality_score: number | null;
+    overall_score: number | null;
+    regression_breakdown: Record<string, number>;
+    best_model: WorkbenchModelSummary | null;
+    closest_to_baseline: WorkbenchModelSummary | null;
+    models: WorkbenchModelSummary[];
+  } | null;
+  deployment_recommendation: string | null;
   remaining_risks: string[];
+}
+
+// --- RedForge V3 · Foundation Platform (Epic 1) ----------------------------
+
+export interface FoundationModel {
+  id: string;
+  hf_repo: string;
+  revision: string | null;
+  architecture: string | null;
+  parameter_count: number | null;
+  format: string;
+  quantization: string;
+  status: string; // referenced | downloading | local | invalid
+  source: string; // hf_hub | local_import | resolved_from_runtime
+  license: string | null;
+  cache_path: string | null;
+  checksum: string | null;
+  metadata: Record<string, unknown>;
+  identity_key: string;
+  is_local: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface ResolutionCandidate {
+  hf_repo: string;
+  confidence: number;
+  reason: string;
+  architecture: string | null;
+  parameter_count: number | null;
+}
+
+export interface ResolutionResult {
+  runtime_ref: string;
+  candidates: ResolutionCandidate[];
+  resolved: ResolutionCandidate | null;
+  is_ambiguous: boolean;
+  facts: Record<string, unknown>;
+}
+
+export interface FoundationDiscovery {
+  runtime_ref: string;
+  suggested: ResolutionCandidate | null;
+  candidate_count: number;
+  is_ambiguous: boolean;
+}
+
+export interface FoundationRuntimeLink {
+  registry_id: string | null;
+  runtime_model: string | null;
+  label: string | null;
+  provider: string | null;
+  fallback: number | null;
+  match: string;
+}
+
+// --- RedForge V3 · Automatic Model Discovery (Epic 4.5) --------------------
+
+export interface RuntimeModel {
+  id: string;
+  runtime_ref: string;
+  provider: string;             // detected from, e.g. "ollama"
+  resolution: string;           // resolved | needs_resolution | unresolved
+  available: boolean;           // currently served by the runtime
+  status: string;               // display: resolved | needs_resolution | unavailable
+  foundation_model_id: string | null;
+  confidence: number | null;
+  candidates: ResolutionCandidate[];
+  facts: Record<string, unknown>;
+  last_synced_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DiscoverySummary {
+  provider: string;
+  online: boolean;
+  discovered: number;
+  resolved: number;
+  needs_resolution: number;
+  registered: number;
+  unavailable: number;
+  error?: string;
+}
+
+export interface RuntimeResolveResult {
+  runtime_model: RuntimeModel;
+  foundation_model: FoundationModel | null;
+  note?: string;
+}
+
+// --- RedForge V3 · Artifact Registry (Epic 2) ------------------------------
+
+export interface ArtifactLocation {
+  kind: string; // "file" | "data"
+  file_path: string | null;
+  table: string | null;
+  row_id: string | null;
+}
+
+export interface ArtifactChecksum {
+  algorithm: string;
+  value: string;
+}
+
+export interface Artifact {
+  id: string;
+  type: string;
+  name: string;
+  status: string; // draft | ready | invalid | archived
+  location: ArtifactLocation;
+  producer: string;
+  project_id: string | null;
+  experiment_id: string | null;
+  description: string;
+  size_bytes: number | null;
+  checksum: ArtifactChecksum | null;
+  tags: string[];
+  lineage_id: string;
+  version: number;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+  updated_at: string | null;
+  archived_at: string | null;
+}
+
+export interface ArtifactReference {
+  id: string;
+  type: string;
+  name: string;
+  version: number;
+  status: string;
+}
+
+export interface ArtifactEdge {
+  id: string;
+  parent_id: string;
+  child_id: string;
+  relationship: string;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+}
+
+export interface ArtifactLineage {
+  artifact_id: string;
+  ancestors: ArtifactReference[];
+  descendants: ArtifactReference[];
+  parents: ArtifactReference[];
+  children: ArtifactReference[];
+  edges: ArtifactEdge[];
+}
+
+export interface ArtifactTypeInfo {
+  key: string;
+  label: string;
+  backing: string;
+  category: string;
+}
+
+// --- RedForge V3 · Job System (Epic 2) -------------------------------------
+
+export interface JobProgress {
+  fraction: number;
+  step: number | null;
+  total: number | null;
+  message: string;
+  updated_at: string | null;
+}
+
+export interface JobResult {
+  success: boolean;
+  data: Record<string, unknown>;
+  artifact_ids: string[];
+  message: string;
+}
+
+export interface JobError {
+  message: string;
+  kind: string;
+  traceback: string;
+}
+
+export interface Job {
+  id: string;
+  type: string;
+  status: string; // queued | running | paused | completed | failed | cancelled | interrupted
+  params: Record<string, unknown>;
+  target_ref: string | null;
+  project_id: string | null;
+  priority: number;
+  progress: JobProgress;
+  result: JobResult | null;
+  error: JobError | null;
+  logs: string[];
+  attempts: number;
+  max_attempts: number;
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface JobTypeInfo {
+  key: string;
+  label: string;
+  concurrency: number;
+  default_max_attempts: number;
+}
+
+// --- RedForge V3 · Dataset Platform (Epic 3) -------------------------------
+
+export interface V3Dataset {
+  id: string;
+  name: string;
+  format: string;
+  kind: string;
+  status: string;
+  description: string;
+  project_id: string | null;
+  current_version: number;
+  schema: { kind: string; columns: string[] };
+  statistics: { record_count: number; byte_size: number; estimated_tokens: number; avg_length: number; column_count: number };
+  content_hash: string;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  created_at: string | null;
+  updated_at: string | null;
+  version_id?: string;
+  artifact_id?: string;
+}
+
+export interface V3DatasetVersion {
+  id: string;
+  dataset_id: string;
+  version: number;
+  record_count: number;
+  note: string;
+  content_hash: string;
+  artifact_id: string | null;
+  created_at: string | null;
+}
+
+export interface V3DatasetValidation {
+  valid: boolean;
+  score: number;
+  grade: string;
+  issues: Record<string, number>;
+  suggestions: string[];
+}
+
+// --- RedForge V3 · Training Platform (Epic 3) ------------------------------
+
+export interface TrainingStrategyInfo {
+  key: string;
+  label: string;
+  adapter_based: boolean;
+  dataset_shape: string;
+  providers: string[];
+  implemented: boolean;
+}
+
+export interface TrainingProviderInfo {
+  name: string;
+  label: string;
+  available: boolean;
+  reason: string;
+  dev_only: boolean;
+}
+
+export interface TrainingEstimate {
+  vram_mb: number;
+  disk_mb: number;
+  duration_seconds: number;
+  checkpoint_size_mb: number;
+  adapter_size_mb: number;
+  fits_hardware: boolean;
+  warnings: string[];
+}
+
+export interface V3TrainingRun {
+  id: string;
+  name: string;
+  configuration: {
+    foundation_model_id: string | null;
+    base_model: string;
+    dataset_id: string | null;
+    dataset_version: number | null;
+    strategy: string;
+    provider: string;
+    hyperparameters: Record<string, unknown>;
+    adapter: { rank: number; alpha: number; dropout: number };
+    strategy_params: Record<string, unknown>;
+  };
+  status: string;
+  metrics: Record<string, unknown>;
+  estimate: TrainingEstimate | null;
+  job_id: string | null;
+  project_id: string | null;
+  output_dir: string;
+  logs: string[];
+  error: string | null;
+  run_artifact_id: string | null;
+  adapter_artifact_id: string | null;
+  created_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface V3TrainingCheckpoint {
+  id: string;
+  run_id: string;
+  step: number;
+  epoch: number;
+  loss: number | null;
+  val_loss: number | null;
+  path: string;
+  is_best: boolean;
+  artifact_id: string | null;
+  created_at: string | null;
+}
+
+// --- RedForge V3 · Export Engine (Epic 3) ----------------------------------
+
+export interface ExportProviderInfo {
+  target: string;
+  name: string;
+  available: boolean;
+  reason: string;
+}
+
+// --- RedForge V3 · Experiment Platform (Epic 4) ----------------------------
+
+export interface ExperimentConfiguration {
+  foundation_model_id: string | null;
+  base_model: string;
+  dataset_id: string | null;
+  dataset_version: number | null;
+  strategy: string;
+  provider: string | null;
+  hyperparameters: Record<string, unknown>;
+  adapter: Record<string, unknown>;
+}
+
+export interface ExperimentSnapshot {
+  foundation_model: Record<string, unknown>;
+  dataset_version: number | null;
+  dataset_content_hash: string;
+  strategy: string;
+  provider: string;
+  hyperparameters: Record<string, unknown>;
+  resource_estimate: Record<string, unknown>;
+  gpu: Record<string, unknown>;
+  redforge_version: string;
+  platform: Record<string, unknown>;
+  captured_at: string | null;
+}
+
+export interface Experiment {
+  id: string;
+  name: string;
+  status: string; // draft | active | concluded | archived
+  description: string;
+  configuration: ExperimentConfiguration;
+  snapshot: ExperimentSnapshot | null;
+  tags: string[];
+  metrics: Record<string, unknown>;
+  project_id: string | null;
+  parent_experiment_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  concluded_at: string | null;
+}
+
+export interface ExperimentTimelineEvent {
+  id: string;
+  experiment_id: string;
+  kind: string;
+  title: string;
+  payload: Record<string, unknown>;
+  source: string; // system | user
+  at: string | null;
+}
+
+export interface ExperimentNote {
+  id: string;
+  experiment_id: string;
+  body: string;
+  created_at: string | null;
+}
+
+export interface ExperimentJobRef {
+  experiment_id: string;
+  job_id: string;
+  job_type: string;
+  status: string;
+  updated_at: string | null;
+}
+
+export interface ExperimentComparisonColumn {
+  id: string;
+  name: string;
+  status: string;
+  strategy: string;
+  provider: string | null;
+  base_model: string;
+  hyperparameters: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  artifact_counts: Record<string, number>;
+  artifacts_total: number;
+  jobs_total: number;
+  training_duration: number | null;
+  final_loss: number | null;
+  gpu: Record<string, unknown>;
+}
+
+export interface ExperimentComparison {
+  experiments: ExperimentComparisonColumn[];
+}
+
+// --- Global Task Manager --------------------------------------------------
+export interface Task {
+  id: string;
+  kind: string;
+  label: string;
+  title: string;
+  status: 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled' | 'interrupted';
+  progress: number; // 0–100
+  step?: number | null;
+  total?: number | null;
+  current_step: string;
+  elapsed_seconds?: number | null;
+  eta_seconds?: number | null;
+  cancellable: boolean;
+  retryable: boolean;
+  logs_tail: string[];
+  logs?: string[];
+  error?: string | null;
+  artifact_ids: string[];
+  project_id?: string | null;
+  experiment_id?: string | null;
+  created_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+}
+
+export interface TaskSummary {
+  running: number;
+  queued: number;
+  paused: number;
+  active: number;
+  failed: number;
+  completed: number;
+  by_status: Record<string, number>;
+}
+
+export interface TaskList {
+  tasks: Task[];
+  summary: TaskSummary;
+}
+
+// --- Model Hub ------------------------------------------------------------
+export interface ModelHubModel {
+  id: string;
+  name: string;
+  family: string;
+  parameters_b: number;
+  category: string;
+  quantization: string;
+  download_size_gb: number;
+  required_vram_gb: number;
+  estimated_ram_gb: number;
+  hf_repo?: string | null;
+  ollama_tag?: string | null;
+  sources: string[];
+  recommended_hardware: string;
+  training_suitability: 'recommended' | 'supported' | 'not supported';
+  benchmark_suitability: 'recommended' | 'limited';
+  trainable: boolean;
+  benchmarkable: boolean;
+  badges: string[];
+  description: string;
+}
+
+export interface ModelHubCategory {
+  key: string;
+  label: string;
+  models: ModelHubModel[];
+}
+
+export interface ModelHubCatalog {
+  categories: ModelHubCategory[];
 }

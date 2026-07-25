@@ -6,6 +6,7 @@ import {
   Boxes,
   Database,
   FileText,
+  FlaskConical,
   Layers,
   Lightbulb,
   Rocket,
@@ -24,6 +25,7 @@ import {
 import {
   useBenchmarkHistory,
   useBenchmarkLeaderboard,
+  useWorkbenchSessions,
   useDatasets,
   useProject,
   useProjectRecommendations,
@@ -50,6 +52,7 @@ export default function ProjectOverviewPage() {
   const accuracy = useRecommendationAccuracy(id);
   const benchmarks = useBenchmarkHistory(id ? { project_id: id } : undefined);
   const leaderboard = useBenchmarkLeaderboard(id ? { project_id: id } : undefined);
+  const evalSessions = useWorkbenchSessions(id ? { project_id: id } : undefined);
 
   const runList = runs.data ?? [];
   const datasetList = datasets.data ?? [];
@@ -57,6 +60,8 @@ export default function ProjectOverviewPage() {
   const recList = recs.data ?? [];
   const benchList = benchmarks.data ?? [];
   const bestModel = (leaderboard.data ?? [])[0] ?? null;
+  const evalList = evalSessions.data ?? [];
+  const latestEval = evalList.find((s) => s.status === 'completed') ?? null;
   const models = project.data?.models ?? [];
 
   const completedRuns = useMemo(
@@ -204,6 +209,45 @@ export default function ProjectOverviewPage() {
                     {b.overall_score != null && <span className="font-semibold text-content">{b.overall_score}</span>}
                     <Badge tone={b.status === 'completed' ? 'green' : b.status === 'failed' ? 'red' : 'amber'}>
                       {b.status}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
+
+        {/* Evaluation Workbench — pass rate, best behaving model, recent sessions */}
+        <SectionCard title="Evaluation" icon={<FlaskConical size={15} />} to="/workbench" cta="Workbench">
+          {latestEval && (
+            <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-base p-3 text-xs">
+              <span className="flex items-center gap-2 text-content">
+                <Trophy size={13} className="text-uncertain" /> Latest pass rate
+                {latestEval.summary?.best_model && (
+                  <span className="text-content-subtle">· best {latestEval.summary.best_model.label}</span>
+                )}
+              </span>
+              <span className="font-semibold text-pass">
+                {latestEval.summary?.pass_rate != null ? `${latestEval.summary.pass_rate}%` : '—'}
+              </span>
+            </div>
+          )}
+          {evalList.length === 0 ? (
+            <Muted>No evaluation sessions yet. Validate model behavior in the Workbench.</Muted>
+          ) : (
+            <ul className="space-y-1.5">
+              {evalList.slice(0, 6).map((s) => (
+                <li key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs">
+                  <span className="min-w-0">
+                    <span className="block truncate text-content">{s.name || `Session ${s.id.slice(0, 6)}`}</span>
+                    <span className="block truncate text-[11px] text-content-subtle">
+                      {s.models.length} model(s) · {s.summary?.total_results ?? s.total_tasks} result(s)
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {s.summary?.pass_rate != null && <span className="font-semibold text-content">{s.summary.pass_rate}%</span>}
+                    <Badge tone={s.status === 'completed' ? 'green' : s.status === 'failed' ? 'red' : 'amber'}>
+                      {s.status}
                     </Badge>
                   </span>
                 </li>

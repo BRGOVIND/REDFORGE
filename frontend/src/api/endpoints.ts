@@ -260,6 +260,7 @@ export const datasetExportUrl = (id: string, fmt = 'jsonl') =>
 import type {
   TrainingBackend,
   TrainingCheckpoint,
+  TrainingDiagnostics,
   TrainingParams,
   TrainingProgress,
   TrainingRun,
@@ -267,6 +268,11 @@ import type {
 
 export const trainingBackends = () =>
   http.get<{ backends: TrainingBackend[]; default: string }>('/training/backends').then((r) => r.data);
+
+export const trainingDiagnostics = (refresh = false) =>
+  http
+    .get<TrainingDiagnostics>('/training/diagnostics', { params: refresh ? { refresh: true } : undefined })
+    .then((r) => r.data);
 
 export const listTrainingRuns = (projectId?: string, limit?: number) =>
   http
@@ -407,3 +413,382 @@ export const benchmarkCompare = (ids: string[]) =>
 
 export const benchmarkQueue = () =>
   http.get<{ pending: string[]; running: string | null; queued: number }>('/benchmark-center/queue').then((r) => r.data);
+
+// --- RedForge V2 · Evaluation Workbench (Phase 4) --------------------------
+import type {
+  EvaluationCollection,
+  EvaluationResult,
+  GoldenDiff,
+  Prompt,
+  PromptSet,
+  PromptVersion,
+  SessionCreateRequest,
+  SessionRegressions,
+  SimilarityProviderInfo,
+  WorkbenchSession,
+} from './types';
+
+const WB = '/evaluation-workbench';
+
+export const similarityProviders = () =>
+  http.get<SimilarityProviderInfo[]>(`${WB}/similarity-providers`).then((r) => r.data);
+
+export const regressionTypes = () =>
+  http.get<{ type: string; label: string }[]>(`${WB}/regression-types`).then((r) => r.data);
+
+// Collections
+export const listCollections = (projectId?: string) =>
+  http
+    .get<EvaluationCollection[]>(`${WB}/collections`, { params: projectId ? { project_id: projectId } : undefined })
+    .then((r) => r.data);
+
+export const getCollection = (id: string) =>
+  http.get<EvaluationCollection>(`${WB}/collections/${id}`).then((r) => r.data);
+
+export const createCollection = (body: {
+  name: string; project_id?: string; category?: string; description?: string; tags?: string[]; notes?: string;
+}) => http.post<EvaluationCollection>(`${WB}/collections`, body).then((r) => r.data);
+
+export const updateCollection = (id: string, body: Partial<EvaluationCollection>) =>
+  http.patch<EvaluationCollection>(`${WB}/collections/${id}`, body).then((r) => r.data);
+
+export const deleteCollection = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`${WB}/collections/${id}`).then((r) => r.data);
+
+// Prompt sets
+export const listPromptSets = (params?: { collection_id?: string; project_id?: string }) =>
+  http.get<PromptSet[]>(`${WB}/prompt-sets`, { params }).then((r) => r.data);
+
+export const getPromptSet = (id: string) =>
+  http.get<PromptSet>(`${WB}/prompt-sets/${id}`).then((r) => r.data);
+
+export const createPromptSet = (body: {
+  collection_id: string; title: string; description?: string; category?: string;
+  tags?: string[]; notes?: string; priority?: string; owner?: string; project_id?: string;
+}) => http.post<PromptSet>(`${WB}/prompt-sets`, body).then((r) => r.data);
+
+export const updatePromptSet = (id: string, body: Partial<PromptSet>) =>
+  http.patch<PromptSet>(`${WB}/prompt-sets/${id}`, body).then((r) => r.data);
+
+export const deletePromptSet = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`${WB}/prompt-sets/${id}`).then((r) => r.data);
+
+// Prompts
+export const getPrompt = (id: string) =>
+  http.get<Prompt>(`${WB}/prompts/${id}`).then((r) => r.data);
+
+export const createPrompt = (body: Partial<Prompt> & { prompt_set_id: string; prompt: string }) =>
+  http.post<Prompt>(`${WB}/prompts`, body).then((r) => r.data);
+
+export const updatePrompt = (id: string, body: Partial<Prompt> & { version_note?: string }) =>
+  http.patch<Prompt>(`${WB}/prompts/${id}`, body).then((r) => r.data);
+
+export const deletePrompt = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`${WB}/prompts/${id}`).then((r) => r.data);
+
+export const promptVersions = (id: string) =>
+  http.get<PromptVersion[]>(`${WB}/prompts/${id}/versions`).then((r) => r.data);
+
+export const comparePromptVersions = (id: string, a: number, b: number) =>
+  http
+    .get<{ changed_fields: string[]; diff: Record<string, { a: unknown; b: unknown }> }>(
+      `${WB}/prompts/${id}/versions/compare`, { params: { a, b } })
+    .then((r) => r.data);
+
+// Sessions
+export const listWorkbenchSessions = (params?: { project_id?: string; run_id?: string }) =>
+  http.get<WorkbenchSession[]>(`${WB}/sessions`, { params }).then((r) => r.data);
+
+export const getWorkbenchSession = (id: string) =>
+  http.get<WorkbenchSession>(`${WB}/sessions/${id}`).then((r) => r.data);
+
+export const createWorkbenchSession = (body: SessionCreateRequest) =>
+  http.post<{ id: string; status: string; total_tasks: number }>(`${WB}/sessions`, body).then((r) => r.data);
+
+export const cancelWorkbenchSession = (id: string) =>
+  http.delete<{ cancelled: boolean }>(`${WB}/sessions/${id}`).then((r) => r.data);
+
+export const sessionResults = (id: string, params?: { verdict?: string; regression_type?: string }) =>
+  http.get<EvaluationResult[]>(`${WB}/sessions/${id}/results`, { params }).then((r) => r.data);
+
+export const sessionRegressions = (id: string) =>
+  http.get<SessionRegressions>(`${WB}/sessions/${id}/regressions`).then((r) => r.data);
+
+export const compareResults = (ids: string[]) =>
+  http.get<{ results: EvaluationResult[] }>(`${WB}/compare`, { params: { ids: ids.join(',') } }).then((r) => r.data);
+
+export const responseDiff = (reference: string, candidate: string) =>
+  http.post<GoldenDiff>(`${WB}/diff`, { reference, candidate }).then((r) => r.data);
+
+export const workbenchQueue = () =>
+  http.get<{ pending: string[]; running: string | null; queued: number }>(`${WB}/queue`).then((r) => r.data);
+
+// --- RedForge V3 · Foundation Platform (Epic 1) ----------------------------
+import type {
+  FoundationDiscovery,
+  FoundationModel,
+  FoundationRuntimeLink,
+  ResolutionResult,
+} from './types';
+
+const FM = '/foundation-models';
+
+export const listFoundationModels = (params?: { status?: string; source?: string }) =>
+  http.get<FoundationModel[]>(FM, { params }).then((r) => r.data);
+
+export const getFoundationModel = (id: string) =>
+  http.get<FoundationModel>(`${FM}/${id}`).then((r) => r.data);
+
+export const registerFoundationModel = (body: {
+  hf_repo: string; revision?: string; architecture?: string; parameter_count?: number;
+  format?: string; quantization?: string; source?: string; license?: string;
+  cache_path?: string; metadata?: Record<string, unknown>;
+}) => http.post<FoundationModel>(FM, body).then((r) => r.data);
+
+export const deleteFoundationModel = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`${FM}/${id}`).then((r) => r.data);
+
+export const resolveRuntimeModel = (runtimeRef: string) =>
+  http.post<ResolutionResult>(`${FM}/resolve`, { runtime_ref: runtimeRef }).then((r) => r.data);
+
+export const discoverFoundationModels = () =>
+  http.get<FoundationDiscovery[]>(`${FM}/discover`).then((r) => r.data);
+
+export const foundationModelStatus = (id: string) =>
+  http
+    .get<{ id: string; status: string; is_local: boolean; cache_path: string | null; checksum: string | null }>(
+      `${FM}/${id}/status`)
+    .then((r) => r.data);
+
+export const foundationModelRuntimes = (id: string) =>
+  http.get<FoundationRuntimeLink[]>(`${FM}/${id}/runtimes`).then((r) => r.data);
+
+export const syncFoundationModel = (id: string) =>
+  http.post<FoundationModel>(`${FM}/${id}/sync`).then((r) => r.data);
+
+export const cacheFoundationModel = (id: string, cachePath: string) =>
+  http.post<FoundationModel>(`${FM}/${id}/cache`, { cache_path: cachePath }).then((r) => r.data);
+
+export const ensureFoundationForBaseModel = (baseModel: string) =>
+  http.post<FoundationModel>(`${FM}/ensure`, { base_model: baseModel }).then((r) => r.data);
+
+// --- RedForge V3 · Automatic Model Discovery (Epic 4.5) --------------------
+import type { DiscoverySummary, RuntimeModel, RuntimeResolveResult } from './types';
+
+const RM = '/runtime-models';
+
+export const discoverAndRegisterModels = () =>
+  http.post<DiscoverySummary>(`${FM}/discover`).then((r) => r.data);
+export const syncRuntimeModels = () =>
+  http.post<DiscoverySummary>(`${FM}/sync`).then((r) => r.data);
+export const listRuntimeModels = (params?: { provider?: string; resolution?: string; available?: boolean }) =>
+  http.get<RuntimeModel[]>(RM, { params }).then((r) => r.data);
+export const listUnresolvedRuntimeModels = () =>
+  http.get<RuntimeModel[]>(`${RM}/unresolved`).then((r) => r.data);
+export const resolveRuntimeModelEntry = (id: string, hfRepo?: string) =>
+  http.post<RuntimeResolveResult>(`${RM}/${id}/resolve`, { hf_repo: hfRepo ?? null }).then((r) => r.data);
+
+// --- RedForge V3 · Artifact Registry (Epic 2) ------------------------------
+import type {
+  Artifact,
+  ArtifactLineage,
+  ArtifactReference,
+  ArtifactTypeInfo,
+  Job,
+  JobTypeInfo,
+} from './types';
+
+const ART = '/artifacts';
+
+export const listArtifactTypes = () =>
+  http.get<ArtifactTypeInfo[]>(`${ART}/types`).then((r) => r.data);
+
+export const searchArtifacts = (params?: {
+  type?: string; status?: string; project_id?: string; tag?: string; q?: string;
+}) => http.get<Artifact[]>(ART, { params }).then((r) => r.data);
+
+export const getArtifact = (id: string) =>
+  http.get<Artifact>(`${ART}/${id}`).then((r) => r.data);
+
+export const registerArtifact = (body: {
+  type: string; name: string; producer?: string; project_id?: string; description?: string;
+  file_path?: string; table?: string; row_id?: string; tags?: string[];
+  metadata?: Record<string, unknown>; parents?: { parent_id: string; relationship?: string }[];
+  status?: string;
+}) => http.post<Artifact>(ART, body).then((r) => r.data);
+
+export const artifactLineage = (id: string) =>
+  http.get<ArtifactLineage>(`${ART}/${id}/lineage`).then((r) => r.data);
+
+export const artifactParents = (id: string) =>
+  http.get<ArtifactReference[]>(`${ART}/${id}/parents`).then((r) => r.data);
+
+export const artifactChildren = (id: string) =>
+  http.get<ArtifactReference[]>(`${ART}/${id}/children`).then((r) => r.data);
+
+export const artifactVersions = (id: string) =>
+  http.get<Artifact[]>(`${ART}/${id}/versions`).then((r) => r.data);
+
+export const createArtifactVersion = (id: string, body: { description?: string; metadata?: Record<string, unknown> }) =>
+  http.post<Artifact>(`${ART}/${id}/version`, body).then((r) => r.data);
+
+export const publishArtifact = (id: string) =>
+  http.post<Artifact>(`${ART}/${id}/publish`).then((r) => r.data);
+
+export const tagArtifact = (id: string, tags: string[]) =>
+  http.post<Artifact>(`${ART}/${id}/tag`, { tags }).then((r) => r.data);
+
+export const archiveArtifact = (id: string) =>
+  http.post<Artifact>(`${ART}/${id}/archive`).then((r) => r.data);
+
+export const validateArtifact = (id: string) =>
+  http.post<{ id: string; valid: boolean; reason: string }>(`${ART}/${id}/validate`).then((r) => r.data);
+
+export const deleteArtifact = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`${ART}/${id}`).then((r) => r.data);
+
+// --- RedForge V3 · Job System (Epic 2) -------------------------------------
+
+const JOBS = '/jobs';
+
+export const listJobTypes = () =>
+  http.get<JobTypeInfo[]>(`${JOBS}/types`).then((r) => r.data);
+
+export const jobQueue = () =>
+  http.get<{ pending: string[]; running: string[]; queued: number; active: number }>(`${JOBS}/queue`).then((r) => r.data);
+
+export const listJobs = (params?: { status?: string; type?: string; project_id?: string; limit?: number }) =>
+  http.get<Job[]>(JOBS, { params }).then((r) => r.data);
+
+export const getJob = (id: string) =>
+  http.get<Job>(`${JOBS}/${id}`).then((r) => r.data);
+
+export const submitJob = (body: {
+  type: string; params?: Record<string, unknown>; target_ref?: string; project_id?: string;
+  priority?: number; max_attempts?: number;
+}) => http.post<Job>(JOBS, body).then((r) => r.data);
+
+export const jobProgress = (id: string) =>
+  http.get<{ id: string; status: string; fraction: number; message: string }>(`${JOBS}/${id}/progress`).then((r) => r.data);
+
+export const jobLogs = (id: string) =>
+  http.get<{ id: string; logs: string[] }>(`${JOBS}/${id}/logs`).then((r) => r.data);
+
+export const cancelJob = (id: string) =>
+  http.post<{ cancelled: boolean; id: string }>(`${JOBS}/${id}/cancel`).then((r) => r.data);
+
+export const retryJob = (id: string) =>
+  http.post<Job>(`${JOBS}/${id}/retry`).then((r) => r.data);
+
+// --- Model Hub -------------------------------------------------------------
+import type { ModelHubCatalog, Task as HubTask } from './types';
+
+const HUB = '/model-hub';
+export const modelHubCatalog = () => http.get<ModelHubCatalog>(HUB).then((r) => r.data);
+export const modelHubDownload = (id: string, source?: 'huggingface' | 'ollama') =>
+  http.post<{ task: HubTask; message: string }>(`${HUB}/${id}/download`, { source }).then((r) => r.data);
+
+// --- Global Task Manager (unified over the Job System) ---------------------
+import type { Task, TaskList } from './types';
+
+const TASKS = '/tasks';
+
+export const listTasks = (params?: { active_only?: boolean; kind?: string; status?: string; limit?: number }) =>
+  http.get<TaskList>(TASKS, { params }).then((r) => r.data);
+export const getTask = (id: string) => http.get<Task>(`${TASKS}/${id}`).then((r) => r.data);
+export const cancelTask = (id: string) =>
+  http.post<{ cancelled: boolean; id: string }>(`${TASKS}/${id}/cancel`).then((r) => r.data);
+export const retryTask = (id: string) => http.post<Task>(`${TASKS}/${id}/retry`).then((r) => r.data);
+export const deleteTask = (id: string) =>
+  http.delete<{ deleted: boolean; id: string }>(`${TASKS}/${id}`).then((r) => r.data);
+
+// --- RedForge V3 · Dataset Platform (Epic 3) -------------------------------
+import type {
+  ExportProviderInfo,
+  TrainingEstimate,
+  TrainingProviderInfo,
+  TrainingStrategyInfo,
+  V3Dataset,
+  V3DatasetValidation,
+  V3DatasetVersion,
+  V3TrainingCheckpoint,
+  V3TrainingRun,
+} from './types';
+
+const DP = '/dataset-platform';
+
+export const dpFormats = () => http.get<string[]>(`${DP}/formats`).then((r) => r.data);
+export const dpList = (projectId?: string) =>
+  http.get<V3Dataset[]>(DP, { params: projectId ? { project_id: projectId } : undefined }).then((r) => r.data);
+export const dpGet = (id: string) => http.get<V3Dataset>(`${DP}/${id}`).then((r) => r.data);
+export const dpRegister = (body: { name: string; records: unknown[]; format?: string; kind?: string; project_id?: string; description?: string }) =>
+  http.post<V3Dataset>(DP, body).then((r) => r.data);
+export const dpImport = (file: File, name?: string, projectId?: string) => {
+  const form = new FormData();
+  form.append('file', file);
+  if (name) form.append('name', name);
+  if (projectId) form.append('project_id', projectId);
+  return http.post<V3Dataset>(`${DP}/import`, form, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
+};
+export const dpVersions = (id: string) => http.get<V3DatasetVersion[]>(`${DP}/${id}/versions`).then((r) => r.data);
+export const dpPreview = (id: string, offset = 0, limit = 50) =>
+  http.get<{ rows: unknown[]; total: number; offset: number }>(`${DP}/${id}/preview`, { params: { offset, limit } }).then((r) => r.data);
+export const dpValidate = (id: string) => http.get<V3DatasetValidation>(`${DP}/${id}/validate`).then((r) => r.data);
+export const dpProcess = (id: string, body: { operation: string; train?: number; val?: number; test?: number }) =>
+  http.post<{ id: string }>(`${DP}/${id}/process`, body).then((r) => r.data);
+export const dpDelete = (id: string) => http.delete<{ deleted: boolean }>(`${DP}/${id}`).then((r) => r.data);
+
+// --- RedForge V3 · Training Platform (Epic 3) ------------------------------
+const TP = '/training-platform';
+
+export const tpStrategies = () => http.get<TrainingStrategyInfo[]>(`${TP}/strategies`).then((r) => r.data);
+export const tpProviders = () => http.get<TrainingProviderInfo[]>(`${TP}/providers`).then((r) => r.data);
+export const tpEstimate = (body: Record<string, unknown>) => http.post<TrainingEstimate>(`${TP}/estimate`, body).then((r) => r.data);
+export const tpList = (projectId?: string) =>
+  http.get<V3TrainingRun[]>(TP, { params: projectId ? { project_id: projectId } : undefined }).then((r) => r.data);
+export const tpGet = (id: string) => http.get<V3TrainingRun>(`${TP}/${id}`).then((r) => r.data);
+export const tpCreate = (body: Record<string, unknown>) => http.post<V3TrainingRun>(TP, body).then((r) => r.data);
+export const tpLaunch = (id: string) => http.post<{ run: V3TrainingRun; job: { id: string } }>(`${TP}/${id}/launch`).then((r) => r.data);
+export const tpCheckpoints = (id: string) => http.get<V3TrainingCheckpoint[]>(`${TP}/${id}/checkpoints`).then((r) => r.data);
+export const tpLogs = (id: string) => http.get<{ id: string; logs: string[] }>(`${TP}/${id}/logs`).then((r) => r.data);
+export const tpCancel = (id: string) => http.post<{ cancelled: boolean }>(`${TP}/${id}/cancel`).then((r) => r.data);
+export const tpDelete = (id: string) => http.delete<{ deleted: boolean }>(`${TP}/${id}`).then((r) => r.data);
+
+// --- RedForge V3 · Export Engine (Epic 3) ----------------------------------
+const EX = '/export';
+
+export const exProviders = () => http.get<ExportProviderInfo[]>(`${EX}/providers`).then((r) => r.data);
+export const exHistory = () => http.get<import('./types').Job[]>(`${EX}/history`).then((r) => r.data);
+export const exSubmit = (body: { source_artifact_id: string; target?: string; base_model?: string; quantization?: string; model_name?: string }) =>
+  http.post<import('./types').Job>(EX, body).then((r) => r.data);
+
+// --- RedForge V3 · Experiment Platform (Epic 4) ----------------------------
+import type {
+  Experiment,
+  ExperimentComparison,
+  ExperimentJobRef,
+  ExperimentNote,
+  ExperimentSnapshot,
+  ExperimentTimelineEvent,
+} from './types';
+
+const XP = '/experiments';
+
+export const xpList = (params?: { project_id?: string; status?: string }) =>
+  http.get<Experiment[]>(XP, { params }).then((r) => r.data);
+export const xpGet = (id: string) => http.get<Experiment>(`${XP}/${id}`).then((r) => r.data);
+export const xpCreate = (body: { name: string; description?: string; configuration?: Record<string, unknown>; tags?: string[]; project_id?: string }) =>
+  http.post<Experiment>(XP, body).then((r) => r.data);
+export const xpUpdate = (id: string, body: { name?: string; description?: string; tags?: string[]; status?: string }) =>
+  http.patch<Experiment>(`${XP}/${id}`, body).then((r) => r.data);
+export const xpDelete = (id: string) => http.delete<{ deleted: boolean }>(`${XP}/${id}`).then((r) => r.data);
+export const xpClone = (id: string, body: { name?: string; include_notes?: boolean }) =>
+  http.post<Experiment>(`${XP}/${id}/clone`, body).then((r) => r.data);
+export const xpSnapshot = (id: string) => http.post<ExperimentSnapshot>(`${XP}/${id}/snapshot`).then((r) => r.data);
+export const xpTimeline = (id: string) => http.get<ExperimentTimelineEvent[]>(`${XP}/${id}/timeline`).then((r) => r.data);
+export const xpArtifacts = (id: string) => http.get<Artifact[]>(`${XP}/${id}/artifacts`).then((r) => r.data);
+export const xpJobs = (id: string) => http.get<ExperimentJobRef[]>(`${XP}/${id}/jobs`).then((r) => r.data);
+export const xpNotes = (id: string) => http.get<ExperimentNote[]>(`${XP}/${id}/notes`).then((r) => r.data);
+export const xpAddNote = (id: string, body: string) => http.post<ExperimentNote>(`${XP}/${id}/notes`, { body }).then((r) => r.data);
+export const xpCompare = (ids: string[]) =>
+  http.get<ExperimentComparison>(`${XP}/compare`, { params: { ids: ids.join(',') } }).then((r) => r.data);
