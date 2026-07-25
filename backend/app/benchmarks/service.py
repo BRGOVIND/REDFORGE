@@ -74,10 +74,24 @@ class BenchmarkService:
         from app.db.database import AsyncSessionLocal
         return AsyncSessionLocal
 
-    async def _run(self, target_model: str, suites: list, config: dict) -> dict:
+    async def _run(self, target_model: str, suites: list, config: dict, progress_cb=None) -> dict:
         if self._run_fn is not None:
             return await self._run_fn(target_model, suites, config)
-        return await _default_run(target_model, suites, config)
+        return await _default_run(target_model, suites, config, progress_cb=progress_cb)
+
+    async def _write_progress(self, job_id: str, phase: str, index: int, total: int) -> None:
+        """Persist a lightweight progress marker into the running result's existing
+        ``metrics`` JSON (no schema change) so a long benchmark visibly advances
+        instead of sitting at 'running' with no feedback."""
+        try:
+            async with self._factory()() as db:
+                b = await db.get(BenchmarkResult, job_id)
+                if b is not None and b.status == "running":
+                    b.metrics = {**(b.metrics or {}),
+                                 "progress": {"phase": phase, "suite_index": index, "suite_total": total}}
+                    await db.commit()
+        except Exception:  # noqa: BLE001 - progress reporting must never break a run
+            pass
 
     # -- scheduling --------------------------------------------------------
 
@@ -150,7 +164,12 @@ class BenchmarkService:
                 target, suites, config = b.target_model, list(b.suites or []), dict(b.config or {})
 
             start = time.monotonic()
-            result = await self._run(target, suites, config)
+
+            async def _progress(phase: str, index: int, total: int) -> None:
+                if job_id not in self._cancelled:
+                    await self._write_progress(job_id, phase, index, total)
+
+            result = await self._run(target, suites, config, progress_cb=_progress)
             duration = round(time.monotonic() - start, 3)
 
             async with self._factory()() as db:
@@ -168,13 +187,18 @@ class BenchmarkService:
                 b.completed_at = _utcnow()
                 await db.commit()
         except Exception as exc:  # noqa: BLE001 - a failed benchmark must never crash the app
-            logger.warning("benchmark job %s failed: %s", job_id, exc)
+            import traceback
+            tb = traceback.format_exc()
+            logger.warning("benchmark job %s failed: %s\n%s", job_id, exc, tb)
             try:
                 async with self._factory()() as db:
                     b = await db.get(BenchmarkResult, job_id)
                     if b is not None:
                         b.status = "failed"
-                        b.error = str(exc)[:500]
+                        # Always persist a meaningful reason (+ traceback tail) — a
+                        # failed benchmark must never store a null error.
+                        b.error = (f"{type(exc).__name__}: {exc}" or "benchmark failed")[:500]
+                        b.metrics = {**(b.metrics or {}), "traceback": tb[-1500:]}
                         b.completed_at = _utcnow()
                         await db.commit()
             except Exception:  # noqa: BLE001
@@ -294,9 +318,12 @@ async def _runtime_generate(model: str, prompt: str, *, options: Optional[dict] 
     return getattr(result, "response", "") or getattr(result, "text", "") or ""
 
 
-async def _default_run(target_model: str, suites: list, config: dict) -> dict:
+async def _default_run(target_model: str, suites: list, config: dict, progress_cb=None) -> dict:
     """Run each requested suite for one model and aggregate. Individual suite
-    failures are captured per-suite and never abort the others."""
+    failures are captured per-suite and never abort the others. ``progress_cb`` (if
+    given) is awaited before each suite so a running benchmark reports what it is
+    doing — a suite can issue many bounded-timeout generations, so without this the
+    run looks frozen."""
     try:
         from app.resources import detect_resources
         resources = detect_resources().to_dict()
@@ -310,10 +337,13 @@ async def _default_run(target_model: str, suites: list, config: dict) -> dict:
 
     scores: dict = {}
     metrics: dict = {}
-    for key in suites:
+    total = len(suites)
+    for i, key in enumerate(suites):
         suite = get_suite(key)
         if suite is None:
             continue
+        if progress_cb is not None:
+            await progress_cb(f"running suite '{key}'", i + 1, total)
         try:
             res = await suite.run(ctx)
             scores[key] = res.score

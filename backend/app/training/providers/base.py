@@ -73,6 +73,18 @@ class TrainingProvider(ABC):
         (missing ML stack / no GPU) and the reason is shown to the user."""
         ...
 
+    def diagnose(self, refresh: bool = False) -> dict:
+        """Structured, per-layer diagnostics. The default derives a single check
+        from :meth:`is_available`; providers with a real dependency stack (Unsloth)
+        override this to report each layer separately."""
+        ok, reason = self.is_available()
+        return {
+            "backend": self.name, "label": self.label,
+            "checks": [{"name": self.label, "ok": ok, "detail": reason, "required": True}],
+            "ready": ok, "missing_required": [] if ok else [self.label],
+            "status": ("Ready" if ok else reason), "install_hint": "",
+        }
+
     @abstractmethod
     def run(self, config: TrainingConfig, cancel) -> AsyncIterator[ProgressEvent]:
         """Async-generate progress events for one run. ``cancel`` is a callable

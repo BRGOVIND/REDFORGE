@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -23,6 +24,8 @@ from app.config import settings
 from app.continuous_security import continuous_security
 from app.datasets_lab import dataset_service
 from app.db.database import get_db
+from app.foundation_models import foundation_model_service
+from app.logging_config import get_logger
 from app.runtime_registry import runtime_registry
 from app.training import manager, training_service
 from app.training.providers.base import TrainingConfig
@@ -30,6 +33,15 @@ from app.training.runner import run_training
 from app.training.store import progress_store
 
 router = APIRouter(prefix="/api/training", tags=["training"])
+logger = get_logger("training-api")
+
+# A Hugging Face repo id is ``owner/name`` (alphanumeric/_/-/. only) with NO ``:`` tag.
+# A runtime tag like ``qwen3:8b`` fails this — and must never reach a training provider.
+_HF_REPO_RE = re.compile(r"^[A-Za-z0-9][\w.-]*/[\w.-]+$")
+
+
+def _is_hf_repo(ref: str) -> bool:
+    return bool(_HF_REPO_RE.match((ref or "").strip()))
 
 
 # ---------------------------------------------------------------------------
@@ -74,11 +86,37 @@ class NotesRequest(BaseModel):
 # Backends / metadata
 # ---------------------------------------------------------------------------
 
-@router.get("/backends")
-async def backends() -> dict:
-    # Default is auto-detected: real Unsloth when the GPU + ML stack exist,
-    # otherwise the dependency-free simulation.
+# Availability probing imports torch/CUDA, which is multi-second on first call.
+# Doing that on the event loop freezes every other endpoint (the cause of the
+# frontend ECONNRESET on /api/models, /api/registry, …). So we run it in a worker
+# thread and cache the result for the process lifetime (hardware/stack are static;
+# `?refresh=true` re-probes after a driver/install change).
+_backends_cache: Optional[dict] = None
+
+
+def _compute_backends() -> dict:
     return {"backends": manager.available_backends(), "default": manager.default_backend()}
+
+
+@router.get("/backends")
+async def backends(refresh: bool = Query(False)) -> dict:
+    global _backends_cache
+    if _backends_cache is None or refresh:
+        if refresh:
+            await asyncio.to_thread(manager.reset_availability_cache)
+        _backends_cache = await asyncio.to_thread(_compute_backends)
+    return _backends_cache
+
+
+@router.get("/diagnostics")
+async def training_diagnostics(backend: Optional[str] = Query(None),
+                               refresh: bool = Query(False)) -> dict:
+    """Structured, per-layer training diagnostics (PyTorch / CUDA / GPU /
+    Transformers / PEFT / Unsloth / bitsandbytes). Computed off the event loop so
+    the heavy torch import never blocks other requests."""
+    if refresh:
+        await asyncio.to_thread(manager.reset_availability_cache)
+    return await asyncio.to_thread(manager.diagnostics, backend, refresh)
 
 
 # ---------------------------------------------------------------------------
@@ -98,25 +136,87 @@ async def list_runs(
 async def launch(req: LaunchRequest, db: AsyncSession = Depends(get_db)) -> dict:
     backend = (req.backend or manager.default_backend()).lower()
 
+    # --- Foundation Model resolution (the architectural seam) -----------------
+    # A training provider must ONLY ever receive a Foundation Model identity (a
+    # Hugging Face repo), NEVER a Runtime Model tag (e.g. an Ollama 'qwen3:8b').
+    # Resolve the operator's selection through the Foundation Platform's existing
+    # seam (ensure_foundation_for_base_model → provider-agnostic ModelResolution
+    # Service). This makes the training providers runtime-agnostic and works for
+    # every runtime (Ollama / llama.cpp / LM Studio / vLLM / OpenAI-compat / …) —
+    # no hardcoded mappings, no per-provider branching here.
+    logger.info("[model-id] launch: requested base_model=%r backend=%r", req.base_model, backend)
+    foundation = await foundation_model_service.ensure_foundation_for_base_model(req.base_model)
+    hf_repo = (foundation.get("hf_repo") or "").strip()
+    logger.info("[model-id] resolved: runtime_ref=%r → foundation id=%s hf_repo=%r source=%s",
+                req.base_model, foundation.get("id"), hf_repo, foundation.get("source"))
+    if foundation.get("metadata", {}).get("unverified") or not _is_hf_repo(hf_repo):
+        # Never hand a runtime tag to the provider — fail honestly instead.
+        raise HTTPException(
+            status_code=422,
+            detail=(f"'{req.base_model}' is a runtime model that could not be resolved to a "
+                    "Hugging Face foundation model. Resolve it on the Foundation Models page, "
+                    "or enter a Hugging Face repo id (owner/name)."),
+        )
+
+    # --- Hardware pre-flight (Hardware Compatibility Engine) ------------------
+    # Never let an impossible job reach a provider. For real GPU backends, estimate
+    # the run's VRAM need for (model, strategy, hyperparameters) on the DETECTED GPU
+    # BEFORE loading a single weight. Block if it cannot fit (and recommend a model
+    # that does); apply the engine's safe defaults when it only fits tightly. This is
+    # provider-agnostic and is the correct alternative to CPU offload.
+    params = req.params.model_dump()
+    hw_warnings: list[str] = []
+    assessment_dict = None
+    if backend not in ("simulation", "mock"):
+        from app.hardware import hardware_service
+        assessment = hardware_service.assess(
+            base_model=hf_repo, strategy=req.method,
+            max_seq_length=int(params.get("max_seq_length", 2048)),
+            batch_size=int(params.get("batch_size", 2)),
+            gradient_accumulation=int(params.get("gradient_accumulation", 4)),
+            provider=backend)
+        assessment_dict = assessment.to_dict()
+        logger.info("[hardware] %r on %s → %s | %s", hf_repo,
+                    assessment.gpu.name, assessment.verdict.value, assessment.reason)
+        if not assessment.can_launch:
+            # Impossible job — refuse before loading, with a concrete recommendation.
+            raise HTTPException(status_code=422, detail={
+                "error": "insufficient_gpu_memory",
+                "message": assessment.reason,
+                "recommended_models": assessment.recommended_models,
+                "assessment": assessment_dict,
+            })
+        if assessment.verdict.value == "tight":
+            # Fit it by reducing seq/batch (NOT by offloading) — the engine's safe
+            # defaults, applied automatically so a first-time user need not tune.
+            params.update(assessment.safe_defaults.as_overrides())
+            hw_warnings = list(assessment.warnings)
+
     # Load dataset records (local) if a dataset is attached.
     records: list[Any] = []
     if req.dataset_id:
         records = await dataset_service._current_records(db, req.dataset_id) or []
 
     config_public = {
-        "method": req.method, **req.params.model_dump(),
+        "method": req.method, **params,
         "continuous_security": req.continuous_security,
         "security_profile": req.security_profile,
+        # Provenance: the runtime selection and the foundation identity it resolved to.
+        "runtime_ref": req.base_model,
+        "foundation_model_id": foundation.get("id"),
+        "hardware_assessment": assessment_dict,
+        "hardware_warnings": hw_warnings,
     }
+    # The run + the provider config carry the FOUNDATION identity (hf_repo), not the tag,
+    # and the hardware-safe hyperparameters (``params``), not necessarily the requested.
     run = await training_service.create(
-        db, name=req.name, base_model=req.base_model, dataset_id=req.dataset_id,
+        db, name=req.name, base_model=hf_repo, dataset_id=req.dataset_id,
         method=req.method, backend=backend, config=config_public,
-        output_dir=req.params.output_dir, project_id=req.project_id,
+        output_dir=params.get("output_dir", ""), project_id=req.project_id,
     )
 
     cfg = TrainingConfig(
-        base_model=req.base_model, method=req.method, dataset_records=records,
-        **req.params.model_dump(),
+        base_model=hf_repo, method=req.method, dataset_records=records, **params,
     )
 
     # Continuous Security hook — register the checkpoint in the Runtime Registry,
@@ -277,7 +377,8 @@ async def training_report(run_id: str, db: AsyncSession = Depends(get_db)) -> di
     from sqlalchemy import select
 
     from app.db.models import (
-        BenchmarkResult, CheckpointSecurity, Dataset, Recommendation, RegisteredModel, TrainingRun,
+        BenchmarkResult, CheckpointSecurity, Dataset, Recommendation, RegisteredModel,
+        TrainingRun, WorkbenchSession,
     )
 
     run = await db.get(TrainingRun, run_id)
@@ -354,6 +455,46 @@ async def training_report(run_id: str, db: AsyncSession = Depends(get_db)) -> di
         key=lambda b: b["overall_score"], default=None,
     )
 
+    # Evaluation Workbench (Phase 4) — latest completed session for this run or its
+    # project. Reuses stored session data; nothing new is computed or stored.
+    eval_stmt = select(WorkbenchSession).where(WorkbenchSession.status == "completed")
+    if run.project_id:
+        eval_stmt = eval_stmt.where(
+            (WorkbenchSession.run_id == run_id) | (WorkbenchSession.project_id == run.project_id))
+    else:
+        eval_stmt = eval_stmt.where(WorkbenchSession.run_id == run_id)
+    eval_session = (await db.execute(
+        eval_stmt.order_by(WorkbenchSession.created_at.desc()).limit(1))).scalar_one_or_none()
+    evaluation = None
+    deployment_recommendation = None
+    if eval_session is not None:
+        summ = eval_session.summary or {}
+        best = summ.get("best_model")
+        evaluation = {
+            "session_id": eval_session.id, "name": eval_session.name,
+            "pass_rate": summ.get("pass_rate"), "fail_rate": summ.get("fail_rate"),
+            "regression_score": summ.get("regression_score"),
+            "consistency_score": summ.get("consistency_score"),
+            "quality_score": summ.get("quality_score"),
+            "overall_score": summ.get("overall_score"),
+            "regression_breakdown": summ.get("regression_breakdown", {}),
+            "best_model": best, "closest_to_baseline": summ.get("closest_to_baseline"),
+            "models": summ.get("models", []),
+        }
+        pr = summ.get("pass_rate")
+        if best and pr is not None:
+            if pr >= 80 and not summ.get("regression_breakdown"):
+                deployment_recommendation = (
+                    f"Deploy **{best['label']}** — {pr:.0f}% pass rate with no regressions.")
+            elif pr >= 80:
+                deployment_recommendation = (
+                    f"**{best['label']}** leads ({pr:.0f}% pass) but has regressions — "
+                    f"review them before deploying.")
+            else:
+                deployment_recommendation = (
+                    f"Hold deployment — best model **{best['label']}** only passed "
+                    f"{pr:.0f}% of prompts. Consider retraining.")
+
     exec_summary = (
         f"{run.name}: {run.method.upper()} on {run.base_model} ({run.backend}), status {run.status}. "
         + (f"Security {comparison['first']['score']} → {comparison['last']['score']} "
@@ -385,6 +526,8 @@ async def training_report(run_id: str, db: AsyncSession = Depends(get_db)) -> di
         "final_models": final_models,
         "benchmarks": benchmarks,
         "best_benchmark": best_benchmark,
+        "evaluation": evaluation,
+        "deployment_recommendation": deployment_recommendation,
         "remaining_risks": sorted(set(remaining)),
     }
 

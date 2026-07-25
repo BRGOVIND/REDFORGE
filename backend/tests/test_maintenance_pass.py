@@ -39,9 +39,29 @@ def test_db_url_defaults_to_absolute_app_data(monkeypatch, tmp_path):
 
 # -- training backend auto-detection ----------------------------------------
 
-def test_default_backend_falls_back_to_simulation():
+def _force_unsloth_unavailable(monkeypatch):
+    """Make the Unsloth backend report unavailable so backend-selection is
+    deterministic regardless of whether this machine has a GPU + ML stack."""
     from app.training import manager
-    # No GPU / ML stack in CI → unsloth unavailable → simulation.
+
+    class _Unavailable:
+        name = "unsloth"
+        label = "Unsloth (local GPU · LoRA/QLoRA)"
+        def is_available(self):
+            return False, "no CUDA GPU detected (simulated CPU-only env)"
+        def diagnose(self, refresh=False):
+            return {"backend": "unsloth", "label": self.label, "ready": False,
+                    "checks": [{"name": "CUDA", "ok": False, "detail": "unavailable", "required": True}],
+                    "missing_required": ["CUDA"], "status": "Not ready — CUDA unavailable",
+                    "install_hint": ""}
+
+    monkeypatch.setitem(manager._PROVIDERS, "unsloth", lambda: _Unavailable())
+    manager.reset_availability_cache()
+
+
+def test_default_backend_falls_back_to_simulation(monkeypatch):
+    from app.training import manager
+    _force_unsloth_unavailable(monkeypatch)  # explicit CPU-only scenario
     assert manager.default_backend() == "simulation"
 
 
@@ -54,11 +74,13 @@ def test_default_backend_picks_unsloth_when_available(monkeypatch):
             return True, "ready"
 
     monkeypatch.setitem(manager._PROVIDERS, "unsloth", lambda: _FakeReady())
+    manager.reset_availability_cache()
     assert manager.default_backend() == "unsloth"
 
 
-def test_get_provider_uses_auto_default():
+def test_get_provider_uses_auto_default(monkeypatch):
     from app.training import manager
+    _force_unsloth_unavailable(monkeypatch)  # explicit CPU-only scenario
     assert manager.get_provider(None).name == "simulation"
 
 

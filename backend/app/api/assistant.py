@@ -178,6 +178,8 @@ class AskRequest(BaseModel):
     recommendation_id: Optional[str] = None
     # Optional project to scope benchmark answers, using ONLY local results.
     project_id: Optional[str] = None
+    # Optional evaluation session to answer against, using ONLY its local results.
+    session_id: Optional[str] = None
 
 
 class Source(BaseModel):
@@ -464,6 +466,105 @@ async def _benchmark_answer(question: str, project_id: Optional[str]) -> Optiona
     return None
 
 
+async def _evaluation_answer(question: str, project_id: Optional[str],
+                             session_id: Optional[str]) -> Optional[str]:
+    """Answer Evaluation Workbench questions from LOCAL session results only."""
+    from app.evaluation import evaluation_sessions
+
+    q = question.lower()
+    strong = any(t in q for t in (
+        "regress", "baseline", "behav", "retrain", "closest", "evaluation session",
+        "summarize session", "workbench", "became worse"))
+    prompt_fail = "prompt" in q and any(w in q for w in ("fail", "pass", "worse"))
+    if not (strong or prompt_fail):
+        return None
+
+    # Resolve the target session: explicit id, else latest completed in the project.
+    session = None
+    if session_id:
+        session = await evaluation_sessions.get(session_id)
+    if session is None and project_id:
+        hist = [s for s in await evaluation_sessions.history(project_id=project_id, limit=20)
+                if s["status"] == "completed"]
+        session = hist[0] if hist else None
+    if session is None:
+        return None
+
+    sid = session["id"]
+    summ = session.get("summary") or {}
+
+    # Which prompts failed? / what failed?
+    if ("fail" in q or "worse" in q) and ("prompt" in q or "which" in q or "what" in q):
+        # "why did prompt N fail" — target a specific prompt by number/title.
+        import re as _re
+        nums = _re.findall(r"\d+", question)
+        if "why" in q:
+            results = await evaluation_sessions.results(sid)
+            failed = [r for r in results if r["verdict"] in ("fail", "error")]
+            target = None
+            if nums:
+                target = next((r for r in failed if nums[0] in (r["prompt_title"] or "")), None)
+            target = target or (failed[0] if failed else None)
+            if target is None:
+                return "No prompts failed in this session — every graded prompt passed."
+            regs = "; ".join(f"{x['label']} ({x['severity']}): {x['summary']}"
+                             for x in target["regressions"]) or "similarity below the pass threshold"
+            return (f"**{target['prompt_title'] or 'Prompt'}** failed on {target['label']}: {regs}.")
+        failed = await evaluation_sessions.results(sid, verdict="fail")
+        if not failed:
+            return "No prompts failed in this session — every graded prompt passed."
+        titles = ", ".join(sorted({r["prompt_title"] or "untitled" for r in failed}))
+        return f"{len(failed)} failed result(s) in this session. Prompts: {titles}."
+
+    # Which model behaved best? / closest to baseline?
+    if "closest" in q or ("baseline" in q and ("which" in q or "stay" in q)):
+        c = summ.get("closest_to_baseline")
+        if c:
+            return (f"**{c['label']}** stayed closest to the baseline "
+                    f"(mean similarity {c['mean_similarity']}/100).")
+    if "behav" in q or ("best" in q and ("model" in q or "checkpoint" in q)):
+        b = summ.get("best_model")
+        if b:
+            return (f"**{b['label']}** behaved best: {b['pass_rate']}% pass rate, "
+                    f"mean similarity {b['mean_similarity']}/100, {b['regressions']} regression(s).")
+
+    # Show only <type> regressions.
+    for key, name in (("safety", "safety"), ("format", "formatting"), ("instruction", "instruction"),
+                      ("reason", "reasoning"), ("json", "json"), ("style", "style")):
+        if key in q and "regress" in q:
+            reg = await evaluation_sessions.regressions(sid)
+            grp = next((g for g in reg["by_type"] if g["type"].startswith(name[:4])), None)
+            if grp is None:
+                return f"No {name} regressions detected in this session."
+            items = "; ".join(f"{it['prompt_title']} on {it['target_model']}" for it in grp["items"][:6])
+            return f"{grp['count']} {name} regression(s): {items}."
+
+    # Became worse after retraining (model-attributed regressions).
+    if "became worse" in q or "worse after" in q:
+        reg = await evaluation_sessions.regressions(sid)
+        worse = [it for g in reg["by_type"] for it in g["items"] if it["attribution"] == "model"]
+        if not worse:
+            return "No prompts became worse — no model-attributed regressions in this session."
+        titles = ", ".join(sorted({it["prompt_title"] for it in worse})[:8])
+        return f"{len(worse)} prompt(s) regressed after the model changed: {titles}."
+
+    # Should I retrain?
+    if "retrain" in q or "should i" in q:
+        pr = summ.get("pass_rate")
+        if pr is not None:
+            if pr < 60:
+                return (f"Pass rate is {pr}% — below par. Retraining is worth considering; "
+                        f"target the failing prompts and re-evaluate.")
+            return (f"Pass rate is {pr}% with regression score {summ.get('regression_score')}. "
+                    f"Retraining isn't clearly needed — focus on the specific failing prompts first.")
+
+    # Summarize the session.
+    return (f"Session **{session.get('name') or sid[:8]}**: pass rate {summ.get('pass_rate')}%, "
+            f"quality {summ.get('quality_score')}, regression score {summ.get('regression_score')}, "
+            f"consistency {summ.get('consistency_score')}, overall {summ.get('overall_score')} "
+            f"across {summ.get('total_results')} result(s).")
+
+
 @router.post("/ask", response_model=AskResponse)
 async def ask(req: AskRequest, db: AsyncSession = Depends(get_db)) -> AskResponse:
     # Recommendation-scoped questions answered from the stored recommendation.
@@ -531,6 +632,21 @@ async def ask(req: AskRequest, db: AsyncSession = Depends(get_db)) -> AskRespons
                 "Should I deploy the best checkpoint?",
             ],
         )
+
+    # Evaluation Workbench questions answered from local session results.
+    if req.project_id or req.session_id:
+        ev = await _evaluation_answer(req.question, req.project_id, req.session_id)
+        if ev:
+            return AskResponse(
+                answer=ev,
+                sources=[Source(id="evaluation-workbench", title="Evaluation Workbench (local)")],
+                suggestions=[
+                    "Which prompts failed?",
+                    "Which model stayed closest to the baseline?",
+                    "Show only safety regressions.",
+                    "Should I retrain?",
+                ],
+            )
 
     # Training-run-scoped questions answered from local run metadata.
     if req.run_id:

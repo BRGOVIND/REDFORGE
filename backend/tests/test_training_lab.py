@@ -15,7 +15,34 @@ from app.db.database import Base
 
 # -- provider / registry ----------------------------------------------------
 
-def test_registry_lists_backends_with_availability():
+
+@pytest.fixture
+def force_cpu(monkeypatch):
+    """Force the Unsloth backend to report unavailable so backend-selection tests
+    are deterministic regardless of the host GPU / ML stack. The GPU-available
+    scenario is covered separately (see test_backends_endpoint_reports_unsloth)."""
+    from app.training import manager
+    from app.api import training as training_api
+
+    class _Unavailable:
+        name = "unsloth"
+        label = "Unsloth (local GPU · LoRA/QLoRA)"
+        def is_available(self):
+            return False, "no CUDA GPU detected (simulated CPU-only env)"
+        def diagnose(self, refresh=False):
+            return {"backend": "unsloth", "label": self.label, "ready": False,
+                    "checks": [{"name": "CUDA", "ok": False, "detail": "unavailable", "required": True}],
+                    "missing_required": ["CUDA"], "status": "Not ready — CUDA unavailable",
+                    "install_hint": ""}
+
+    monkeypatch.setitem(manager._PROVIDERS, "unsloth", lambda: _Unavailable())
+    manager.reset_availability_cache()
+    monkeypatch.setattr(training_api, "_backends_cache", None, raising=False)
+    yield
+    manager.reset_availability_cache()
+
+
+def test_registry_lists_backends_with_availability(force_cpu):
     from app.training import manager
     backs = manager.available_backends()
     names = {b["name"] for b in backs}
@@ -23,14 +50,28 @@ def test_registry_lists_backends_with_availability():
     sim = next(b for b in backs if b["name"] == "simulation")
     assert sim["available"] is True
     uns = next(b for b in backs if b["name"] == "unsloth")
-    assert uns["available"] is False  # no GPU/ML stack here
+    assert uns["available"] is False  # forced CPU-only by the fixture
     assert manager.DEFAULT_BACKEND == "simulation"
 
 
-def test_get_provider_defaults_to_simulation():
+def test_get_provider_defaults_to_simulation(force_cpu):
     from app.training import manager
     assert manager.get_provider(None).name == "simulation"
     assert manager.get_provider("does-not-exist").name == "simulation"
+
+
+def test_get_provider_reports_unsloth_when_available(monkeypatch):
+    """GPU-available scenario — selection must pick the real backend."""
+    from app.training import manager
+
+    class _Ready:
+        name = "unsloth"; label = "Unsloth"
+        def is_available(self):
+            return True, "ready"
+
+    monkeypatch.setitem(manager._PROVIDERS, "unsloth", lambda: _Ready())
+    manager.reset_availability_cache()
+    assert manager.default_backend() == "unsloth"
 
 
 @pytest.mark.asyncio
@@ -141,21 +182,34 @@ async def client(db_session):
 
 
 @pytest.mark.asyncio
-async def test_backends_endpoint(client):
+async def test_backends_endpoint(client, force_cpu):
     r = (await client.get("/api/training/backends")).json()
     assert r["default"] == "simulation"
     assert any(b["name"] == "unsloth" for b in r["backends"])
 
 
 @pytest.mark.asyncio
-async def test_run_crud_notes_delete(client):
+async def test_diagnostics_endpoint(client):
+    """Structured per-layer diagnostics — reports each dependency independently."""
+    d = (await client.get("/api/training/diagnostics")).json()
+    names = {c["name"] for c in d["checks"]}
+    assert {"PyTorch", "CUDA", "GPU", "Transformers", "PEFT", "Unsloth"} <= names
+    assert "ready" in d and "status" in d
+    # every check has an explicit ok/detail — never a collapsed single message
+    assert all("ok" in c and "detail" in c for c in d["checks"])
+
+
+@pytest.mark.asyncio
+async def test_run_crud_notes_delete(client, force_cpu):
     from app.training import training_service
     # create directly via service (launch spawns a background task on a different DB)
     from app.db.database import get_db  # noqa: F401
 
-    # use the API to create+list by launching then immediately inspecting the row
+    # use the API to create+list by launching then immediately inspecting the row.
+    # base_model is a Foundation Model identity (HF repo) — training providers receive
+    # a foundation id, never a runtime tag (an unresolvable tag is now a 422).
     resp = await client.post("/api/training/launch", json={
-        "name": "My Run", "base_model": "llama3.1:8b", "method": "qlora",
+        "name": "My Run", "base_model": "meta-llama/Llama-3.1-8B", "method": "qlora",
         "params": {"epochs": 1},
     })
     assert resp.status_code == 202
@@ -177,6 +231,44 @@ async def test_run_crud_notes_delete(client):
 
     assert (await client.delete(f"/api/training/{rid}")).json()["deleted"] is True
     assert (await client.get(f"/api/training/{rid}")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_launch_resolves_runtime_model_to_foundation(client, force_cpu, monkeypatch):
+    """A Runtime Model tag is resolved to a Foundation Model (HF repo) BEFORE it can
+    reach a training provider — the run + provider config carry the HF repo, never the
+    tag. This is the architectural guarantee (providers are runtime-agnostic)."""
+    from app.api import training as training_api
+
+    async def fake_resolve(base_model):
+        assert base_model == "qwen3:8b"   # the runtime tag the operator selected
+        return {"id": "fm-1", "hf_repo": "Qwen/Qwen3-8B",
+                "source": "resolved_from_runtime", "metadata": {"auto_resolved": True}}
+
+    monkeypatch.setattr(training_api.foundation_model_service,
+                        "ensure_foundation_for_base_model", fake_resolve)
+    resp = await client.post("/api/training/launch", json={
+        "name": "R", "base_model": "qwen3:8b", "method": "qlora", "params": {"epochs": 1}})
+    assert resp.status_code == 202
+    # The run stores the FOUNDATION identity, not the runtime tag.
+    assert resp.json()["run"]["base_model"] == "Qwen/Qwen3-8B"
+
+
+@pytest.mark.asyncio
+async def test_launch_rejects_unresolvable_runtime_tag(client, force_cpu, monkeypatch):
+    """If a runtime tag cannot be resolved to a real HF foundation repo, the launch
+    fails honestly (422) instead of passing the tag to the provider."""
+    from app.api import training as training_api
+
+    async def fake_unverified(base_model):
+        return {"id": "fm-2", "hf_repo": base_model, "source": "resolved_from_runtime",
+                "metadata": {"unverified": True}}
+
+    monkeypatch.setattr(training_api.foundation_model_service,
+                        "ensure_foundation_for_base_model", fake_unverified)
+    resp = await client.post("/api/training/launch", json={
+        "name": "R", "base_model": "mysterymodel:xyz", "method": "qlora", "params": {"epochs": 1}})
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio

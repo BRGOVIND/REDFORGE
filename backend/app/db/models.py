@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -432,4 +432,489 @@ class BenchmarkResult(Base):
     config = Column(JSON, default=dict)                           # sampling/suite config used
     error = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=_utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Evaluation Workbench (V2 Phase 4) — the qualitative evaluation layer.
+#
+# Benchmark Center asks "how well does the model perform?"; the Workbench asks
+# "how does the model actually behave?". A Project holds Collections → Prompt
+# Sets → Prompts (each version-tracked with an optional golden/expected
+# baseline). A WorkbenchSession runs selected prompt sets against selected
+# models through the SAME async queue architecture as Benchmark Center, and
+# stores one EvaluationResult per (model × prompt) with metrics, a pluggable
+# similarity score, a pass/fail verdict, and detected regressions. Everything
+# is local-only and additive; nothing existing depends on it.
+# ---------------------------------------------------------------------------
+
+
+class EvaluationCollection(Base):
+    """A themed group of prompt sets within a project (Coding, Security, RAG …)."""
+
+    __tablename__ = "eval_collections"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    name = Column(String(200), nullable=False)
+    category = Column(String(60), default="custom")   # coding/security/reasoning/…/custom
+    description = Column(Text, default="")
+    tags = Column(JSON, default=list)                 # list[str]
+    notes = Column(Text, default="")
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    prompt_sets = relationship(
+        "PromptSet", back_populates="collection",
+        cascade="all, delete-orphan", order_by="PromptSet.created_at",
+    )
+
+
+class PromptSet(Base):
+    """A named collection of prompts (a test suite) inside an EvaluationCollection."""
+
+    __tablename__ = "eval_prompt_sets"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    collection_id = Column(String(36), ForeignKey("eval_collections.id"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)  # denormalized for queries
+    title = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    category = Column(String(60), default="custom")
+    tags = Column(JSON, default=list)
+    notes = Column(Text, default="")
+    priority = Column(String(20), default="normal")   # low/normal/high/critical
+    owner = Column(String(120), default="")
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    collection = relationship("EvaluationCollection", back_populates="prompt_sets")
+    prompts = relationship(
+        "Prompt", back_populates="prompt_set",
+        cascade="all, delete-orphan", order_by="Prompt.created_at",
+    )
+
+
+class Prompt(Base):
+    """A single evaluation prompt with an optional baseline (expected/golden)."""
+
+    __tablename__ = "eval_prompts"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    prompt_set_id = Column(String(36), ForeignKey("eval_prompt_sets.id"), nullable=False, index=True)
+    title = Column(String(200), default="")
+    prompt = Column(Text, nullable=False)
+    system_prompt = Column(Text, default="")
+    context = Column(Text, default="")
+    expected_behavior = Column(Text, default="")
+    expected_output = Column(Text, default="")            # baseline (loose reference)
+    golden_response = Column(Text, default="")            # baseline (exact reference)
+    acceptance_criteria = Column(JSON, default=dict)      # {min_similarity, must_include[], must_exclude[], require_json}
+    tags = Column(JSON, default=list)
+    priority = Column(String(20), default="normal")
+    difficulty = Column(String(20), default="normal")     # easy/normal/hard
+    notes = Column(Text, default="")
+    enabled = Column(Integer, default=1)                  # 0/1
+    current_version = Column(Integer, default=1)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+    prompt_set = relationship("PromptSet", back_populates="prompts")
+    versions = relationship(
+        "PromptVersion", back_populates="prompt",
+        cascade="all, delete-orphan", order_by="PromptVersion.version",
+    )
+
+
+class PromptVersion(Base):
+    """Immutable snapshot of a prompt's fields. Lets regression reports say whether
+    the prompt changed or the model changed."""
+
+    __tablename__ = "eval_prompt_versions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    prompt_id = Column(String(36), ForeignKey("eval_prompts.id"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    snapshot = Column(JSON, nullable=False)               # full prompt field dict at this version
+    note = Column(String(300), default="")
+    created_at = Column(DateTime, default=_utcnow)
+
+    prompt = relationship("Prompt", back_populates="versions")
+
+
+class WorkbenchSession(Base):
+    """One execution of selected prompt sets against selected models. Runs through
+    the async queue (mirrors Benchmark Center); summaries composed at read time
+    from its EvaluationResult rows. Distinct from the legacy ``evaluation_sessions``
+    (security batch) table."""
+
+    __tablename__ = "workbench_sessions"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    run_id = Column(String(36), ForeignKey("training_runs.id"), nullable=True, index=True)
+    name = Column(String(200), default="")
+    models = Column(JSON, default=list)                   # list[{target_model, registry_id, provider, runtime, label}]
+    prompt_set_ids = Column(JSON, default=list)           # list[str]
+    similarity = Column(String(40), default="text")       # similarity provider key
+    status = Column(String(20), default="pending")        # pending/running/completed/failed/cancelled
+    config = Column(JSON, default=dict)                   # sampling/thresholds
+    summary = Column(JSON, default=dict)                 # cached scores {pass_rate, regression_score, …}
+    total_tasks = Column(Integer, default=0)
+    completed_tasks = Column(Integer, default=0)
+    duration_seconds = Column(Float, nullable=True)
+    error = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    results = relationship(
+        "EvaluationResult", back_populates="session",
+        cascade="all, delete-orphan", order_by="EvaluationResult.created_at",
+    )
+
+
+class EvaluationResult(Base):
+    """One model's response to one prompt within a session, plus metrics,
+    similarity, verdict, and detected regressions."""
+
+    __tablename__ = "eval_results"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    session_id = Column(String(36), ForeignKey("workbench_sessions.id"), nullable=False, index=True)
+    prompt_id = Column(String(36), ForeignKey("eval_prompts.id"), nullable=True, index=True)
+    prompt_set_id = Column(String(36), nullable=True, index=True)
+    prompt_version = Column(Integer, default=1)
+    prompt_title = Column(String(200), default="")
+    target_model = Column(String(200), nullable=False)
+    registry_id = Column(String(80), nullable=True)
+    provider = Column(String(40), nullable=True)
+    runtime = Column(String(40), nullable=True)
+    label = Column(String(120), nullable=True)
+    response = Column(Text, default="")
+    metrics = Column(JSON, default=dict)                 # latency_ms, ttft_ms, completion_ms, prompt/completion/total tokens
+    similarity_score = Column(Float, nullable=True)      # 0–100 vs baseline
+    baseline_type = Column(String(20), nullable=True)    # golden/expected/none
+    verdict = Column(String(20), default="none")         # pass/fail/warn/error/none
+    regressions = Column(JSON, default=list)             # [{type, severity, summary}]
+    warnings = Column(JSON, default=list)                # list[str]
+    error = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
+
+    session = relationship("WorkbenchSession", back_populates="results")
+
+
+# ---------------------------------------------------------------------------
+# Foundation Platform (V3 Epic 1) — the training-domain model identity.
+#
+# A FoundationModel is what a training provider LOADS (a Hugging Face checkpoint),
+# distinct from a RuntimeModel (what the Runtime Manager SERVES). The two are
+# related only by derivation, never by identity — see the V3 Constitution §5.4.
+# Additive: this is a NEW table; nothing existing depends on it, no existing
+# table is altered. Persistence-only — the domain object and all business logic
+# live in app/foundation_models/ and never import this class directly (the
+# repository maps between this row and the pure domain object).
+# ---------------------------------------------------------------------------
+
+
+class FoundationModelRecord(Base):
+    """Persistence row for a Foundation Model. Owned exclusively by
+    ``app.foundation_models.repository`` — no service touches it directly."""
+
+    __tablename__ = "foundation_models"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    hf_repo = Column(String(300), nullable=False, index=True)   # e.g. meta-llama/Llama-3.1-8B
+    revision = Column(String(120), nullable=True)               # pinned commit SHA (optional)
+    architecture = Column(String(60), nullable=True)            # llama/qwen2/mistral/phi3/...
+    parameter_count = Column(Integer, nullable=True)
+    format = Column(String(40), default="safetensors")          # weight format
+    quantization = Column(String(60), default="none")           # part of identity
+    status = Column(String(30), default="referenced")           # referenced/downloading/local/invalid
+    source = Column(String(40), default="hf_hub")               # hf_hub/local_import/resolved_from_runtime
+    license = Column(String(120), nullable=True)
+    cache_path = Column(String(500), nullable=True)             # local weights dir; null = not local
+    checksum = Column(String(128), nullable=True)
+    # Identity dedup key (hf_repo@revision|format|quantization), indexed for
+    # idempotent register. Reserved column name "metadata" avoided per SQLAlchemy.
+    identity_key = Column(String(500), nullable=True, index=True)
+    model_metadata = Column(JSON, default=dict)                 # provider/HF metadata + resolution evidence
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class RuntimeModelRecord(Base):
+    """Persistence row for a *discovered runtime model* (RedForge V3, Epic 4.5).
+
+    Tracks a locally-installed runtime model (e.g. an Ollama tag), its runtime
+    availability, and how it resolved to a Foundation identity. Distinct from
+    ``FoundationModelRecord`` — RuntimeModel and FoundationModel are separate
+    identities (Constitution §5.4, §11.2). Linked by reference via
+    ``foundation_model_id`` when confidently resolved; a vanished runtime model is
+    marked unavailable, never deleted (and its Foundation identity persists).
+    Owned exclusively by ``app.foundation_models.repository``. Additive: NEW table."""
+
+    __tablename__ = "runtime_models"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    runtime_ref = Column(String(300), nullable=False, index=True)   # e.g. llama3.1:8b
+    provider = Column(String(60), default="ollama", index=True)     # detected runtime provider
+    resolution = Column(String(30), default="unresolved", index=True)  # resolved/needs_resolution/unresolved
+    available = Column(Boolean, default=True)                        # currently served by the runtime?
+    foundation_model_id = Column(String(36), nullable=True, index=True)  # reference (NOT a FK merge)
+    confidence = Column(Float, nullable=True)
+    candidates = Column(JSON, default=list)                          # candidate dicts when ambiguous
+    facts = Column(JSON, default=dict)                               # introspected evidence
+    last_synced_at = Column(DateTime, default=_utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Artifact Registry (V3 Epic 2) — the platform spine.
+#
+# Every produced unit (foundation model, dataset, checkpoint, adapter, merged
+# model, gguf, runtime model, benchmark/evaluation/security result, report, log)
+# is an Artifact with lineage (Constitution §6). Additive: NEW tables only;
+# nothing existing is altered. Persistence-only — the pure domain object and all
+# business logic live in app/artifacts/ and never import these classes directly
+# (the repository maps between rows and domain objects).
+# ---------------------------------------------------------------------------
+
+
+class ArtifactRecord(Base):
+    """Persistence row for an Artifact (the index). Owned exclusively by
+    ``app.artifacts.repository``."""
+
+    __tablename__ = "artifacts"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    type = Column(String(60), nullable=False, index=True)       # extensible type key
+    name = Column(String(300), nullable=False)
+    status = Column(String(20), default="draft", index=True)    # draft/ready/invalid/archived
+    producer = Column(String(200), default="")                  # e.g. "job:<id>", "user_import"
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    experiment_id = Column(String(36), nullable=True, index=True)  # reserved (Experiments epic)
+    description = Column(Text, default="")
+    # Location (union): file-backed uses location_path; data-backed uses table/row.
+    location_kind = Column(String(10), default="data")          # "file" | "data"
+    location_path = Column(String(1000), nullable=True)
+    location_table = Column(String(80), nullable=True)
+    location_row_id = Column(String(80), nullable=True)
+    size_bytes = Column(Integer, nullable=True)
+    checksum_algorithm = Column(String(20), nullable=True)
+    checksum_value = Column(String(128), nullable=True)
+    tags = Column(JSON, default=list)                           # list[str]
+    lineage_id = Column(String(36), nullable=True, index=True)  # stable version-chain id
+    version = Column(Integer, default=1)
+    artifact_metadata = Column(JSON, default=dict)              # reserved name "metadata" avoided
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+    archived_at = Column(DateTime, nullable=True)
+
+
+class ArtifactEdgeRecord(Base):
+    """A directed lineage edge (parent → child) in the artifact DAG."""
+
+    __tablename__ = "artifact_edges"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    parent_id = Column(String(36), ForeignKey("artifacts.id"), nullable=False, index=True)
+    child_id = Column(String(36), ForeignKey("artifacts.id"), nullable=False, index=True)
+    relationship = Column(String(30), default="derived_from")   # derived_from/produced_from/supersedes/consumed/contains
+    edge_metadata = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# AI Engineering Pipeline (V3 Epic 3) — Dataset Platform + Training Platform.
+#
+# NEW tables, additive; distinct from the legacy datasets/training tables so the
+# existing subsystems keep working unchanged (strangler-fig). Persistence-only —
+# the domain objects and logic live in app/datasets/ and app/training/ and never
+# import these classes directly (the repositories map rows <-> domain).
+# ---------------------------------------------------------------------------
+
+
+class V3DatasetRecord(Base):
+    """Dataset Platform (V3) dataset. Owned by ``app.datasets.repository``."""
+
+    __tablename__ = "v3_datasets"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    name = Column(String(300), nullable=False)
+    format = Column(String(20), default="jsonl")
+    kind = Column(String(20), default="records")               # records | text
+    status = Column(String(20), default="registered")
+    description = Column(Text, default="")
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    current_version = Column(Integer, default=0)
+    schema = Column(JSON, default=dict)                         # {kind, columns}
+    statistics = Column(JSON, default=dict)
+    content_hash = Column(String(128), nullable=True)
+    tags = Column(JSON, default=list)
+    dataset_metadata = Column(JSON, default=dict)               # reserved name avoided
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class V3DatasetVersionRecord(Base):
+    """Immutable dataset version (records stored inline as JSON, data-backed)."""
+
+    __tablename__ = "v3_dataset_versions"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    dataset_id = Column(String(36), ForeignKey("v3_datasets.id"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    records = Column(JSON, nullable=False)                      # list[dict] | list[str]
+    record_count = Column(Integer, default=0)
+    note = Column(String(300), default="")
+    content_hash = Column(String(128), nullable=True)
+    artifact_id = Column(String(36), nullable=True)            # published dataset artifact id
+    created_at = Column(DateTime, default=_utcnow)
+
+
+class V3TrainingRunRecord(Base):
+    """Training Platform (V3) run. Owned by ``app.training.repository``. Distinct
+    from the legacy ``training_runs`` table."""
+
+    __tablename__ = "v3_training_runs"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    name = Column(String(200), nullable=False)
+    foundation_model_id = Column(String(36), nullable=True, index=True)   # app foundation model id
+    base_model = Column(String(200), nullable=False)            # resolved runnable/HF identity used
+    dataset_id = Column(String(36), nullable=True, index=True)  # v3_datasets id
+    dataset_version = Column(Integer, nullable=True)
+    strategy = Column(String(40), default="lora")               # lora/qlora/sft/dpo/...
+    provider = Column(String(40), default="simulation")
+    status = Column(String(20), default="created")              # created/queued/running/completed/failed/cancelled
+    config = Column(JSON, default=dict)                         # full training configuration
+    hyperparameters = Column(JSON, default=dict)
+    metrics = Column(JSON, default=dict)                        # final metrics
+    estimate = Column(JSON, default=dict)                       # resource estimate
+    job_id = Column(String(36), nullable=True, index=True)     # the executing job
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    output_dir = Column(String(500), default="")
+    logs = Column(JSON, default=list)                          # list[str]
+    error = Column(String(1000), nullable=True)
+    # Artifact linkage (the run + its products).
+    run_artifact_id = Column(String(36), nullable=True)
+    adapter_artifact_id = Column(String(36), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+
+class V3CheckpointRecord(Base):
+    """A checkpoint produced by a V3 training run (file-backed)."""
+
+    __tablename__ = "v3_training_checkpoints"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    run_id = Column(String(36), ForeignKey("v3_training_runs.id"), nullable=False, index=True)
+    step = Column(Integer, nullable=False)
+    epoch = Column(Float, default=0.0)
+    loss = Column(Float, nullable=True)
+    val_loss = Column(Float, nullable=True)
+    path = Column(String(500), default="")
+    is_best = Column(Integer, default=0)
+    artifact_id = Column(String(36), nullable=True)            # published checkpoint artifact id
+    created_at = Column(DateTime, default=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Experiment Platform (V3 Epic 4) — the aggregation root / primary unit of work.
+#
+# An Experiment references (never owns) the runs/jobs/artifacts produced under it,
+# learning associations from the Event Bus. NEW tables, additive; no existing table
+# altered. Persistence-only — logic lives in app/experiments/.
+# ---------------------------------------------------------------------------
+
+
+class ExperimentRecord(Base):
+    __tablename__ = "experiments"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    name = Column(String(200), nullable=False)
+    status = Column(String(20), default="draft", index=True)
+    description = Column(Text, default="")
+    configuration = Column(JSON, default=dict)
+    snapshot = Column(JSON, nullable=True)
+    tags = Column(JSON, default=list)
+    metrics = Column(JSON, default=dict)
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    parent_experiment_id = Column(String(36), nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+    concluded_at = Column(DateTime, nullable=True)
+
+
+class ExperimentTimelineRecord(Base):
+    __tablename__ = "experiment_timeline"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    experiment_id = Column(String(36), ForeignKey("experiments.id"), nullable=False, index=True)
+    kind = Column(String(60), nullable=False)
+    title = Column(String(300), default="")
+    payload = Column(JSON, default=dict)
+    source = Column(String(10), default="system")             # system | user
+    at = Column(DateTime, default=_utcnow, index=True)
+
+
+class ExperimentNoteRecord(Base):
+    __tablename__ = "experiment_notes"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    experiment_id = Column(String(36), ForeignKey("experiments.id"), nullable=False, index=True)
+    body = Column(Text, nullable=False)                       # Markdown
+    created_at = Column(DateTime, default=_utcnow)
+
+
+class ExperimentJobRefRecord(Base):
+    __tablename__ = "experiment_job_refs"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    experiment_id = Column(String(36), ForeignKey("experiments.id"), nullable=False, index=True)
+    job_id = Column(String(36), nullable=False, index=True)
+    job_type = Column(String(60), default="")
+    status = Column(String(20), default="")
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Execution Platform / Job System (V3 Epic 2).
+#
+# The unified unit of long-running, backgrounded, recoverable work (Constitution
+# §5.22, §8). Additive: a NEW table; no existing table altered. Persistence-only —
+# the domain object and orchestration live in app/jobs/ and never import this class.
+# ---------------------------------------------------------------------------
+
+
+class JobRecord(Base):
+    """Persistence row for a Job. Owned exclusively by ``app.jobs.repository``."""
+
+    __tablename__ = "jobs"
+
+    id = Column(String(36), primary_key=True)  # uuid4
+    type = Column(String(60), nullable=False, index=True)       # extensible kind key
+    status = Column(String(20), default="queued", index=True)   # canonical job state machine
+    params = Column(JSON, default=dict)
+    target_ref = Column(String(200), nullable=True)
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=True, index=True)
+    priority = Column(Integer, default=0)
+    # Progress (flattened for cheap querying).
+    progress_fraction = Column(Float, default=0.0)
+    progress_step = Column(Integer, nullable=True)
+    progress_total = Column(Integer, nullable=True)
+    progress_message = Column(String(500), default="")
+    # Result / error.
+    result = Column(JSON, nullable=True)
+    error = Column(String(1000), nullable=True)                 # message (never null on failure)
+    error_detail = Column(JSON, nullable=True)                  # {kind, traceback}
+    logs = Column(JSON, default=list)                           # list[str]
+    attempts = Column(Integer, default=0)
+    max_attempts = Column(Integer, default=1)
+    job_metadata = Column(JSON, default=dict)                   # reserved name "metadata" avoided
+    created_at = Column(DateTime, default=_utcnow)
+    started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)

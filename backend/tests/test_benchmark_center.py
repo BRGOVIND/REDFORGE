@@ -154,6 +154,59 @@ async def test_service_cancel_pending(SessionLocal):
     assert got["status"] == "cancelled"
 
 
+@pytest.mark.asyncio
+async def test_failed_benchmark_always_persists_error(SessionLocal):
+    """A failing worker must never leave status=failed with a null error/timestamp."""
+    from app.benchmarks.service import BenchmarkService
+
+    async def boom(model, suites, config):
+        raise RuntimeError("provider exploded")
+
+    svc = BenchmarkService(run_fn=boom, session_factory=SessionLocal, auto_worker=False)
+    job = await svc.schedule(target_model="qwen3:8b", suites=["performance"])
+    await svc.drain()
+    got = await svc.get(job["id"])
+    assert got["status"] == "failed"
+    assert got["error"] and "provider exploded" in got["error"]
+    assert got["completed_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_benchmark_runs_against_raw_model_without_registry(SessionLocal):
+    """Runtime Registry fallback: registry_id=null → benchmark the target_model
+    directly (a raw Ollama model), no manual registration required."""
+    from app.benchmarks.service import BenchmarkService
+    svc = BenchmarkService(run_fn=_fake_run, session_factory=SessionLocal, auto_worker=False)
+    job = await svc.schedule(target_model="qwen3:8b", suites=["performance", "security"])
+    await svc.drain()
+    got = await svc.get(job["id"])
+    assert got["registry_id"] is None
+    assert got["status"] == "completed" and got["completed_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_orphan_recovery_persists_error_and_timestamp(SessionLocal, monkeypatch):
+    """Startup recovery must give an interrupted job a real error + completed_at —
+    the root cause of the 'status=failed, error=null, completed_at=null' record."""
+    import app.main as main_mod
+    from sqlalchemy import select
+    from app.db.models import BenchmarkResult
+
+    async with SessionLocal() as db:
+        db.add(BenchmarkResult(id=str(uuid4()), target_model="qwen3:8b", status="running",
+                               suites=["performance"], scores={}, metrics={}))
+        await db.commit()
+
+    monkeypatch.setattr(main_mod, "AsyncSessionLocal", SessionLocal)
+    await main_mod._recover_orphaned_jobs()
+
+    async with SessionLocal() as db:
+        row = (await db.execute(select(BenchmarkResult))).scalars().first()
+    assert row.status == "failed"
+    assert row.error and "interrupted" in row.error.lower()
+    assert row.completed_at is not None
+
+
 # -- API --------------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -246,3 +299,49 @@ async def test_training_report_includes_benchmarks(client, db_session):
     rep = (await client.get(f"/api/training/{rid}/report")).json()
     assert rep["benchmarks"] and rep["benchmarks"][0]["overall_score"] == 85.0
     assert rep["best_benchmark"]["label"] == "Checkpoint 4"
+
+
+# ---------------------------------------------------------------------------
+# P0 stabilization — a running benchmark must report per-suite progress so it
+# never looks frozen (each suite can issue many bounded-timeout generations).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_default_run_reports_per_suite_progress(monkeypatch):
+    import app.benchmarks.service as svc
+
+    class _Res:
+        score = 90.0
+        metrics: dict = {}
+        simulated = True
+        note = ""
+
+    class _Suite:
+        async def run(self, ctx):
+            return _Res()
+
+    monkeypatch.setattr(svc, "get_suite", lambda k: _Suite())
+    calls: list = []
+
+    async def cb(phase, i, n):
+        calls.append((phase, i, n))
+
+    out = await svc._default_run("m", ["alpha", "beta"], {}, progress_cb=cb)
+    assert out["overall_score"] is not None
+    # progress_cb is awaited once before each suite, carrying index/total
+    assert calls == [("running suite 'alpha'", 1, 2), ("running suite 'beta'", 2, 2)]
+
+
+@pytest.mark.asyncio
+async def test_write_progress_lands_in_metrics(SessionLocal):
+    from app.benchmarks.service import BenchmarkService
+    from app.db.models import BenchmarkResult
+    svc = BenchmarkService(session_factory=SessionLocal, auto_worker=False)
+    async with SessionLocal() as db:
+        db.add(BenchmarkResult(id="bp1", target_model="m", status="running",
+                               suites=["x"], scores={}, metrics={}))
+        await db.commit()
+    await svc._write_progress("bp1", "running suite 'x'", 1, 3)
+    async with SessionLocal() as db:
+        row = await db.get(BenchmarkResult, "bp1")
+        assert row.metrics["progress"] == {"phase": "running suite 'x'", "suite_index": 1, "suite_total": 3}

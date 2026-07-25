@@ -63,6 +63,20 @@ class ProgressStore:
             })
         if event.get("message"):
             st.logs.append(f"[{event.get('step', 0)}] {event['message']}")
+        elif event.get("step"):
+            # Step events from a real provider (e.g. Unsloth's HF-Trainer callback)
+            # carry metrics but no message. Surface them as real terminal lines so the
+            # UI shows live "step / epoch / loss / lr" instead of only updating charts.
+            parts = [f"step {event['step']}"]
+            if event.get("total_steps"):
+                parts[0] += f"/{event['total_steps']}"
+            if event.get("epoch") is not None:
+                parts.append(f"epoch {round(float(event['epoch']), 2)}")
+            if event.get("loss") is not None:
+                parts.append(f"loss {round(float(event['loss']), 4)}")
+            if event.get("learning_rate") is not None:
+                parts.append(f"lr {float(event['learning_rate']):.2e}")
+            st.logs.append(f"[{event['step']}] " + " · ".join(parts))
 
     def cancel(self, run_id: str) -> bool:
         st = self._runs.get(run_id)

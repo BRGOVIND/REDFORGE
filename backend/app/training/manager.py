@@ -63,3 +63,24 @@ def get_provider(name: str | None = None) -> TrainingProvider:
     key = (name or default_backend()).lower()
     factory = _PROVIDERS.get(key) or _PROVIDERS[FALLBACK_BACKEND]
     return factory()
+
+
+def diagnostics(name: str | None = None, refresh: bool = False) -> dict:
+    """Structured, per-layer diagnostics for a backend (default: the real training
+    backend, ``unsloth``). Drives the Training Lab diagnostics panel so the UI shows
+    the exact failing dependency instead of a collapsed message."""
+    key = (name or "unsloth").lower()
+    factory = _PROVIDERS.get(key) or _PROVIDERS[FALLBACK_BACKEND]
+    return factory().diagnose(refresh=refresh)
+
+
+def reset_availability_cache() -> None:
+    """Clear cached availability/diagnostics (hardware or install changed, or tests
+    switching simulated environments). Never raises."""
+    for factory in _PROVIDERS.values():
+        try:
+            prov = factory()
+            if hasattr(type(prov), "_diag_cache"):
+                type(prov)._diag_cache = None
+        except Exception:  # noqa: BLE001
+            pass

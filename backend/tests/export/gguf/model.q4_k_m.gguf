@@ -1,0 +1,1 @@
+{"format": "gguf", "quantization": "q4_k_m", "source": "C:\\Users\\LOQ\\redforge\\backend\\tests\\export\\gguf\\merged_model.json", "simulated": true}
