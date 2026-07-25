@@ -4,8 +4,8 @@ import { HeroSilhouette } from './HeroSilhouette';
 
 /** Section 2 — Hero. Typography is the hero; whitespace does the rest. */
 export function Hero({ started }: { started: boolean }) {
-  const words = ['BREAK', 'YOUR', 'MODEL.'];
-  const words2 = ['BEFORE', 'ATTACKERS', 'DO.'];
+  const words = ['BUILD.', 'EVALUATE.', 'MANAGE.'];
+  const words2 = ['LOCAL', 'AI.'];
 
   const wordStyle = (i: number): React.CSSProperties => ({
     opacity: started ? 1 : 0,
@@ -64,19 +64,45 @@ export function Hero({ started }: { started: boolean }) {
         </h1>
 
         <div
-          className="mt-10 flex max-w-xl items-start gap-4 sm:mt-14"
+          className="mt-10 flex max-w-2xl items-start gap-4 sm:mt-14"
           style={{ opacity: started ? 1 : 0, transition: 'opacity 1.2s ease 900ms' }}
         >
           <span className="mt-1 h-10 w-px shrink-0 bg-forge" />
           <p className="text-[15px] leading-relaxed text-steel-200 sm:text-base">
-            A red-teaming laboratory that lives on your machine. Throw thousands of adversarial
-            prompts at any local model and watch exactly where it breaks — before someone else finds out.
+            The complete Local AI Engineering Platform. Discover models, manage runtimes,
+            engineer prompts, benchmark, evaluate, secure, and fine-tune — everything you need to
+            build with local AI, running entirely on your machine.
           </p>
+        </div>
+
+        {/* Primary + secondary CTAs */}
+        <div
+          className="mt-9 flex flex-wrap items-center gap-3 sm:mt-11"
+          style={{ opacity: started ? 1 : 0, transition: 'opacity 1.2s ease 1100ms' }}
+        >
+          <a
+            href="#download"
+            className="focus-ring group inline-flex items-center gap-2 rounded-full bg-forge px-6 py-3 text-[14px] font-medium text-bone transition-all duration-300 hover:bg-forge/90 hover:shadow-[0_0_28px_-6px_rgba(122,0,0,0.7)]"
+          >
+            Download RedForge
+          </a>
+          <a
+            href="#capabilities"
+            className="focus-ring inline-flex items-center gap-2 rounded-full border border-steel-600 px-6 py-3 text-[14px] text-bone transition-colors duration-300 hover:border-steel-400"
+          >
+            View Documentation
+          </a>
+          <span className="ml-1 hidden items-center gap-4 text-[12px] text-steel-400 sm:flex">
+            <span>⭐ 100% Local</span>
+            <span>🔒 Privacy First</span>
+            <span>⚡ Multi-Runtime</span>
+            <span>🧪 Training (Experimental)</span>
+          </span>
         </div>
       </div>
 
       <a
-        href="#problem"
+        href="#capabilities"
         className="focus-ring absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-steel-300"
         style={{ opacity: started ? 1 : 0, transition: 'opacity 1s ease 1400ms' }}
         aria-label="Scroll to begin"
@@ -89,5 +115,5 @@ export function Hero({ started }: { started: boolean }) {
 }
 
 function cnWord(w: string): string {
-  return w === 'ATTACKERS' ? 'inline-block text-ember-gradient' : 'inline-block';
+  return w === 'LOCAL' ? 'inline-block text-ember-gradient' : 'inline-block';
 }

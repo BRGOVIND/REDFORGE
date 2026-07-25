@@ -25,7 +25,7 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.4",
-    "vite": "^5.4.8"
+    "vite": "^8.1.5"
   },
   "comment": "Motion is implemented in-house (see src/motion). The design brief calls for GSAP + Framer Motion + Lenis; add them with `npm i gsap framer-motion lenis` when a registry is reachable and swap the in-house primitives in src/motion — the seams are documented there."
 }

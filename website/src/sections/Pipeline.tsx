@@ -1,14 +1,16 @@
-import { Cpu, Brain, Crosshair, Scale, Activity, FileText } from 'lucide-react';
+import { Package, Database, Dumbbell, Gauge, ShieldCheck, FileText } from 'lucide-react';
 import { usePinProgress } from '../motion';
 import { cn, clamp } from '../lib/cn';
 
+// One connected engineering workflow — not isolated tools. Everything below runs
+// locally and flows into the next stage, with full lineage.
 const STAGES = [
-  { k: 'Model', icon: Cpu, d: 'Point RedForge at any model served by your local runtime — Ollama, LM Studio, llama.cpp, or vLLM. Nothing is sent away.' },
-  { k: 'Planner', icon: Brain, d: 'It profiles the model and drafts a deterministic attack plan — categories, ordering, and escalation, tuned to the target.' },
-  { k: 'Attack Engine', icon: Crosshair, d: 'Adversarial prompts are fired in waves. When one is resisted, it mutates and escalates — automatically.' },
-  { k: 'Judge', icon: Scale, d: 'Each response is scored — by heuristics or an LLM-as-judge — into PASS, FAIL, or UNCERTAIN, with a reason.' },
-  { k: 'Analysis', icon: Activity, d: 'Verdicts become a security score, category breakdowns, ranked vulnerabilities, and failure patterns.' },
-  { k: 'Report', icon: FileText, d: 'A structured report lands with an executive summary, findings, evidence, and concrete recommendations.' },
+  { k: 'Discover', icon: Package, d: 'Browse the Model Hub and one-click download models from Hugging Face or Ollama — into a local project. No terminal.' },
+  { k: 'Datasets', icon: Database, d: 'Import, preprocess, and version datasets for training and evaluation. Everything stays on disk, under your control.' },
+  { k: 'Train', icon: Dumbbell, d: 'Fine-tune with LoRA / QLoRA. The workflow mirrors real execution today and is actively evolving — marked Experimental.' },
+  { k: 'Benchmark', icon: Gauge, d: 'Score and compare models across suites, tracked over time — so you know what actually improved.' },
+  { k: 'Secure & Evaluate', icon: ShieldCheck, d: 'Red-team and evaluate any local model with deterministic verdicts — security as one capability among many.' },
+  { k: 'Report & Export', icon: FileText, d: 'Turn runs into structured reports and export results — adapters, GGUF, or an Ollama model — ready to ship.' },
 ];
 
 export function Pipeline() {

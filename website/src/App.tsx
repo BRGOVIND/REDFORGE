@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Entry } from './components/Entry';
 import { Nav } from './components/Nav';
 import { Hero } from './sections/Hero';
+import { Capabilities } from './sections/Capabilities';
 import { Problem } from './sections/Problem';
 import { Vision } from './sections/Vision';
 import { Pipeline } from './sections/Pipeline';
 import { AttackViz } from './sections/AttackViz';
 import { Benchmark } from './sections/Benchmark';
+import { Stack } from './sections/Stack';
 import { BuiltFor } from './sections/BuiltFor';
 import { Local } from './sections/Local';
 import { QuickInstall } from './sections/QuickInstall';
@@ -25,16 +27,18 @@ export default function App() {
       <Nav visible={entered} />
       <main>
         <Hero started={entered} />
-        <Problem />
-        <Vision />
+        <Capabilities />
         <Pipeline />
+        <Problem />
         <AttackViz />
         <Benchmark />
+        <Stack />
         <BuiltFor />
         <Local />
         <QuickInstall />
         <Download />
         <InstallSteps />
+        <Vision />
         <Future />
         <About />
       </main>

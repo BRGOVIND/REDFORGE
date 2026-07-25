@@ -4,10 +4,10 @@ import { Wordmark } from './marks';
 import { cn } from '../lib/cn';
 
 const LINKS = [
-  { href: '#how', label: 'How it works' },
-  { href: '#benchmark', label: 'Benchmark' },
+  { href: '#capabilities', label: 'Platform' },
+  { href: '#how', label: 'Workflow' },
+  { href: '#security', label: 'Security' },
   { href: '#local', label: 'Local' },
-  { href: '#quickstart', label: 'Quickstart' },
 ];
 
 export function Nav({ visible }: { visible: boolean }) {

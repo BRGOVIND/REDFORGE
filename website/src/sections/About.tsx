@@ -3,15 +3,15 @@ import { Reveal } from '../motion';
 const PRINCIPLES = [
   {
     k: 'Local by default',
-    v: 'Every model runs through a local runtime on your machine — Ollama, LM Studio, llama.cpp, or vLLM. Prompts, responses, and findings never leave it: no server to trust, no API key to leak.',
+    v: 'Every model runs through a local runtime on your machine — Ollama, LM Studio, llama.cpp, or vLLM. Prompts, data, and results never leave it: no server to trust, no API key to leak.',
   },
   {
-    k: 'You own the data',
-    v: 'Results live in a local SQLite database you control. The most sensitive testing you do stays entirely under your roof.',
+    k: 'Simulation-first architecture',
+    v: 'Where infrastructure is still evolving, workflows accurately mirror real execution while preserving the final production experience — an intentional engineering decision, not a limitation. Training is currently Experimental.',
   },
   {
-    k: 'Deterministic & auditable',
-    v: 'Planning and analysis are reproducible. The engine is open source — read it, fork it, extend the attacks and evaluators.',
+    k: 'Open & extensible',
+    v: 'Results live in a local database you own; the platform is open source. Read it, fork it, and add runtimes, attacks, evaluators, and workflows.',
   },
 ];
 
@@ -22,7 +22,7 @@ export function About() {
         <div className="lg:col-span-5">
           <Reveal delay={120}>
             <h2 className="display text-5xl leading-[1.02] text-bone sm:text-6xl">
-              A security lab
+              A platform
               <br />
               that never leaves
               <br />
@@ -31,16 +31,16 @@ export function About() {
           </Reveal>
           <Reveal delay={240}>
             <p className="mt-8 max-w-md text-[15px] leading-relaxed text-steel-300">
-              RedForge is a local red-teaming laboratory for large language models. It ships a
-              library of adversarial attacks and a benchmark, runs them against any model served by
-              your local runtime, scores the responses, and reports where the model breaks.
+              RedForge began as a local AI security &amp; evaluation lab. It has grown into a complete
+              Local AI Engineering Platform — discover and manage models, engineer prompts, work with
+              datasets, benchmark, evaluate, fine-tune, and secure, all from one native desktop app.
             </p>
           </Reveal>
           <Reveal delay={320}>
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-steel-400">
-              Language models fail in ways traditional software never did — adversarial, subtle, and
-              invisible until someone goes looking. Testing them is exactly the kind of work that
-              shouldn't require handing your prompts to a third party. RedForge exists so it doesn't.
+              Everything runs through a local runtime you control — no prompt, dataset, or result
+              leaves your hardware. Security is still here, sharper than ever, but now it's one
+              capability among many in a cohesive engineering workflow.
             </p>
           </Reveal>
         </div>

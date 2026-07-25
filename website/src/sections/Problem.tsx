@@ -29,9 +29,12 @@ export function Problem() {
   const [active, setActive] = useState<number | null>(null);
 
   return (
-    <section id="problem" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+    <section id="security" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-4">
+          <Reveal delay={80}>
+            <p className="label mb-4">Security testing · one capability</p>
+          </Reveal>
           <Reveal delay={120}>
             <h2 className="display text-5xl text-bone sm:text-6xl">
               Every model has a<br />
@@ -40,8 +43,9 @@ export function Problem() {
           </Reveal>
           <Reveal delay={240}>
             <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-steel-300">
-              Language models fail in ways traditional software never did. The failures are
-              subtle, adversarial, and invisible until someone goes looking.
+              RedForge keeps a full red-teaming engine built in — now one capability inside a
+              complete platform. Throw thousands of adversarial prompts at any local model and see
+              exactly where it breaks, with deterministic, exportable results.
             </p>
           </Reveal>
         </div>

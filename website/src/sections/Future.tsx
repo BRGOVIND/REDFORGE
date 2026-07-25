@@ -1,15 +1,16 @@
 import { Reveal } from '../motion';
 
 const HORIZON = [
-  { k: 'Enterprise', v: 'Team workspaces, SSO, and audit trails for organizations running RedForge at scale.' },
-  { k: 'Fine-tuning workspace', v: 'Close the loop — turn findings into training signal and re-harden the model in place.' },
-  { k: 'API connectors', v: 'Optional bridges to hosted models, for teams that need to test beyond local.' },
-  { k: 'Research platform', v: 'Shared benchmarks, leaderboards, and reproducible studies for the community.' },
+  { k: 'Real fine-tuning', v: 'Graduate Training from Experimental to production — full local LoRA / QLoRA with real GPU execution.' },
+  { k: 'Distributed training', v: 'Scale runs across multiple GPUs and machines, orchestrated from one workspace.' },
+  { k: 'Plugin marketplace', v: 'Install community runtimes, attacks, evaluators, and workflows in one click.' },
+  { k: 'Agent workflows', v: 'Compose multi-step agentic pipelines over your local models and tools.' },
+  { k: 'Cloud sync & collaboration', v: 'Optional sync and team workspaces — for those who want to share, without giving up local-first.' },
 ];
 
 export function Future() {
   return (
-    <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+    <section id="future" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal delay={120}>
           <h2 className="display max-w-2xl text-5xl text-bone sm:text-6xl">
