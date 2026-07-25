@@ -45,7 +45,7 @@ No data leaves your computer unless **you explicitly connect a cloud provider**.
 
 # 🌐 Website
 
-**wwww.redforge.site**
+**www.redforge.site**
 
 ---
 
