@@ -216,6 +216,12 @@ def start(host: str = "127.0.0.1", port: int = 8000, *, dev: bool = False, open_
     else:
         _warn("No prebuilt interface found — serving the API only (dev builds on demand)")
 
+    # NOTE: relocation of Unsloth's compiled-kernel cache out of the watched tree is
+    # done in the BACKEND (app.main._relocate_unsloth_cache), so it applies no matter
+    # how the server is launched (redforge, bare uvicorn, an IDE). We intentionally do
+    # NOT set UNSLOTH_COMPILE_LOCATION here — app.main is the single source of truth.
+    # The dev reloader still gets absolute-dir excludes below as defense-in-depth.
+
     if dev:
         return _start_dev(host, port, env)
 
@@ -280,9 +286,39 @@ def start(host: str = "127.0.0.1", port: int = 8000, *, dev: bool = False, open_
 def _start_dev(host: str, port: int, env: dict) -> int:
     """Developer mode: backend with reload + Vite dev server (two processes)."""
     print(cyan("Starting RedForge in DEV mode (backend + Vite, hot reload)…"))
+    # --- Keep the dev reloader from restarting mid-training ---------------------
+    # uvicorn's WatchFiles reloader ALWAYS watches the process CWD (= backend/): it
+    # drops any --reload-dir that is a child of CWD and appends CWD unconditionally,
+    # so ``--reload-dir app`` alone does NOT narrow the watch set. Its default include
+    # is ``*.py``, and ML tooling (Unsloth) writes generated ``.py`` cache files into
+    # CWD during a run — which fired a reload, killing the in-memory job.
+    #
+    # uvicorn's FileFilter excludes a changed path when one of its parents is a
+    # --reload-exclude that is an ABSOLUTE, EXISTING directory at startup (its
+    # ``exclude_dirs`` fast-path: ``if exclude_dir in path.parents: return False``).
+    # So we PRE-CREATE each generated runtime dir and pass its ABSOLUTE path as an
+    # exclude. (We deliberately do NOT pass wildcard forms like ``name/*``: as a
+    # subprocess argv element on Windows a trailing ``*`` gets expanded to the
+    # directory's files, which breaks uvicorn's CLI. The absolute-dir exclude is the
+    # reliable mechanism and needs no wildcard.) Combined with UNSLOTH_COMPILE_LOCATION
+    # (set in start(), which moves the Unsloth cache out of the tree entirely), the
+    # reloader stays quiet during training. Only edits under ``app/`` reload — reload
+    # is NOT disabled.
+    backend_dir = paths.backend_dir()
+    generated_dirs = ("unsloth_compiled_cache", "outputs", "checkpoints", "runs", "artifacts", "logs", ".redforge")
+    exclude_args: list[str] = []
+    for name in generated_dirs:
+        d = backend_dir / name
+        try:
+            d.mkdir(parents=True, exist_ok=True)  # must EXIST at startup for the exclude_dirs fast-path
+        except OSError:
+            pass
+        exclude_args += ["--reload-exclude", str(d)]
+    exclude_args += ["--reload-exclude", "*.db"]
     backend = subprocess.Popen(
-        [paths.backend_python(), "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(port), "--reload"],
-        cwd=str(paths.backend_dir()), env=env,
+        [paths.backend_python(), "-m", "uvicorn", "app.main:app", "--host", host, "--port", str(port),
+         "--reload", "--reload-dir", str(backend_dir / "app"), *exclude_args],
+        cwd=str(backend_dir), env=env,
     )
     _write_pid(backend.pid)
     vite = subprocess.Popen(npm_cmd(["run", "dev"]), cwd=str(paths.frontend_dir()))
