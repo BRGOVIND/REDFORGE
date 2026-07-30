@@ -23,6 +23,8 @@ A desktop-first IDE for Local AI development.
 
 RedForge is a **Local AI Engineering Platform** designed for developers, researchers, students, and AI enthusiasts who want a professional environment for building AI applications **without relying on the cloud**.
 
+So about why I devoloped something like this, a while ago I watched my favourite youtuber go fromm a beginner to advanced level AI engineer in less than a year. Pewdiepie fine tuned a model into something of a size of GPT. He even made Odysseus, something i ws very fascinated by. I cant really finetune an ai (not much with my comp), then I thought of making something that'll help people Train, Evaluate, Benchmark and Access thier model. So thats how the devolopment of Redforge started.
+
 Think of it as:
 
 > **VS Code + Docker Desktop + MLflow + LM Studio + Postman**
