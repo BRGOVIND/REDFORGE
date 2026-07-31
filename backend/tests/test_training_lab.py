@@ -51,13 +51,23 @@ def test_registry_lists_backends_with_availability(force_cpu):
     assert sim["available"] is True
     uns = next(b for b in backs if b["name"] == "unsloth")
     assert uns["available"] is False  # forced CPU-only by the fixture
-    assert manager.DEFAULT_BACKEND == "simulation"
+    # With no real backend usable, auto-detection lands on simulation. (The old
+    # module constant DEFAULT_BACKEND was removed — it always read "simulation"
+    # regardless of hardware, one letter away from this function.)
+    assert manager.default_backend() == "simulation"
 
 
-def test_get_provider_defaults_to_simulation(force_cpu):
+def test_get_provider_auto_detects_simulation_when_nothing_else_is_usable(force_cpu):
     from app.training import manager
     assert manager.get_provider(None).name == "simulation"
-    assert manager.get_provider("does-not-exist").name == "simulation"
+
+
+def test_unknown_backend_raises_instead_of_silently_simulating(force_cpu):
+    """A misspelled backend used to fall through to simulation, producing a *fake*
+    run that reported success — the worst possible failure for a training tool."""
+    from app.training import manager
+    with pytest.raises(manager.UnknownBackendError):
+        manager.get_provider("does-not-exist")
 
 
 def test_get_provider_reports_unsloth_when_available(monkeypatch):

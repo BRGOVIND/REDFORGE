@@ -18,14 +18,37 @@ _PROVIDERS: dict[str, ProviderFactory] = {
 }
 
 # Simulation is the guaranteed fallback (zero ML deps). ``default_backend()``
-# auto-selects the real Unsloth provider when a CUDA GPU + the ML stack exist.
+# auto-selects a real training provider when one is actually usable.
 FALLBACK_BACKEND = "simulation"
 # Preference order when auto-detecting; first available wins.
-_AUTO_ORDER = ["unsloth", "simulation"]
+#   unsloth  — in-process; source installs that already have the ML stack
+#   managed  — subprocess against the managed training runtime (the packaged app)
+#   simulation — always available, never silently substituted (see get_provider)
+_AUTO_ORDER = ["unsloth", "managed", "simulation"]
+
+
+class UnknownBackendError(ValueError):
+    """Raised for a backend name that is not registered.
+
+    Deliberately loud. This used to fall through to the simulation provider,
+    which meant a typo produced a *fake* run that reported success — the worst
+    possible failure mode for a training platform.
+    """
+
+    def __init__(self, name: str, available: list[str]) -> None:
+        self.name = name
+        self.available = available
+        super().__init__(
+            f"unknown training backend '{name}'. Available: {', '.join(available)}"
+        )
 
 
 def register_provider(name: str, factory: ProviderFactory) -> None:
     _PROVIDERS[name.lower()] = factory
+
+
+def known_backends() -> list[str]:
+    return sorted(_PROVIDERS)
 
 
 def default_backend() -> str:
@@ -44,8 +67,9 @@ def default_backend() -> str:
     return FALLBACK_BACKEND
 
 
-# Backwards-compatible alias (existing callers referenced DEFAULT_BACKEND).
-DEFAULT_BACKEND = FALLBACK_BACKEND
+# NOTE: a module constant named DEFAULT_BACKEND used to live here, always equal to
+# "simulation" and one letter away from the auto-detecting default_backend().
+# It had no callers and was a trap, so it is gone. Use default_backend().
 
 
 def available_backends() -> list[dict]:
@@ -60,8 +84,15 @@ def available_backends() -> list[dict]:
 
 
 def get_provider(name: str | None = None) -> TrainingProvider:
+    """Resolve a backend by name. ``None`` auto-detects.
+
+    Raises :class:`UnknownBackendError` for an unregistered name — it must never
+    silently degrade to simulation.
+    """
     key = (name or default_backend()).lower()
-    factory = _PROVIDERS.get(key) or _PROVIDERS[FALLBACK_BACKEND]
+    factory = _PROVIDERS.get(key)
+    if factory is None:
+        raise UnknownBackendError(key, known_backends())
     return factory()
 
 
@@ -69,8 +100,10 @@ def diagnostics(name: str | None = None, refresh: bool = False) -> dict:
     """Structured, per-layer diagnostics for a backend (default: the real training
     backend, ``unsloth``). Drives the Training Lab diagnostics panel so the UI shows
     the exact failing dependency instead of a collapsed message."""
-    key = (name or "unsloth").lower()
-    factory = _PROVIDERS.get(key) or _PROVIDERS[FALLBACK_BACKEND]
+    key = (name or default_backend()).lower()
+    factory = _PROVIDERS.get(key)
+    if factory is None:
+        raise UnknownBackendError(key, known_backends())
     return factory().diagnose(refresh=refresh)
 
 

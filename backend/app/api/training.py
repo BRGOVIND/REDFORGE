@@ -95,7 +95,79 @@ _backends_cache: Optional[dict] = None
 
 
 def _compute_backends() -> dict:
-    return {"backends": manager.available_backends(), "default": manager.default_backend()}
+    """The authoritative backend list + the default the UI must use.
+
+    ``default`` is the *effective* backend: a user preference from Settings when
+    it names a usable backend, otherwise auto-detection. The UI must never invent
+    its own fallback — see the `ready` flag, which gates the Launch button.
+    """
+    available = manager.available_backends()
+    usable = {b["name"] for b in available if b["available"]}
+    auto = manager.default_backend()
+
+    preferred = _preferred_backend()
+    default = auto
+    preference_note = ""
+    if preferred and preferred in usable:
+        default = preferred
+    elif preferred and preferred not in usable:
+        preference_note = (
+            f"Settings prefers '{preferred}', which is not available on this machine; "
+            f"using '{auto}' instead."
+        )
+
+    return {
+        "backends": available,
+        "default": default,
+        "auto_detected": auto,
+        "preferred": preferred,
+        "preference_note": preference_note,
+        # Explicit readiness signal so the client never guesses.
+        "ready": True,
+        "real_training_available": bool(usable - {"simulation"}),
+    }
+
+
+def _effective_backend() -> str:
+    """The backend an 'auto' request resolves to — Settings preference if usable,
+    otherwise auto-detection. Blocking (probes the stack); call via a thread."""
+    preferred = _preferred_backend()
+    if preferred:
+        try:
+            ok, _ = manager.get_provider(preferred).is_available()
+        except manager.UnknownBackendError:
+            ok = False
+        if ok:
+            return preferred
+    return manager.default_backend()
+
+
+def _backend_availability(name: str) -> tuple[bool, str]:
+    """(available, reason) for a named backend. Blocking; call via a thread."""
+    try:
+        return manager.get_provider(name).is_available()
+    except manager.UnknownBackendError as exc:
+        return False, str(exc)
+
+
+def _preferred_backend() -> Optional[str]:
+    """The user's Settings choice, if any.
+
+    Settings are authoritative: a value shown in the UI must affect behaviour.
+    Read defensively — a settings failure must not take training down.
+    """
+    try:
+        from app.settings import settings_service
+        value = settings_service.get_sync("training.default_backend")
+    except Exception:  # noqa: BLE001
+        return None
+    if not value or not isinstance(value, str):
+        return None
+    value = value.strip().lower()
+    # "auto" means "no preference — auto-detect".
+    if value in ("", "auto"):
+        return None
+    return value
 
 
 @router.get("/backends")
@@ -132,9 +204,61 @@ async def list_runs(
     return await training_service.list(db, project_id=project_id, limit=limit)
 
 
+def _training_enabled() -> bool:
+    """Settings → Training → Enable training. Authoritative, not decorative."""
+    try:
+        from app.settings import settings_service
+        return bool(settings_service.get_sync("training.enabled"))
+    except Exception:  # noqa: BLE001 - a settings failure must not disable training
+        return True
+
+
 @router.post("/launch", status_code=202)
 async def launch(req: LaunchRequest, db: AsyncSession = Depends(get_db)) -> dict:
-    backend = (req.backend or manager.default_backend()).lower()
+    if not _training_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "training_disabled",
+                "message": "Training is disabled in Settings.",
+                "fix": "Enable it under Settings → Training → Enable training.",
+            },
+        )
+    # An explicit "auto" (or nothing) means "resolve it for me"; anything else must
+    # name a real, registered backend. Silently substituting simulation here would
+    # produce a fake run that reports success — never acceptable.
+    requested = (req.backend or "").strip().lower()
+    if requested in ("", "auto"):
+        backend = await asyncio.to_thread(_effective_backend)
+    else:
+        known = manager.known_backends()
+        if requested not in known:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "unknown_backend",
+                    "message": f"Unknown training backend '{requested}'.",
+                    "fix": f"Use one of: {', '.join(known)}, or 'auto'.",
+                    "available_backends": known,
+                },
+            )
+        backend = requested
+
+    # A backend that exists but cannot run here is also a 400 — with the reason.
+    available, reason = await asyncio.to_thread(_backend_availability, backend)
+    if not available:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "backend_unavailable",
+                "message": f"The '{backend}' training backend is not available on this machine.",
+                "reason": reason,
+                "fix": ("Install the training runtime (Training → Runtime), "
+                        "or choose the Simulation backend."),
+                "backend": backend,
+            },
+        )
+    logger.info("[launch] backend=%s model=%s", backend, req.base_model)
 
     # --- Foundation Model resolution (the architectural seam) -----------------
     # A training provider must ONLY ever receive a Foundation Model identity (a

@@ -7,12 +7,14 @@ runtime). No engine code changes — the Training Manager selects by name.
 from __future__ import annotations
 
 from app.training.providers.base import TrainingConfig, TrainingProvider, ProgressEvent
+from app.training.providers.managed import ManagedRuntimeProvider
 from app.training.providers.simulation import SimulationProvider
 from app.training.providers.unsloth import UnslothProvider
 
 BUILTIN_PROVIDERS: dict[str, type[TrainingProvider]] = {
     SimulationProvider.name: SimulationProvider,
     UnslothProvider.name: UnslothProvider,
+    ManagedRuntimeProvider.name: ManagedRuntimeProvider,
 }
 
 __all__ = [
@@ -20,6 +22,7 @@ __all__ = [
     "TrainingProvider",
     "TrainingConfig",
     "ProgressEvent",
+    "ManagedRuntimeProvider",
     "SimulationProvider",
     "UnslothProvider",
 ]
