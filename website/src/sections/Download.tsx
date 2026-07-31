@@ -11,40 +11,35 @@ import {
 } from 'lucide-react';
 import { Reveal } from '../motion';
 import {
-  CHECKSUMS_URL,
-  OTHER_DOWNLOADS,
+  ALL_RELEASES_URL,
   REPO,
-  RELEASE_NOTES_URL,
-  VERSION,
+  detectOS,
+  formatSize,
+  otherDownloads,
   primaryFor,
+  useLatestRelease,
   type OS,
 } from '../config/downloads';
 
-function detectOS(): OS {
-  if (typeof navigator === 'undefined') return 'other';
-  const s = `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
-  if (s.includes('win')) return 'windows';
-  if (s.includes('mac')) return 'mac';
-  if (s.includes('linux') || s.includes('android') || s.includes('x11')) return 'linux';
-  return 'other';
-}
-
+// The desktop app bundles its own backend — Python is NOT a requirement any more.
 const REQUIREMENTS = [
-  'Python 3.11+',
-  'A local runtime (Ollama, LM Studio, llama.cpp, or vLLM)',
-  'Windows / Linux / macOS',
-  'Local AI models',
+  'Windows 10+, macOS 12+, or Linux',
+  '8 GB RAM (16 GB recommended)',
+  '~2 GB disk for the app',
+  'NVIDIA GPU optional — for training',
 ];
 
 export function Download() {
   const [os, setOs] = useState<OS>('other');
   const [showOther, setShowOther] = useState(false);
+  const { release } = useLatestRelease();
 
   useEffect(() => {
     setOs(detectOS());
   }, []);
 
-  const primary = primaryFor(os);
+  const primary = primaryFor(os, release);
+  const others = otherDownloads(release, primary);
 
   return (
     <section id="download" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
@@ -60,7 +55,7 @@ export function Download() {
             <Reveal delay={200}>
               <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-steel-700 px-3 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-forge" />
-                <span className="label text-steel-300">RedForge V{VERSION}</span>
+                <span className="label text-steel-300">RedForge V{release.version}</span>
               </div>
             </Reveal>
 
@@ -68,15 +63,18 @@ export function Download() {
             <Reveal delay={280}>
               {primary ? (
                 <a
-                  href={primary.asset.url}
-                  download={primary.asset.filename}
+                  href={primary.url}
+                  download={primary.filename}
                   className="focus-ring group mt-8 flex w-full items-center gap-4 rounded-xl border border-forge/50 bg-forge/10 px-5 py-4 transition-all duration-300 ease-forge hover:border-forge/70 hover:bg-forge/20 sm:px-6 sm:py-5"
-                  aria-label={`${primary.label} — ${primary.asset.filename}`}
+                  aria-label={`${primary.label} — ${primary.filename}`}
                 >
                   <DownloadIcon size={22} className="shrink-0 text-forge" />
                   <div className="flex-1">
                     <div className="display text-lg text-bone sm:text-xl">{primary.label}</div>
-                    <div className="mt-0.5 text-xs text-steel-300">{primary.sub}</div>
+                    <div className="mt-0.5 text-xs text-steel-300">
+                      {primary.note} · v{release.version}
+                      {primary.size ? ` · ${formatSize(primary.size)}` : ''}
+                    </div>
                   </div>
                   <ArrowUpRight size={18} className="shrink-0 text-forge transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </a>
@@ -88,7 +86,7 @@ export function Download() {
                   <DownloadIcon size={22} className="shrink-0 text-forge" />
                   <div className="flex-1">
                     <div className="display text-lg text-bone sm:text-xl">Download RedForge</div>
-                    <div className="mt-0.5 text-xs text-steel-300">Choose your platform · v{VERSION}</div>
+                    <div className="mt-0.5 text-xs text-steel-300">Choose your platform · v{release.version}</div>
                   </div>
                   <ChevronDown size={18} className="shrink-0 text-forge" />
                 </button>
@@ -108,18 +106,31 @@ export function Download() {
               </button>
               {showOther && (
                 <ul id="other-downloads" className="mt-3 space-y-1 border-l border-steel-800 pl-4">
-                  {OTHER_DOWNLOADS.map((a) => (
+                  {others.map((a) => (
                     <li key={a.id}>
                       <a
                         href={a.url}
                         download={a.filename}
                         className="focus-ring group flex items-center justify-between gap-3 rounded py-1.5 text-[13px] text-steel-300 hover:text-bone"
                       >
-                        <span>{a.label}</span>
-                        <span className="font-mono text-[11px] text-steel-500 group-hover:text-steel-300">{a.filename}</span>
+                        <span>{a.label} <span className="text-steel-500">· {a.note}</span></span>
+                        <span className="font-mono text-[11px] text-steel-500 group-hover:text-steel-300">
+                          {formatSize(a.size) || a.filename}
+                        </span>
                       </a>
                     </li>
                   ))}
+                  <li>
+                    <a
+                      href={ALL_RELEASES_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="focus-ring group flex items-center justify-between gap-3 rounded py-1.5 text-[13px] text-steel-300 hover:text-bone"
+                    >
+                      <span>All releases &amp; changelog</span>
+                      <ArrowUpRight size={13} className="text-steel-500 group-hover:text-steel-300" />
+                    </a>
+                  </li>
                   <li>
                     <a
                       href={REPO}
@@ -135,14 +146,18 @@ export function Download() {
               )}
             </Reveal>
 
-            {/* Install snippet */}
+            {/* Install flow — no terminal required */}
             <Reveal delay={400}>
-              <div className="mt-8 max-w-sm rounded-lg border border-steel-700 bg-char/60 p-4 font-mono text-[13px] leading-relaxed text-steel-300">
-                <span className="text-steel-500"># install once, then:</span>
-                <br />
-                <span className="text-steel-500">$ </span>redforge start
-                <br />
-                <span className="text-forge">→ </span>browser opens · no Node.js needed
+              <div className="mt-8 max-w-sm rounded-lg border border-steel-700 bg-char/60 p-4 text-[13px] leading-relaxed text-steel-300">
+                <span className="label text-steel-500">Three steps</span>
+                <ol className="mt-2 space-y-1">
+                  <li><span className="text-forge">1 </span>Download the installer</li>
+                  <li><span className="text-forge">2 </span>Install &amp; launch RedForge</li>
+                  <li><span className="text-forge">3 </span>The backend starts itself</li>
+                </ol>
+                <p className="mt-3 text-[12px] text-steel-500">
+                  No Python. No Node.js. No terminal.
+                </p>
               </div>
             </Reveal>
           </div>
@@ -168,7 +183,7 @@ export function Download() {
             {/* Secondary actions */}
             <div className="mt-8">
               <Reveal>
-                <a href={CHECKSUMS_URL} className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
+                <a href={release.checksumsUrl} className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
                   <FileCheck2 size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
                   <div className="flex-1">
                     <h3 className="display text-lg text-bone">Verify Download</h3>
@@ -178,11 +193,11 @@ export function Download() {
                 </a>
               </Reveal>
               <Reveal>
-                <a href={RELEASE_NOTES_URL} target="_blank" rel="noreferrer" className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
+                <a href={release.notesUrl} target="_blank" rel="noreferrer" className="focus-ring group flex items-center gap-4 border-t border-steel-800 py-6 transition-all duration-500 ease-forge hover:pl-3">
                   <ScrollText size={20} className="shrink-0 text-steel-400 group-hover:text-forge" />
                   <div className="flex-1">
                     <h3 className="display text-lg text-bone">View Release Notes</h3>
-                    <p className="text-[13px] text-steel-400">What's new in v{VERSION}</p>
+                    <p className="text-[13px] text-steel-400">What's new in v{release.version}</p>
                   </div>
                   <ArrowUpRight size={18} className="text-steel-500 transition-all duration-500 ease-forge group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-forge" />
                 </a>

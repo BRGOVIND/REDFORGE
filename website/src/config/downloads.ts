@@ -1,93 +1,194 @@
 /**
- * Download configuration — the single source of truth for the website's
- * distribution portal. Assets are served directly from the **official GitHub
- * Release** for this version's tag (`v<VERSION>`) — never proxied through Vercel.
- * The release workflow uploads exactly the filenames below, so the buttons match
- * the published assets 1:1.
+ * Download configuration — the single source of truth for the distribution portal.
  *
- * To mirror on a CDN: set VITE_DOWNLOAD_BASE_URL at build time.
- * To ship a new version: bump the repo-root VERSION file — tag + filenames follow.
+ * Two layers, so the buttons are never wrong and never need a site rebuild:
+ *
+ *   1. **Static fallback** — filenames derived from the VERSION baked in at build
+ *      time. Always renders instantly, works with JS disabled, and matches the
+ *      artifactName patterns in `desktop/package.json` exactly.
+ *   2. **Live resolution** — on mount we ask the GitHub Releases API for the
+ *      *latest* release and swap in its real assets. Publishing a new release is
+ *      therefore enough; the site follows automatically.
+ *
+ * If the API is unreachable or rate-limited, layer 1 stands and the "all releases"
+ * link still gets the user there.
  */
+import { useEffect, useState } from 'react';
 
 // Injected from the repo-root VERSION file at build time (see vite.config.ts).
 declare const __APP_VERSION__: string;
 export const VERSION: string =
-  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
+  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0';
 
-// Repository + release host.
 export const REPO = 'https://github.com/BRGOVIND/REDFORGE';
+const OWNER_REPO = 'BRGOVIND/REDFORGE';
+const API_LATEST = `https://api.github.com/repos/${OWNER_REPO}/releases/latest`;
 
-// Assets are downloaded straight from the GitHub Release for tag v<VERSION>.
-// Override with VITE_DOWNLOAD_BASE_URL (e.g. a CDN mirror) without touching components.
-const envBase = (import.meta.env as Record<string, string | undefined>)
-  .VITE_DOWNLOAD_BASE_URL;
-export const DOWNLOAD_BASE_URL: string = (
-  envBase || `${REPO}/releases/download/v${VERSION}`
-).replace(/\/$/, '');
+/** Always-valid, zero-maintenance links (GitHub resolves "latest" server-side). */
+export const LATEST_RELEASE_URL = `${REPO}/releases/latest`;
+export const ALL_RELEASES_URL = `${REPO}/releases`;
 
 export type OS = 'windows' | 'linux' | 'mac' | 'other';
-
-export function assetUrl(filename: string): string {
-  return `${DOWNLOAD_BASE_URL}/${filename}`;
-}
 
 export interface Asset {
   id: string;
   label: string;
+  /** Short platform note shown under the primary button. */
+  note: string;
   filename: string;
   url: string;
+  size?: number;
 }
-
-function asset(id: string, label: string, filename: string): Asset {
-  return { id, label, filename, url: assetUrl(filename) };
-}
-
-/** Version-aware artifact names (match scripts/build_release.py + installers). */
-export const ASSETS = {
-  windowsInstaller: asset('win-exe', 'Windows Installer (.exe)', `RedForge-Setup-${VERSION}.exe`),
-  windowsZip: asset('win-zip', 'Windows ZIP', `redforge-${VERSION}.zip`),
-  linuxAppImage: asset('linux-appimage', 'Linux AppImage', `RedForge-${VERSION}-x86_64.AppImage`),
-  linuxTarGz: asset('linux-tar', 'Linux / macOS (.tar.gz)', `redforge-${VERSION}.tar.gz`),
-} as const;
 
 /**
- * The asset offered as the primary Windows download.
- *
- * A signed `RedForge-Setup-<VERSION>.exe` installer has not been built yet, so we
- * ship the verified ZIP as the primary download. The installer remains fully
- * defined (see ASSETS.windowsInstaller / OTHER_DOWNLOADS) — once the real
- * installer exists, switch this one line back to `ASSETS.windowsInstaller`.
+ * How to recognise each artifact in a release, in priority order.
+ * These mirror `desktop/package.json` → build.*.artifactName.
  */
-export const WINDOWS_PRIMARY: Asset = ASSETS.windowsZip;
+const PATTERNS: { id: string; label: string; note: string; os: OS; test: RegExp }[] = [
+  { id: 'win-setup',     label: 'Download for Windows', note: 'Installer (.exe)',      os: 'windows', test: /-Setup\.exe$/i },
+  { id: 'win-portable',  label: 'Windows Portable',     note: 'No install (.zip)',     os: 'windows', test: /-Portable\.zip$/i },
+  { id: 'mac-arm64',     label: 'Download for macOS',   note: 'Apple Silicon (.dmg)',  os: 'mac',     test: /-arm64\.dmg$/i },
+  { id: 'mac-x64',       label: 'macOS (Intel)',        note: 'Intel (.dmg)',          os: 'mac',     test: /-x64\.dmg$/i },
+  { id: 'linux-appimage',label: 'Download for Linux',   note: 'AppImage',              os: 'linux',   test: /\.AppImage$/i },
+  { id: 'linux-deb',     label: 'Linux (.deb)',         note: 'Debian / Ubuntu',       os: 'linux',   test: /\.deb$/i },
+];
 
-/** The primary, OS-detected download. Returns null for unknown OS. */
-export function primaryFor(os: OS): { asset: Asset; label: string; sub: string } | null {
-  switch (os) {
-    case 'windows': {
-      const isInstaller = WINDOWS_PRIMARY === ASSETS.windowsInstaller;
-      return {
-        asset: WINDOWS_PRIMARY,
-        label: 'Download for Windows',
-        sub: `${isInstaller ? 'Installer' : 'ZIP'} · v${VERSION}`,
-      };
-    }
-    case 'linux':
-      return { asset: ASSETS.linuxAppImage, label: 'Download for Linux', sub: `AppImage · v${VERSION}` };
-    case 'mac':
-      return { asset: ASSETS.linuxTarGz, label: 'Download for macOS', sub: `Archive (.tar.gz) · v${VERSION}` };
-    default:
-      return null;
+function staticUrl(version: string, filename: string): string {
+  return `${REPO}/releases/download/v${version}/${filename}`;
+}
+
+/** Filenames the release pipeline is guaranteed to publish for a given version. */
+function staticFilename(id: string, version: string): string {
+  switch (id) {
+    case 'win-setup':      return `RedForge-v${version}-Setup.exe`;
+    case 'win-portable':   return `RedForge-v${version}-Portable.zip`;
+    case 'mac-arm64':      return `RedForge-v${version}-arm64.dmg`;
+    case 'mac-x64':        return `RedForge-v${version}-x64.dmg`;
+    case 'linux-appimage': return `RedForge-v${version}-x64.AppImage`;
+    case 'linux-deb':      return `RedForge-v${version}-amd64.deb`;
+    default:               return '';
   }
 }
 
-/** Everything under "Other Downloads", including Source Code. */
-export const OTHER_DOWNLOADS: Asset[] = [
-  ASSETS.windowsInstaller,
-  ASSETS.windowsZip,
-  ASSETS.linuxAppImage,
-  ASSETS.linuxTarGz,
-];
+export interface Release {
+  version: string;
+  assets: Asset[];
+  notesUrl: string;
+  checksumsUrl: string;
+  /** Where the data came from — 'static' means the live lookup hasn't landed. */
+  source: 'static' | 'github';
+}
 
-// SHA-256 checksums are a release asset; release notes are the Release page body.
-export const CHECKSUMS_URL = assetUrl('SHA256SUMS.txt');
-export const RELEASE_NOTES_URL = `${REPO}/releases/tag/v${VERSION}`;
+/** The build-time fallback release. Rendered immediately, before any network. */
+export function staticRelease(version = VERSION): Release {
+  const assets = PATTERNS.map(({ id, label, note }) => {
+    const filename = staticFilename(id, version);
+    return { id, label, note, filename, url: staticUrl(version, filename) };
+  });
+  return {
+    version,
+    assets,
+    notesUrl: `${REPO}/releases/tag/v${version}`,
+    checksumsUrl: staticUrl(version, 'SHA256SUMS.txt'),
+    source: 'static',
+  };
+}
+
+interface GitHubAsset { name: string; browser_download_url: string; size: number }
+interface GitHubRelease { tag_name: string; html_url: string; assets: GitHubAsset[] }
+
+/** Ask GitHub for the newest published release and map its assets to our slots. */
+export async function fetchLatestRelease(signal?: AbortSignal): Promise<Release | null> {
+  try {
+    const res = await fetch(API_LATEST, {
+      signal,
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) return null;
+    const data: GitHubRelease = await res.json();
+    const version = (data.tag_name || '').replace(/^v/, '');
+    if (!version) return null;
+
+    const assets: Asset[] = [];
+    for (const { id, label, note, test } of PATTERNS) {
+      const hit = data.assets.find((a) => test.test(a.name));
+      if (hit) {
+        assets.push({ id, label, note, filename: hit.name, url: hit.browser_download_url, size: hit.size });
+      }
+    }
+    // A release with no recognisable installers is not useful — keep the fallback.
+    if (assets.length === 0) return null;
+
+    const sums = data.assets.find((a) => /^SHA256SUMS/i.test(a.name));
+    return {
+      version,
+      assets,
+      notesUrl: data.html_url,
+      checksumsUrl: sums ? sums.browser_download_url : staticUrl(version, 'SHA256SUMS.txt'),
+      source: 'github',
+    };
+  } catch {
+    return null; // offline, rate-limited, or blocked — the fallback stands
+  }
+}
+
+const CACHE_KEY = 'redforge_latest_release';
+
+/**
+ * The release to render. Starts with the static fallback so there is never a
+ * loading state on the download button, then upgrades to live data.
+ */
+export function useLatestRelease(): { release: Release; live: boolean } {
+  const [release, setRelease] = useState<Release>(() => {
+    // A cached lookup from earlier in the session avoids a second API call.
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (raw) return JSON.parse(raw) as Release;
+    } catch { /* ignore */ }
+    return staticRelease();
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchLatestRelease(controller.signal).then((latest) => {
+      if (!latest) return;
+      setRelease(latest);
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(latest));
+      } catch { /* storage disabled — not fatal */ }
+    });
+    return () => controller.abort();
+  }, []);
+
+  return { release, live: release.source === 'github' };
+}
+
+export function detectOS(): OS {
+  if (typeof navigator === 'undefined') return 'other';
+  const s = `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
+  if (s.includes('win')) return 'windows';
+  if (s.includes('mac')) return 'mac';
+  if (s.includes('linux') || s.includes('android') || s.includes('x11')) return 'linux';
+  return 'other';
+}
+
+/** The one asset to feature for a platform (Apple Silicon is the mac default). */
+export function primaryFor(os: OS, release: Release): Asset | null {
+  const pick = (id: string) => release.assets.find((a) => a.id === id) ?? null;
+  switch (os) {
+    case 'windows': return pick('win-setup') ?? pick('win-portable');
+    case 'mac':     return pick('mac-arm64') ?? pick('mac-x64');
+    case 'linux':   return pick('linux-appimage') ?? pick('linux-deb');
+    default:        return null;
+  }
+}
+
+/** Everything else, for the "Other downloads" list. */
+export function otherDownloads(release: Release, primary: Asset | null): Asset[] {
+  return release.assets.filter((a) => a.id !== primary?.id);
+}
+
+export function formatSize(bytes?: number): string {
+  if (!bytes) return '';
+  return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+}

@@ -5,12 +5,12 @@ import { Reveal } from '../motion';
 const COMMANDS: { cmd: string; note: string }[] = [
   { cmd: 'pip install redforge', note: 'Get the CLI (Python 3.11+).' },
   { cmd: 'redforge install', note: 'Sets up the runtime and dependencies.' },
-  { cmd: 'redforge start', note: 'Launches RedForge and opens your browser.' },
+  { cmd: 'redforge start', note: 'Runs the same platform, headless.' },
 ];
 
 const COMPAT: { k: string; v: string }[] = [
   { k: 'Operating system', v: 'Windows · macOS · Linux' },
-  { k: 'Python', v: '3.11 or newer' },
+  { k: 'Python', v: '3.11+ (CLI only)' },
   { k: 'Runtime', v: 'Ollama, LM Studio, llama.cpp, vLLM' },
   { k: 'Node.js', v: 'Not required to run' },
 ];
@@ -57,12 +57,17 @@ export function QuickInstall() {
       <div className="relative mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal delay={120}>
           <h2 id="quickstart-heading" className="display max-w-2xl text-5xl text-bone sm:text-6xl">
-            Install in 60 seconds<span className="text-forge">.</span>
+            Prefer the terminal<span className="text-forge">?</span>
           </h2>
         </Reveal>
         <Reveal delay={160}>
           <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-steel-300">
-            Three commands. Everything runs on your machine — no cloud, no API keys.
+            Most people should just{' '}
+            <a href="#download" className="text-bone underline decoration-forge/40 underline-offset-4 hover:decoration-forge">
+              download the app
+            </a>
+            . For servers, CI, and headless machines there is a full CLI — same
+            platform, no window. Everything still runs on your machine.
           </p>
         </Reveal>
 
