@@ -5,13 +5,16 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Reusable: release.yml calls this so a release can never ship untested code.
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel the CI run that a release is gating on.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   PYTHON_VERSION: "3.11"
@@ -28,6 +31,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       # No third-party deps: the guard is standard library only.
       - run: python scripts/version.py --check
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # Correctness rules only (syntax errors, undefined names) — config lives
+      # in the root pyproject.toml under [tool.ruff].
+      - run: pipx install ruff==0.16.0
+      - run: ruff check .
 
   backend:
     name: Backend (pytest)
