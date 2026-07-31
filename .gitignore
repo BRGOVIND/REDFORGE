@@ -29,3 +29,24 @@ Thumbs.db
 build/
 *.egg-info/
 .eggs/
+
+# ...but desktop/build is electron-builder's buildResources (icon.png,
+# entitlements.mac.plist). It is source, not output, and CI needs it to
+# produce the macOS build.
+!desktop/build/
+
+# Generated: the frontend is built into the backend's static dir at package
+# time (desktop/scripts/stage-backend.py, scripts/build_release.py).
+backend/app/static/
+# Training outputs
+backend/outputs/
+
+# Unsloth caches
+backend/unsloth_compiled_cache/
+unsloth_compiled_cache/
+
+# Python virtual environments
+backend/.venv/
+
+# Claude Code local configuration
+.claude/
