@@ -12,6 +12,12 @@ For deep dives, see the focused docs:
 [first-run-experience](first-run-experience.md) ·
 [frontend-architecture](frontend-architecture.md).
 
+Shipping RedForge:
+[developer-guide](developer-guide.md) ·
+[packaging-guide](packaging-guide.md) ·
+[release-guide](release-guide.md) ·
+[training-runtime-guide](training-runtime-guide.md).
+
 ---
 
 ## Top-level layout
