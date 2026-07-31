@@ -3,13 +3,16 @@
   "productName": "RedForge",
   "version": "2.0.0",
   "description": "RedForge — the local AI engineering platform, as a native desktop app.",
-  "author": "RedForge",
+  "author": "RedForge <hello@redforge.site>",
   "license": "SEE LICENSE IN ../LICENSE",
   "main": "electron/main.js",
-  "homepage": "https://redforge.dev",
+  "homepage": "https://redforge.site",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BRGOVIND/REDFORGE.git"
+  },
   "scripts": {
     "start": "electron .",
-    "dev": "REDFORGE_PYTHON=python electron .",
     "stage-backend": "python scripts/stage-backend.py",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
@@ -25,7 +28,7 @@
     "electron-updater": "^6.2.1"
   },
   "build": {
-    "appId": "dev.redforge.desktop",
+    "appId": "site.redforge.desktop",
     "productName": "RedForge",
     "copyright": "Copyright © RedForge",
     "directories": {
@@ -46,21 +49,33 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "redforge",
-        "repo": "redforge"
+        "owner": "BRGOVIND",
+        "repo": "REDFORGE"
+      }
+    ],
+    "generateUpdatesFilesForAllChannels": true,
+    "fileAssociations": [
+      {
+        "ext": "redforge",
+        "name": "RedForge Project",
+        "description": "RedForge project file",
+        "role": "Editor",
+        "icon": "../installers/windows/desktop.ico"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "RedForge",
+        "schemes": ["redforge"]
       }
     ],
     "win": {
       "icon": "../installers/windows/desktop.ico",
       "target": [
         { "target": "nsis", "arch": ["x64"] },
-        { "target": "zip", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        { "target": "zip", "arch": ["x64"] }
       ],
-      "artifactName": "RedForge-Setup-${version}-${arch}.${ext}"
-    },
-    "portable": {
-      "artifactName": "RedForge-Portable-${version}-${arch}.${ext}"
+      "artifactName": "RedForge-v${version}-Portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -72,31 +87,51 @@
       "shortcutName": "RedForge",
       "uninstallDisplayName": "RedForge ${version}",
       "installerIcon": "../installers/windows/installer.ico",
-      "uninstallerIcon": "../installers/windows/installer.ico"
+      "uninstallerIcon": "../installers/windows/installer.ico",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "RedForge-v${version}-Setup.${ext}"
     },
     "mac": {
-      "icon": "build/icon.icns",
+      "icon": "build/icon.png",
       "category": "public.app-category.developer-tools",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
       ],
-      "artifactName": "RedForge-${version}-${arch}.${ext}",
+      "artifactName": "RedForge-v${version}-${arch}.${ext}",
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "RedForge ${version}"
+      "title": "RedForge ${version}",
+      "artifactName": "RedForge-v${version}-${arch}.${ext}"
     },
     "linux": {
       "icon": "../installers/linux/redforge.png",
       "category": "Development",
-      "maintainer": "RedForge <hello@redforge.dev>",
+      "maintainer": "RedForge <hello@redforge.site>",
+      "vendor": "RedForge",
       "synopsis": "Local AI engineering platform",
+      "description": "Build, evaluate and manage local AI models — training, benchmarking, security evaluation and reporting, all on your own hardware.",
+      "desktop": {
+        "Name": "RedForge",
+        "Comment": "Local AI engineering platform",
+        "Categories": "Development;Science;"
+      },
       "target": [
         { "target": "AppImage", "arch": ["x64"] },
         { "target": "deb", "arch": ["x64"] }
       ],
-      "artifactName": "RedForge-${version}-${arch}.${ext}"
+      "artifactName": "RedForge-v${version}-${arch}.${ext}"
+    },
+    "appImage": {
+      "artifactName": "RedForge-v${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "depends": ["libgtk-3-0", "libnotify4", "libnss3", "libxss1", "libxtst6", "xdg-utils", "libatspi2.0-0", "libsecret-1-0"],
+      "artifactName": "RedForge-v${version}-${arch}.${ext}"
     }
   }
 }

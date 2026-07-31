@@ -22,10 +22,11 @@ const HEALTH_TIMEOUT_MS = 60_000;
 const HEALTH_POLL_MS = 5_000;
 
 class BackendSupervisor extends EventEmitter {
-  constructor({ appRoot, isPackaged }) {
+  constructor({ appRoot, isPackaged, appVersion }) {
     super();
     this.appRoot = appRoot;         // repo root (dev) or resourcesPath (packaged)
     this.isPackaged = isPackaged;
+    this.appVersion = appVersion || '';
     this.port = config.port();
     this.proc = null;
     this.stopping = false;
@@ -66,6 +67,9 @@ class BackendSupervisor extends EventEmitter {
       ...process.env,
       REDFORGE_HOME: loc.home,
       REDFORGE_PORT: String(this.port),
+      // The app bundle is the authority on its own version; without this a
+      // frozen backend cannot find the VERSION file and reports 0.0.0.
+      REDFORGE_VERSION: this.appVersion,
       ...(staticDir ? { REDFORGE_STATIC_DIR: staticDir } : {}),
       // Keep generated ML caches out of any watched/source tree (matches app.main).
       UNSLOTH_COMPILE_LOCATION: path.join(loc.cache, 'unsloth_compiled_cache'),

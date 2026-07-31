@@ -86,10 +86,14 @@ def main() -> int:
     ico(ROOT / "installers" / "windows" / "desktop.ico")
     png(256, ROOT / "installers" / "linux" / "redforge.png")
 
+    # electron-builder buildResources: it derives macOS .icns (and any missing
+    # platform icon) from this single square PNG. 512×512 is its minimum.
+    png(512, ROOT / "desktop" / "build" / "icon.png")
+
     # Repo / README / GitHub branding.
     png(512, ROOT / "assets" / "logo-mark.png")
 
-    print("done: website/public, frontend/public, installers, assets")
+    print("done: website/public, frontend/public, installers, desktop/build, assets")
     return 0
 
 
