@@ -96,11 +96,40 @@ def get_provider(name: str | None = None) -> TrainingProvider:
     return factory()
 
 
+def default_diagnostics_backend() -> str:
+    """Which backend ``diagnostics()`` describes when the caller doesn't say.
+
+    Deliberately NOT ``default_backend()``. That answers "what will run?", and on a
+    machine with no training stack the answer is ``simulation`` — whose diagnostics
+    are a single collapsed "Simulation (no GPU required)" check. Diagnostics exist
+    to answer a different question: *why can't I train?* Reporting that simulation
+    is available tells the user nothing about the missing PyTorch/CUDA/Unsloth.
+
+    So: report a **real** training backend, preferring one that actually works, and
+    otherwise the one with the richest per-layer breakdown so the user can see
+    exactly which dependency is missing.
+    """
+    real = [n for n in _AUTO_ORDER if n != FALLBACK_BACKEND and n in _PROVIDERS]
+    for candidate in real:
+        try:
+            ok, _ = _PROVIDERS[candidate]().is_available()
+        except Exception:  # noqa: BLE001 - a broken provider must not break diagnostics
+            ok = False
+        if ok:
+            return candidate
+    # Nothing real is usable — still describe a real backend, not simulation.
+    return real[0] if real else FALLBACK_BACKEND
+
+
 def diagnostics(name: str | None = None, refresh: bool = False) -> dict:
-    """Structured, per-layer diagnostics for a backend (default: the real training
-    backend, ``unsloth``). Drives the Training Lab diagnostics panel so the UI shows
-    the exact failing dependency instead of a collapsed message."""
-    key = (name or default_backend()).lower()
+    """Structured, per-layer diagnostics for a backend.
+
+    Defaults to the real training backend (see
+    :func:`default_diagnostics_backend`). Drives the Training Lab diagnostics
+    panel so the UI shows the exact failing dependency instead of a collapsed
+    message.
+    """
+    key = (name or default_diagnostics_backend()).lower()
     factory = _PROVIDERS.get(key)
     if factory is None:
         raise UnknownBackendError(key, known_backends())

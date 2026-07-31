@@ -1812,5 +1812,8 @@ export interface TrainingRuntimeReport {
   message: string;
   resumable: boolean;
   installed_at: string | null;
+  /** Whether torch inside the managed runtime can see the GPU. Distinct from
+   *  gpu.available (nvidia-smi): a CUDA/driver mismatch fails this, not that. */
+  cuda_available: boolean | null;
   missing_required: string[];
 }

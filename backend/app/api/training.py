@@ -185,10 +185,26 @@ async def training_diagnostics(backend: Optional[str] = Query(None),
                                refresh: bool = Query(False)) -> dict:
     """Structured, per-layer training diagnostics (PyTorch / CUDA / GPU /
     Transformers / PEFT / Unsloth / bitsandbytes). Computed off the event loop so
-    the heavy torch import never blocks other requests."""
+    the heavy torch import never blocks other requests.
+
+    Without ``backend`` this describes the **real** training path — never the
+    simulation backend, whose diagnostics are a single collapsed check and would
+    not answer "why can't I train?".
+    """
     if refresh:
         await asyncio.to_thread(manager.reset_availability_cache)
-    return await asyncio.to_thread(manager.diagnostics, backend, refresh)
+    try:
+        return await asyncio.to_thread(manager.diagnostics, backend, refresh)
+    except manager.UnknownBackendError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "unknown_backend",
+                "message": str(exc),
+                "fix": f"Use one of: {', '.join(exc.available)}.",
+                "available_backends": exc.available,
+            },
+        ) from exc
 
 
 # ---------------------------------------------------------------------------

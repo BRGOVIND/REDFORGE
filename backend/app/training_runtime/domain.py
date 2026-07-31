@@ -87,6 +87,11 @@ class RuntimeReport:
     # Set when a previous install stopped part-way.
     resumable: bool = False
     installed_at: Optional[str] = None
+    # Whether torch *inside the managed runtime* can see the GPU. Distinct from
+    # ``gpu.available`` (which comes from nvidia-smi and needs no runtime): a
+    # machine can have a working GPU while the installed torch build cannot use
+    # it — the classic CUDA/driver mismatch. None means "not determined yet".
+    cuda_available: Optional[bool] = None
 
     @property
     def ready(self) -> bool:
@@ -110,5 +115,6 @@ class RuntimeReport:
             "message": self.message,
             "resumable": self.resumable,
             "installed_at": self.installed_at,
+            "cuda_available": self.cuda_available,
             "missing_required": self.missing_required,
         }

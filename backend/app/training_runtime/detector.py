@@ -282,22 +282,24 @@ def inspect_runtime(root: Path | None = None) -> RuntimeReport:
             detail=info.get("detail", ""),
         ))
 
+    cuda_available = bool(probe.get("cuda_available"))
+
     missing = [c for c in checks if c.required and not c.installed]
     if missing:
         status = "partial" if state.get("started_at") and not state.get("completed_at") else "broken"
         return RuntimeReport(
             status=status, root=str(root), python_executable=str(python_exe),
             python_version=probe.get("python"), gpu=gpu, packages=checks, plan=plan,
-            disk_free_mb=disk, resumable=True,
+            disk_free_mb=disk, resumable=True, cuda_available=cuda_available,
             message=f"Incomplete installation — missing {', '.join(c.label for c in missing)}.",
         )
 
     # Everything imports. CUDA is only *required* when a GPU is present.
-    if gpu.available and not probe.get("cuda_available"):
+    if gpu.available and not cuda_available:
         return RuntimeReport(
             status="broken", root=str(root), python_executable=str(python_exe),
             python_version=probe.get("python"), gpu=gpu, packages=checks, plan=plan,
-            disk_free_mb=disk, resumable=True,
+            disk_free_mb=disk, resumable=True, cuda_available=False,
             message=("PyTorch is installed but cannot see your GPU "
                      f"({probe.get('torch_error') or 'torch.cuda.is_available() is False'}). "
                      "Reinstalling the runtime usually fixes a CUDA/driver mismatch."),
@@ -307,5 +309,6 @@ def inspect_runtime(root: Path | None = None) -> RuntimeReport:
         status="ready", root=str(root), python_executable=str(python_exe),
         python_version=probe.get("python"), gpu=gpu, packages=checks, plan=plan,
         disk_free_mb=disk, installed_at=marker.get("installed_at"),
+        cuda_available=cuda_available,
         message="Training runtime ready — real LoRA and QLoRA are available.",
     )

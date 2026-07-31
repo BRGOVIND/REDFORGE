@@ -210,6 +210,47 @@ async def test_diagnostics_endpoint(client):
 
 
 @pytest.mark.asyncio
+async def test_diagnostics_never_defaults_to_simulation(client, monkeypatch):
+    """The regression this pins down.
+
+    Diagnostics answers "*why can't I train?*". When no real backend is usable —
+    exactly the CI runner's situation, and any machine without a GPU — it must
+    still report the real backend's per-layer breakdown. Defaulting to the
+    *runnable* backend collapsed this to a single "Simulation (no GPU required)"
+    check, which tells the user nothing about the missing PyTorch/CUDA/Unsloth.
+    """
+    from app.training import manager
+    from app.training.providers.managed import ManagedRuntimeProvider
+    from app.training.providers.unsloth import UnslothProvider
+
+    def unavailable(cls):
+        class _CI(cls):
+            def is_available(self):
+                return False, "not installed (simulated CI environment)"
+        return _CI
+
+    monkeypatch.setitem(manager._PROVIDERS, "unsloth", unavailable(UnslothProvider))
+    monkeypatch.setitem(manager._PROVIDERS, "managed", unavailable(ManagedRuntimeProvider))
+    manager.reset_availability_cache()
+
+    # What will *run* is simulation …
+    assert manager.default_backend() == "simulation"
+    # … but what we *diagnose* is the real training path.
+    assert manager.default_diagnostics_backend() != "simulation"
+
+    d = (await client.get("/api/training/diagnostics")).json()
+    assert d["backend"] != "simulation"
+    names = {c["name"] for c in d["checks"]}
+    assert {"PyTorch", "CUDA", "GPU", "Transformers", "PEFT", "Unsloth"} <= names
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_rejects_an_unknown_backend(client):
+    r = await client.get("/api/training/diagnostics", params={"backend": "not-a-backend"})
+    assert r.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_run_crud_notes_delete(client, force_cpu):
     from app.training import training_service
     # create directly via service (launch spawns a background task on a different DB)

@@ -53,6 +53,13 @@ class ManagedRuntimeProvider(TrainingProvider):
         return runtime_service.report_sync(refresh=refresh)
 
     def diagnose(self, refresh: bool = False) -> dict:
+        """Per-layer diagnostics.
+
+        Reports the same layer names as the in-process ``unsloth`` provider
+        (PyTorch / CUDA / GPU / Transformers / PEFT / Unsloth / …) so the
+        diagnostics contract does not change depending on which real backend
+        happens to be selected.
+        """
         report = self._report(refresh=refresh)
         checks = [
             {"name": "Managed runtime", "ok": report.ready,
@@ -60,6 +67,19 @@ class ManagedRuntimeProvider(TrainingProvider):
             {"name": "GPU", "ok": report.gpu.available,
              "detail": report.gpu.name or "no CUDA device detected", "required": True},
         ]
+        # CUDA is a distinct layer from the GPU: the card can be present while the
+        # installed torch build cannot use it (driver/wheel mismatch).
+        if report.cuda_available is None:
+            cuda_ok, cuda_detail = False, "not determined — the runtime is not installed"
+        elif report.cuda_available:
+            cuda_ok = True
+            cuda_detail = f"available (driver CUDA {report.gpu.cuda_version})" \
+                if report.gpu.cuda_version else "available"
+        else:
+            cuda_ok = False
+            cuda_detail = "torch.cuda.is_available() is False"
+        checks.append({"name": "CUDA", "ok": cuda_ok, "detail": cuda_detail, "required": True})
+
         for pkg in report.packages:
             checks.append({
                 "name": pkg.label, "ok": pkg.installed,

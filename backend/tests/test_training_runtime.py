@@ -186,6 +186,26 @@ def test_auto_order_prefers_real_backends_over_simulation():
         assert order.index(real) < order.index("simulation")
 
 
+def test_default_diagnostics_backend_is_never_simulation():
+    """Diagnostics must describe the real training path even when nothing real
+    is usable — otherwise it answers the wrong question."""
+    assert manager.default_diagnostics_backend() != manager.FALLBACK_BACKEND
+
+
+def test_real_backends_expose_the_same_diagnostic_layers():
+    """The per-layer contract must not depend on which real backend is selected.
+
+    Both `unsloth` (in-process) and `managed` (subprocess) are legitimate defaults
+    depending on the install, so both must name the same layers.
+    """
+    required_layers = {"PyTorch", "CUDA", "GPU", "Transformers", "PEFT", "Unsloth"}
+    for name in ("unsloth", "managed"):
+        diag = manager.get_provider(name).diagnose()
+        names = {c["name"] for c in diag["checks"]}
+        assert required_layers <= names, f"{name} is missing {required_layers - names}"
+        assert all("ok" in c and "detail" in c for c in diag["checks"])
+
+
 def test_every_registered_backend_can_be_constructed():
     for name in manager.known_backends():
         provider = manager.get_provider(name)
