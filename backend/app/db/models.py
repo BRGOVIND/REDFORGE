@@ -918,3 +918,15 @@ class JobRecord(Base):
     created_at = Column(DateTime, default=_utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+
+
+class AppSettingRecord(Base):
+    """Persisted user setting override (Settings system). Key/value; the effective
+    value is the override here or the schema default. Additive table — created by
+    ``create_all``; nothing else depends on it."""
+
+    __tablename__ = "app_settings"
+
+    key = Column(String(120), primary_key=True)   # dotted, e.g. "downloads.dir"
+    value = Column(JSON, nullable=True)             # any JSON-serializable value
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

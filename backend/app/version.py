@@ -6,12 +6,20 @@ this module finds the same file. No version literal lives in the backend.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 UNKNOWN = "0.0.0"
 
 
 def read_version() -> str:
+    # The desktop shell knows its own version authoritatively (electron-builder
+    # bakes it into the app bundle) and passes it down. This also covers frozen
+    # builds, where the upward search below leaves the repo entirely.
+    injected = os.environ.get("REDFORGE_VERSION", "").strip()
+    if injected:
+        return injected
+
     here = Path(__file__).resolve().parent
     for candidate in (here, *here.parents):
         try:

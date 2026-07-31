@@ -20,9 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db.models import Attack
 from app.dataset import benchmark_loader
+from app.environment import environment_service
 from app.health import health_service
 from app.resources.resource_monitor import detect_gpu
 from app.runtime.manager import get_runtime
+from app.version import __version__
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
@@ -149,6 +151,7 @@ async def system_checks(
 
     return {
         "ready": ready,
+        "version": __version__,
         "platform": platform.system(),
         "provider": {
             "name": rt["name"],
@@ -165,4 +168,29 @@ async def system_checks(
         "installed_models": models,
         "recommended_models": RECOMMENDED_MODELS if rt["supports_pull"] else [],
         "health": health,
+    }
+
+
+@router.get("/dependencies")
+async def system_dependencies(
+    refresh: bool = Query(False, description="bypass the short-lived cache"),
+) -> dict:
+    """Which external tools are installed, and how to get the missing ones.
+
+    Powers the first-run wizard's dependency step and Settings → Diagnostics.
+    Nothing here is fatal: the desktop build bundles its own backend, so a report
+    full of "not detected" still describes a perfectly usable install — each entry
+    carries the capability it unlocks so the UI can say *why* it matters.
+    """
+    report = await environment_service.report(refresh=refresh)
+    return report.to_dict()
+
+
+@router.get("/version")
+async def system_version() -> dict:
+    """The running version — shown in Settings → About and used by the updater."""
+    return {
+        "version": __version__,
+        "platform": platform.system(),
+        "python": platform.python_version(),
     }

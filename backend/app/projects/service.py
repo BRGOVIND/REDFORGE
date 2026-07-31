@@ -6,14 +6,24 @@ layer owns serialization. No runtime/provider coupling.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Project
+
+# Windows' system clock granularity is ~15.6 ms, so two projects created (or
+# opened) in quick succession get byte-identical timestamps — measured at 7/12
+# collisions. Ordering by timestamp alone then returns them in arbitrary order,
+# which made "Recent Projects" wrong and the ordering test flaky.
+#
+# SQLite's implicit rowid is monotonic per insert, so it is the correct
+# tiebreaker: among equal timestamps, the most recently inserted row wins. The
+# app is SQLite-only (local-first), so relying on rowid is safe here.
+_RECENT_TIEBREAK = text("projects.rowid DESC")
 
 
 def _utcnow() -> datetime:
@@ -38,7 +48,7 @@ def _to_dict(p: Project) -> dict:
 class ProjectService:
     async def list(self, db: AsyncSession, *, limit: Optional[int] = None) -> list[dict]:
         """All projects, most-recently-opened first (drives Recent Projects)."""
-        stmt = select(Project).order_by(Project.opened_at.desc())
+        stmt = select(Project).order_by(Project.opened_at.desc(), _RECENT_TIEBREAK)
         if limit:
             stmt = stmt.limit(limit)
         rows = (await db.execute(stmt)).scalars().all()
@@ -78,11 +88,27 @@ class ProjectService:
         return _to_dict(p)
 
     async def touch(self, db: AsyncSession, project_id: str) -> Optional[dict]:
-        """Mark a project opened → moves it to the top of Recent Projects."""
+        """Mark a project opened → moves it to the top of Recent Projects.
+
+        "Opened is now the most recent" must hold *always*, so the new timestamp
+        is forced strictly greater than every existing one. On Windows the clock
+        only advances every ~15.6 ms, so a plain ``now()`` frequently equals the
+        newest existing value — leaving the just-opened project not at the top.
+        """
         p = await db.get(Project, project_id)
         if p is None:
             return None
-        p.opened_at = _utcnow()
+        newest = (await db.execute(
+            select(Project.opened_at).order_by(Project.opened_at.desc()).limit(1)
+        )).scalar_one_or_none()
+        now = _utcnow()
+        if newest is not None:
+            # SQLite returns naive datetimes; compare on the same footing.
+            if newest.tzinfo is None:
+                newest = newest.replace(tzinfo=timezone.utc)
+            if now <= newest:
+                now = newest + timedelta(microseconds=1000)
+        p.opened_at = now
         await db.commit()
         await db.refresh(p)
         return _to_dict(p)

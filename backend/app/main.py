@@ -44,7 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding, projects, playground, assistant, datasets, training, recommendations, registry, benchmark_center, evaluation_workbench, foundation_models, artifacts, jobs, dataset_platform, training_platform, export, experiments, runtime_models, hardware, tasks, model_hub
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding, projects, playground, assistant, datasets, training, recommendations, registry, benchmark_center, evaluation_workbench, foundation_models, artifacts, jobs, dataset_platform, training_platform, export, experiments, runtime_models, hardware, tasks, model_hub, settings as settings_api, training_runtime as training_runtime_api
 from app.config import settings
 from app.errors import register_error_handlers
 from app.logging_config import configure_logging, get_logger
@@ -213,6 +213,10 @@ def _register_v3_job_handlers() -> None:
         # Model Hub: register the model_download job handler (one-click downloads).
         from app.model_hub import register_model_hub_handlers
         register_model_hub_handlers()
+        # Training Runtime: installing the optional 2–4 GB training engine is a Job,
+        # so it appears in the Global Task Manager with progress/logs/cancel/retry.
+        from app.training_runtime import register_training_runtime_handlers
+        register_training_runtime_handlers()
     except Exception as exc:  # noqa: BLE001 - handler registration must not block startup
         log.warning("V3 job handler registration incomplete: %s", exc)
 
@@ -253,6 +257,10 @@ async def lifespan(app: FastAPI):
     await init_db()
     async with AsyncSessionLocal() as db:
         await seed_attacks(db)
+    # Warm the settings snapshot so sync consumers (providers, Job handlers running
+    # on worker threads) read real values rather than schema defaults.
+    from app.settings import settings_service
+    await settings_service.warm()
     # Register V3 Job handlers (dataset processing, training, export) so the
     # Execution Platform can dispatch them. Additive; never raises.
     _register_v3_job_handlers()
@@ -338,6 +346,9 @@ app.include_router(hardware.router)
 app.include_router(tasks.router)
 # --- Model Hub — browse + one-click download curated models (downloads run as Jobs) ---
 app.include_router(model_hub.router)
+# --- Settings — data-driven, persisted, categorized configuration ---
+app.include_router(settings_api.router)
+app.include_router(training_runtime_api.router)
 
 
 # Standardized structured error responses for every endpoint.

@@ -5,3 +5,6 @@
 
 pytest==9.1.0
 pytest-asyncio==1.4.0
+
+# Lint gate (correctness rules only — see [tool.ruff] in the root pyproject.toml).
+ruff==0.16.0

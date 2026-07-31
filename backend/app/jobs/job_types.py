@@ -43,6 +43,10 @@ def _seed() -> None:
         JobTypeDef("dataset_processing", "Dataset Processing", concurrency=2),
         JobTypeDef("model_download", "Model Download", concurrency=2, default_max_attempts=3),
         JobTypeDef("model_discovery", "Model Discovery", concurrency=2),
+        # Strictly serialized: two pip installs into one virtualenv corrupt it.
+        # Not auto-retried — the installer resumes from its own phase state instead.
+        JobTypeDef("training_runtime_install", "Install Training Runtime",
+                   concurrency=1, default_max_attempts=1),
         JobTypeDef("model_sync", "Model Sync", concurrency=4),
         JobTypeDef("cache_build", "Cache Build", concurrency=2),
         JobTypeDef("plugin_task", "Plugin Task", concurrency=2),
