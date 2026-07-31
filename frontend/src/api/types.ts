@@ -1695,3 +1695,122 @@ export interface ModelHubCategory {
 export interface ModelHubCatalog {
   categories: ModelHubCategory[];
 }
+
+// --- Settings -------------------------------------------------------------
+export interface Setting {
+  key: string;
+  category: string;
+  label: string;
+  type: 'bool' | 'int' | 'float' | 'string' | 'enum' | 'path' | 'secret';
+  default: unknown;
+  description?: string;
+  options?: string[] | null;
+  min?: number | null;
+  max?: number | null;
+  unit?: string;
+  advanced?: boolean;
+  restart?: boolean;
+  value: unknown;
+  is_overridden: boolean;
+  is_set?: boolean;
+}
+
+export interface SettingCategory {
+  key: string;
+  label: string;
+  description: string;
+  settings: Setting[];
+}
+
+export interface SettingsResponse {
+  categories: SettingCategory[];
+}
+
+// --- Host environment / dependency detection -------------------------------
+
+export interface DependencyRemedy {
+  url: string;
+  command: string;
+  manager: string;
+}
+
+export interface Dependency {
+  key: string;
+  label: string;
+  severity: 'required' | 'recommended' | 'optional';
+  purpose: string;
+  found: boolean;
+  version: string | null;
+  path: string | null;
+  detail: string;
+  remedy: DependencyRemedy;
+  docs_url: string;
+  blocking: boolean;
+}
+
+export interface DependencyReport {
+  platform: string;
+  ready: boolean;
+  summary: string;
+  counts: {
+    total: number;
+    found: number;
+    missing_required: number;
+    missing_recommended: number;
+    missing_optional: number;
+  };
+  dependencies: Dependency[];
+}
+
+export interface SystemVersion {
+  version: string;
+  platform: string;
+  python: string;
+}
+
+// --- Training Runtime (the optional 2–4 GB training engine) ----------------
+
+export type RuntimeStatus = 'absent' | 'partial' | 'broken' | 'ready' | 'installing';
+
+export interface RuntimePackage {
+  name: string;
+  label: string;
+  required: boolean;
+  installed: boolean;
+  version: string | null;
+  detail: string;
+}
+
+export interface RuntimeGpu {
+  available: boolean;
+  name: string | null;
+  vram_mb: number | null;
+  cuda_version: string | null;
+  driver_version: string | null;
+}
+
+export interface RuntimeInstallPlan {
+  variant: string;
+  torch_index_url: string;
+  packages: string[];
+  download_mb_estimate: number;
+  minutes_estimate: string;
+  reason: string;
+  warnings: string[];
+}
+
+export interface TrainingRuntimeReport {
+  status: RuntimeStatus;
+  ready: boolean;
+  root: string;
+  python_executable: string | null;
+  python_version: string | null;
+  gpu: RuntimeGpu;
+  packages: RuntimePackage[];
+  plan: RuntimeInstallPlan | null;
+  disk_free_mb: number | null;
+  message: string;
+  resumable: boolean;
+  installed_at: string | null;
+  missing_required: string[];
+}

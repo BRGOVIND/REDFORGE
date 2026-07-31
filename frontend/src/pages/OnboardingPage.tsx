@@ -20,6 +20,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Badge, Button, Card } from '../components/ui';
+import { DependencyPanel } from '../components/DependencyPanel';
 import { useHealth, useModelCatalog, useProviders, useRecommendations } from '../hooks/queries';
 import { getModelPullStatus, startModelPull } from '../api/endpoints';
 import { toast } from '../lib/toast';
@@ -248,7 +249,7 @@ function SystemScan({
     <div>
       <h2 className="text-xl font-semibold tracking-tight text-content">System scan</h2>
       <p className="mt-1 text-sm text-content-muted">
-        Checking your environment via the health engine.
+        Checking your hardware and the tools RedForge can use.
       </p>
       <Card className="mt-6 overflow-hidden">
         <ul className="divide-y divide-border">
@@ -268,6 +269,10 @@ function SystemScan({
           })}
         </ul>
       </Card>
+
+      {/* Python / CUDA / Git / Ollama / LM Studio / llama.cpp / Node — each with
+          a one-click way to install it when missing. */}
+      <DependencyPanel />
     </div>
   );
 }

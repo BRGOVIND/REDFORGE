@@ -680,6 +680,16 @@ export const cancelJob = (id: string) =>
 export const retryJob = (id: string) =>
   http.post<Job>(`${JOBS}/${id}/retry`).then((r) => r.data);
 
+// --- Settings --------------------------------------------------------------
+import type { SettingsResponse } from './types';
+
+const SETTINGS = '/settings';
+export const getSettings = () => http.get<SettingsResponse>(SETTINGS).then((r) => r.data);
+export const updateSettings = (values: Record<string, unknown>) =>
+  http.put<SettingsResponse>(SETTINGS, { values }).then((r) => r.data);
+export const resetSettings = (key?: string) =>
+  http.post<SettingsResponse>(`${SETTINGS}/reset`, undefined, { params: key ? { key } : undefined }).then((r) => r.data);
+
 // --- Model Hub -------------------------------------------------------------
 import type { ModelHubCatalog, Task as HubTask } from './types';
 
@@ -792,3 +802,24 @@ export const xpNotes = (id: string) => http.get<ExperimentNote[]>(`${XP}/${id}/n
 export const xpAddNote = (id: string, body: string) => http.post<ExperimentNote>(`${XP}/${id}/notes`, { body }).then((r) => r.data);
 export const xpCompare = (ids: string[]) =>
   http.get<ExperimentComparison>(`${XP}/compare`, { params: { ids: ids.join(',') } }).then((r) => r.data);
+
+import type { DependencyReport, SystemVersion } from './types';
+
+// Host environment: which external tools are installed, and how to get the rest.
+export const getDependencies = (refresh = false) =>
+  http.get<DependencyReport>('/system/dependencies', { params: { refresh } }).then((r) => r.data);
+export const getSystemVersion = () =>
+  http.get<SystemVersion>('/system/version').then((r) => r.data);
+
+import type { TrainingRuntimeReport } from './types';
+
+// Training Runtime — the optional training engine, installed as a Job.
+export const getTrainingRuntime = (refresh = false) =>
+  http.get<TrainingRuntimeReport>('/training-runtime', { params: { refresh } }).then((r) => r.data);
+export const installTrainingRuntime = (force = false) =>
+  http.post<{ job_id: string; status: string; runtime: TrainingRuntimeReport }>(
+    '/training-runtime/install', { force }).then((r) => r.data);
+export const verifyTrainingRuntime = () =>
+  http.post<TrainingRuntimeReport>('/training-runtime/verify').then((r) => r.data);
+export const removeTrainingRuntime = () =>
+  http.delete<{ removed: boolean; runtime: TrainingRuntimeReport }>('/training-runtime').then((r) => r.data);

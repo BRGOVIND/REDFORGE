@@ -50,6 +50,7 @@ import {
   useTrainingReport,
 } from '../hooks/queries';
 import { toast } from '../lib/toast';
+import { TrainingRuntimePanel } from '../components/TrainingRuntimePanel';
 import { trainingDiagnostics } from '../api/endpoints';
 import type { Recommendation, TrainingParams, TrainingRun } from '../api/types';
 
@@ -307,8 +308,14 @@ function TrainingWizard({
   const modelList = models.data?.models ?? [];
   const datasetList = datasets.data ?? [];
   const backendList = backends.data?.backends ?? [];
-  const activeBackend = backend || backends.data?.default || 'simulation';
+  // Backend detection is authoritative and asynchronous. Never invent a fallback
+  // here: defaulting to 'simulation' while the query was in flight meant a fast
+  // click launched a SIMULATED run on a perfectly capable GPU. Empty string means
+  // "not resolved yet", and the Launch button stays disabled until it is.
+  const backendsResolved = !backends.isLoading && !!backends.data;
+  const activeBackend = backend || backends.data?.default || '';
   const activeModel = baseModel || modelList[0]?.name || '';
+  const isSimulated = activeBackend === 'simulation';
 
   const canNext =
     (step === 0 && !!activeModel) ||
@@ -429,7 +436,9 @@ function TrainingWizard({
             </div>
             <div>
               <label className="mb-1 block text-xs text-content-subtle">Backend</label>
-              <select value={activeBackend} onChange={(e) => setBackend(e.target.value)} className={inputCls}>
+              <select value={activeBackend} onChange={(e) => setBackend(e.target.value)}
+                      disabled={!backendsResolved} className={inputCls}>
+                {!backendsResolved && <option value="">Detecting available backends…</option>}
                 {backendList.map((b) => (
                   <option key={b.name} value={b.name}>
                     {b.label} {b.available ? '' : '— unavailable'}
@@ -441,7 +450,19 @@ function TrainingWizard({
                   {backendList.find((b) => b.name === activeBackend)?.reason}
                 </p>
               )}
+              {/* Never let the user believe a simulated run is real training. */}
+              {isSimulated && (
+                <p className="mt-2 rounded-lg border border-uncertain/30 bg-uncertain/10 px-3 py-2 text-xs text-content">
+                  <span className="font-medium">Simulation Mode.</span> No model is loaded and no
+                  weights are produced — this reproduces the workflow and the shape of the metrics
+                  so you can learn the flow. Install the Training Runtime below for real LoRA/QLoRA.
+                </p>
+              )}
               {activeBackend === 'unsloth' && <TrainingDiagnosticsPanel />}
+              {/* The install experience that replaces silently falling back. */}
+              <div className="mt-4">
+                <TrainingRuntimePanel onChanged={() => backends.refetch?.()} />
+              </div>
             </div>
 
             {/* Continuous Security — auto-evaluate each checkpoint */}
@@ -531,8 +552,15 @@ function TrainingWizard({
             Continue <ArrowRight size={15} />
           </Button>
         ) : (
-          <Button onClick={doLaunch} loading={launch.isPending} disabled={!activeModel}>
-            <Play size={15} /> Launch Training
+          <Button
+            onClick={doLaunch}
+            loading={launch.isPending}
+            // Launch is blocked until backend detection resolves — otherwise a
+            // fast click would send a fallback backend the server never chose.
+            disabled={!activeModel || !backendsResolved || !activeBackend}
+            title={!backendsResolved ? 'Detecting available training backends…' : undefined}
+          >
+            <Play size={15} /> {backendsResolved ? 'Launch Training' : 'Detecting backends…'}
           </Button>
         )}
       </div>

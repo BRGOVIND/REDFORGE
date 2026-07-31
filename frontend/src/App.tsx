@@ -5,6 +5,7 @@ import { Spinner } from './components/ui';
 
 const Dashboard = React.lazy(() => import('./pages/DashboardPage'));
 const Setup = React.lazy(() => import('./pages/SetupPage'));
+const Settings = React.lazy(() => import('./pages/SettingsPage'));
 const NewEvaluation = React.lazy(() => import('./pages/NewEvaluationPage'));
 const LiveList = React.lazy(() => import('./pages/LiveListPage'));
 const LiveSession = React.lazy(() => import('./pages/LiveSessionPage'));
@@ -45,6 +46,7 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/history')) return 'RedForge • History';
   if (pathname.startsWith('/leaderboard')) return 'RedForge • Leaderboard';
   if (pathname.startsWith('/runtime')) return 'RedForge • Runtime Manager';
+  if (pathname.startsWith('/settings')) return 'RedForge • Settings';
   if (pathname.startsWith('/model-hub')) return 'RedForge • Model Hub';
   if (pathname.startsWith('/models')) return 'RedForge • Model Manager';
   if (pathname.startsWith('/studio')) return 'RedForge • AI Studio';
@@ -103,6 +105,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/setup" element={<Setup />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/new" element={<NewEvaluation />} />
           <Route path="/live" element={<LiveList />} />
           <Route path="/live/:id" element={<LiveSession />} />

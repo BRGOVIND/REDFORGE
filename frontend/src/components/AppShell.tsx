@@ -92,7 +92,7 @@ const NAV: NavGroup[] = [
     items: [
       { to: '/runtime', label: 'Runtime', icon: <Server size={16} /> },
       { to: '/jobs', label: 'Jobs', icon: <Activity size={16} />, match: '/jobs' },
-      { to: '/setup', label: 'Settings', icon: <Settings size={16} /> },
+      { to: '/settings', label: 'Settings', icon: <Settings size={16} /> },
     ],
   },
 ];
