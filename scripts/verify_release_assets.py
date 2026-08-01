@@ -35,6 +35,11 @@ INSTALLERS: list[tuple[str, int, str]] = [
     ("RedForge-v{v}-arm64.dmg",      20 * MB, "macOS (Apple Silicon)"),
     ("RedForge-v{v}-x64.AppImage",   20 * MB, "Linux AppImage"),
     ("RedForge-v{v}-amd64.deb",      20 * MB, "Linux .deb"),
+    # electron-updater cannot update from a .dmg — the zip IS the macOS update
+    # payload referenced by latest-mac.yml. A release without it silently breaks
+    # auto-update for every Mac user.
+    ("RedForge-v{v}-x64.zip",        20 * MB, "macOS update payload (Intel)"),
+    ("RedForge-v{v}-arm64.zip",      20 * MB, "macOS update payload (Apple Silicon)"),
 ]
 
 # electron-updater reads these; without them installed apps never see updates.

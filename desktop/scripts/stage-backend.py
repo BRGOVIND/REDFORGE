@@ -22,6 +22,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Windows CI runners use a legacy console codepage (cp1252), so ANY non-ASCII
+# byte reaching stdout raises UnicodeEncodeError and fails the packaging job.
+# This script therefore emits ASCII only; the reconfigure below is a second line
+# of defence for anything a dependency prints through us.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001 - older/odd streams simply keep their encoding
+        pass
+
 ROOT = Path(__file__).resolve().parents[2]      # repo root
 DESKTOP = ROOT / "desktop"
 BACKEND = ROOT / "backend"
@@ -52,7 +62,7 @@ def build_frontend():
     if STATIC.exists():
         shutil.rmtree(STATIC)
     shutil.copytree(dist, STATIC)
-    print(f"staged frontend → {STATIC}")
+    print(f"staged frontend -> {STATIC}")
 
 
 def freeze_backend():
@@ -89,7 +99,7 @@ def assemble():
         # copy the PyInstaller onedir contents (binary + libs) into resources/backend
         shutil.copytree(frozen, RESOURCES, dirs_exist_ok=True)
     else:
-        print("WARNING: frozen backend not found — the desktop app will fall back to system Python.")
+        print("WARNING: frozen backend not found - the desktop app will fall back to system Python.")
     # bundled frontend + datasets alongside the binary
     if STATIC.exists():
         shutil.copytree(STATIC, RESOURCES / "app" / "static", dirs_exist_ok=True)
@@ -99,7 +109,7 @@ def assemble():
     # Inside the frozen bundle that walk leaves the repo entirely, so without
     # this the shipped app reports 0.0.0 everywhere (API, About, UI footer).
     shutil.copy2(ROOT / "VERSION", RESOURCES / "VERSION")
-    print(f"assembled desktop backend → {RESOURCES}")
+    print(f"assembled desktop backend -> {RESOURCES}")
     print("contains binary:", (RESOURCES / EXE).exists())
 
 
@@ -149,12 +159,12 @@ def main() -> int:
         for p in problems:
             print(f"  - {p}", file=sys.stderr)
         if a.require_frozen:
-            print("✗ staging incomplete — refusing to package", file=sys.stderr)
+            print("ERROR: staging incomplete - refusing to package", file=sys.stderr)
             return 1
         print("WARNING: staging incomplete (dev build will fall back to system Python).",
               file=sys.stderr)
     else:
-        print("✓ desktop backend staged and complete")
+        print("OK: desktop backend staged and complete")
     return 0
 
 

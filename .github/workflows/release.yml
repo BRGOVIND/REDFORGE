@@ -39,6 +39,12 @@ concurrency:
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
+  # Windows runners default to a legacy console codepage (cp1252), so any
+  # non-ASCII byte a script prints raises UnicodeEncodeError and fails the job.
+  # UTF-8 mode makes Python's stdio UTF-8 regardless of the console codepage —
+  # the systemic guard, in addition to scripts keeping their output ASCII.
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -166,9 +172,11 @@ jobs:
       - name: Stage backend
         run: python desktop/scripts/stage-backend.py --require-frozen
 
+      # `npm ci` (not `install`): reproducible from the committed lockfile, and it
+      # fails loudly if package.json and the lock have drifted.
       - name: Install desktop deps
         working-directory: desktop
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build installers
         working-directory: desktop
@@ -188,6 +196,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.os }}
+          # *.yml carries the auto-update feeds (latest.yml / latest-mac.yml /
+          # latest-linux.yml, plus per-channel files for prereleases). builder-debug
+          # is electron-builder's internal dump — every OS writes one, so it would
+          # collide on merge AND get attached to the public release.
           path: |
             desktop/release-build/*.exe
             desktop/release-build/*.zip
@@ -196,6 +208,7 @@ jobs:
             desktop/release-build/*.deb
             desktop/release-build/*.yml
             desktop/release-build/*.blockmap
+            !desktop/release-build/builder-debug.yml
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -248,15 +261,30 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Collect artifacts
+      # Only release assets land in dist/. The version-file artifact goes to the
+      # repo root instead — merging it into dist/ put a stray VERSION file into
+      # SHA256SUMS.txt, so `sha256sum -c` referenced a file that is not published.
+      - name: Collect installers
         uses: actions/download-artifact@v4
         with:
+          pattern: installers-*
           path: dist
           merge-multiple: true
 
+      - name: Collect source payload
+        uses: actions/download-artifact@v4
+        with:
+          name: payload
+          path: dist
+
+      - name: Collect resolved VERSION
+        uses: actions/download-artifact@v4
+        with:
+          name: version-file
+          path: .
+
       - name: Sync version
         run: |
-          cp dist/VERSION VERSION 2>/dev/null || true
           python scripts/version.py --sync
           python scripts/version.py
 

@@ -19,6 +19,10 @@ concurrency:
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
+  # See release.yml — Windows runners use a legacy console codepage; UTF-8 mode
+  # stops any script's output from failing the job on encoding.
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: "utf-8"
 
 jobs:
   version:
@@ -44,6 +48,12 @@ jobs:
       # in the root pyproject.toml under [tool.ruff].
       - run: pipx install ruff==0.16.0
       - run: ruff check .
+
+      # Catches broken electron-builder config (missing icons, platform-shared
+      # icon paths, artifact-name drift) in a second, instead of discovering it
+      # part-way through a three-OS packaging matrix.
+      - name: Validate electron-builder configuration
+        run: python scripts/verify_desktop_config.py
 
   backend:
     name: Backend (pytest)

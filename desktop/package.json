@@ -11,6 +11,18 @@
     "type": "git",
     "url": "https://github.com/BRGOVIND/REDFORGE.git"
   },
+  "//icons": [
+    "Icon strategy — read before changing any `icon` value in `build`.",
+    "build/icon.png (512x512) is the canonical cross-platform source; electron-builder",
+    "derives .icns for macOS and the PNG set for Linux from it. Windows needs a real",
+    ".ico, so win/nsis point at installers/windows/*.ico.",
+    "PLATFORM-SHARED keys (fileAssociations[].icon, protocols) must NEVER reference a",
+    "platform-specific file: electron-builder rewrites the extension per platform",
+    "(builder-util getPlatformIconFileName: value.replace('.ico', '.icns') on macOS), so",
+    "'../installers/windows/desktop.ico' became '../installers/windows/desktop.icns' and",
+    "broke the macOS build. Leave fileAssociations without an icon so it inherits the",
+    "app icon, or place BOTH .ico and .icns under build/ with the same basename."
+  ],
   "scripts": {
     "start": "electron .",
     "stage-backend": "python scripts/stage-backend.py",
@@ -59,8 +71,7 @@
         "ext": "redforge",
         "name": "RedForge Project",
         "description": "RedForge project file",
-        "role": "Editor",
-        "icon": "../installers/windows/desktop.ico"
+        "role": "Editor"
       }
     ],
     "protocols": [
@@ -109,7 +120,7 @@
       "artifactName": "RedForge-v${version}-${arch}.${ext}"
     },
     "linux": {
-      "icon": "../installers/linux/redforge.png",
+      "icon": "build/icon.png",
       "category": "Development",
       "maintainer": "RedForge <hello@redforge.site>",
       "vendor": "RedForge",
