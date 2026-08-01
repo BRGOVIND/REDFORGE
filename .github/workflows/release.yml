@@ -185,14 +185,45 @@ jobs:
         shell: bash
         env:
           # Signing is optional: set these repo secrets to produce signed builds.
+          # NOTE: a `${{ secrets.X }}` that is not configured expands to an EMPTY
+          # STRING, and Actions still *defines* the variable. electron-builder
+          # treats an empty CSC_LINK as "the user supplied a certificate path"
+          # (chooseNotNull: '' is not null), resolves it against projectDir and
+          # dies with "<projectDir> not a file". The step below therefore unsets
+          # every signing variable that is empty, so unsigned builds behave
+          # exactly as if the secrets had never been declared.
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Notarize only when Apple credentials are actually present.
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
-        run: npx electron-builder --publish never
+        run: |
+          set -euo pipefail
+
+          # electron-builder does NOT clean its output directory. Any stale
+          # artifact from an earlier version would be picked up by the upload
+          # globs — and the non-version-scoped ones (*.yml, *.blockmap) would be
+          # attached to the release, mixing versions. Start from empty.
+          rm -rf release-build
+
+          # Drop empty signing vars — an empty value is NOT "no value" to
+          # electron-builder. Unsetting happens in this shell, so the
+          # electron-builder child process inherits the cleaned environment.
+          for var in CSC_LINK CSC_KEY_PASSWORD \
+                     WIN_CSC_LINK WIN_CSC_KEY_PASSWORD \
+                     APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!var:-}" ]; then unset "$var" || true; fi
+          done
+
+          if [ -n "${CSC_LINK:-}" ]; then
+            echo "code signing: certificate provided — building SIGNED"
+          else
+            echo "code signing: no certificate — building UNSIGNED"
+            # Stop macOS from searching the (empty) keychain for an identity.
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+
+          npx electron-builder --publish never
 
       - name: Upload installers
         uses: actions/upload-artifact@v4

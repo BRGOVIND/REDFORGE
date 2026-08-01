@@ -129,11 +129,48 @@ macOS). Signing is entirely driven by CI secrets — no config change needed.
 
 | Secret | Purpose |
 |--------|---------|
-| `CSC_LINK` | base64 certificate (`.pfx` / `.p12`) |
+| `CSC_LINK` | base64 certificate (`.pfx` / `.p12`), or a path/URL |
 | `CSC_KEY_PASSWORD` | its password |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | macOS notarization |
 
-When absent, the release workflow builds unsigned and still succeeds.
+Set them and the release builds signed; leave them unset and it builds unsigned.
+Both paths succeed.
+
+### An empty secret is not an absent secret
+
+This one cost a release. `${{ secrets.CSC_LINK }}` for a secret that is **not
+configured** expands to an **empty string**, and GitHub Actions still *defines*
+the environment variable. electron-builder resolves it like this:
+
+```js
+// builder-util: chooseNotNull(v1, v2) => v1 == null ? v2 : v1
+// '' is not null, so an empty CSC_LINK counts as "user supplied a certificate"
+file = path.resolve(projectDir, '')   // -> <repo>/desktop
+// ...then: "<repo>/desktop not a file"
+```
+
+So an unset secret made Windows and macOS packaging fail with
+`Env WIN_CSC_LINK is not correct, cannot resolve: .../desktop not a file`, while
+**Linux passed** — `LinuxPackager` has no code-signing path and never reads the
+variable.
+
+The workflow therefore **unsets every signing variable that is empty**
+immediately before invoking electron-builder, so an unsigned build behaves
+exactly as if the secrets had never been declared:
+
+```bash
+for var in CSC_LINK CSC_KEY_PASSWORD WIN_CSC_LINK WIN_CSC_KEY_PASSWORD \
+           APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+  if [ -z "${!var:-}" ]; then unset "$var" || true; fi
+done
+```
+
+If you add another optional credential, add it to that list too.
+
+> `CSC_IDENTITY_AUTO_DISCOVERY=false` is exported only in the unsigned branch. It
+> stops macOS from scanning the keychain for an identity; it does **not** suppress
+> an explicitly-provided (or empty) `CSC_LINK`, which is why it was not enough on
+> its own.
 
 ---
 
