@@ -30,7 +30,7 @@ live in the local database and reports and never leave your machine.
   static serving is path-traversal-guarded; no secrets in logs.
 
 ## Supported versions
-Security fixes target the latest release (currently **2.0.1**).
+Security fixes target the latest release (currently **2.0.2**).
 
 ## Reporting a vulnerability
 Please report security issues **privately** rather than opening a public issue:
