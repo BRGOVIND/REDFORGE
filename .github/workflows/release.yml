@@ -108,8 +108,10 @@ jobs:
           fi
 
           version="$(python scripts/version.py)"
-          # Fails if any component drifted from VERSION (incl. desktop/package.json).
-          python scripts/version.py --check
+          # Hard gate: every version sink (desktop/website package.json + lockfiles,
+          # SECURITY.md) and every runtime resolver must equal VERSION. --release
+          # additionally warns (never fails) about a missing CHANGELOG section.
+          python scripts/version.py --check --release
 
           prerelease=false
           [ "$channel" = "stable" ] || prerelease=true

@@ -158,7 +158,9 @@ a bug, not a placeholder.
 
 ## Conventions
 
-- Never commit a version literal — bump `VERSION`, run `scripts/version.py --sync`.
+- Never edit a version by hand, anywhere. `python scripts/version.py --set X.Y.Z`
+  is the only supported way to change it; `--check` runs in CI and will fail the
+  build on drift. See the [Release Guide](release-guide.md#versioning).
 - Comments explain *why*, not *what*.
 - Errors must be actionable: what failed, why, and what to do next. No bare
   "Something went wrong."

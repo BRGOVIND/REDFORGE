@@ -11,14 +11,40 @@ For building installers on your own machine, see the
 ## Cutting a release
 
 ```bash
-python scripts/version.py --set 2.1.0     # bump VERSION + every derived literal
+python scripts/version.py --set 2.1.0     # updates EVERY version location
 git commit -am "release 2.1.0"
 git tag v2.1.0
-git push origin main --tags               # the tag is what triggers the release
+git push origin main
+git push origin v2.1.0                    # the tag is what triggers the release
 ```
 
-That is the whole procedure. The pipeline does the rest and the website updates
-itself.
+That is the whole procedure. **Never edit a version by hand anywhere** — the bump
+command is the only supported way to change it. The pipeline does the rest and the
+website updates itself.
+
+Optional, and worth doing: add a `## [2.1.0]` section to `CHANGELOG.md` before
+tagging. `release_notes.py` publishes it as the release body; without it the
+release simply has no "What's changed" section (the workflow warns, it does not
+fail).
+
+### If the tag and VERSION disagree
+
+The release aborts on purpose:
+
+```
+tag v2.0.1 does not match VERSION 2.0.0
+```
+
+This means the tag was pushed without bumping first. Fix it by bumping properly
+and re-pointing the tag — do **not** disable the check:
+
+```bash
+python scripts/version.py --set 2.0.1
+git commit -am "release 2.0.1"
+git tag -f v2.0.1                         # move the tag onto the bump commit
+git push origin main
+git push origin v2.0.1 --force
+```
 
 ### Dry run
 
@@ -29,29 +55,57 @@ workflow artifacts; nothing is published. Use this before any real tag.
 
 ## Versioning
 
-Semantic versioning, single-sourced from the repo-root `VERSION` file. Nothing
-else may contain a version literal.
+Semantic versioning, single-sourced from the repo-root `VERSION` file.
+`scripts/version.py` is the **only** version authority.
 
 ```
-VERSION ──┬─ redforge._version           CLI
-          ├─ app.version                 backend / FastAPI
-          ├─ pyproject.toml              setuptools dynamic
-          ├─ vite.config.ts              __APP_VERSION__ (frontend + website)
-          ├─ installers/windows/*.iss    ISPP FileRead
-          └─ desktop/package.json        electron-builder (see below)
+VERSION
+  │
+  ├─ derived at runtime — nothing to sync, verified by --check
+  │    redforge._version            CLI
+  │    app.version                  backend / FastAPI
+  │    pyproject.toml               setuptools dynamic
+  │    cli/pyproject.toml           setuptools dynamic
+  │    frontend/vite.config.ts      __APP_VERSION__
+  │    website/vite.config.ts       __APP_VERSION__
+  │    installers/windows/*.iss     ISPP FileRead
+  │    installers/linux/*.sh        cat VERSION
+  │    desktop/electron/*           app.getVersion()
+  │
+  └─ sinks — a literal is unavoidable, written by --set/--sync
+       desktop/package.json         electron-builder reads it directly
+       desktop/package-lock.json    npm mirrors package.json
+       website/package.json
+       website/package-lock.json
+       SECURITY.md                  "currently **X.Y.Z**"
 ```
 
-`desktop/package.json` is the one unavoidable exception: electron-builder reads
-the version from it and bakes it into filenames, the NSIS uninstall entry, the
-`.deb` control file and the update feed. It cannot read an external file, so it
-is kept in lockstep instead:
+`desktop/package.json` is the reason sinks exist at all: electron-builder reads
+the version from it and bakes it into installer filenames, the NSIS uninstall
+entry, the `.deb` control file and the update feed. It cannot read an external
+file.
 
-```bash
-python scripts/version.py --check    # fails the build on any drift
-python scripts/version.py --sync     # rewrites it from VERSION
-```
+### Commands
 
-`--check` runs in CI on every push, so drift can never reach a release.
+| Command | Effect |
+|---------|--------|
+| `python scripts/version.py` | print the current version |
+| `python scripts/version.py --list` | show every location and its value (audit view) |
+| `python scripts/version.py --set X.Y.Z` | bump `VERSION`, then update every sink |
+| `python scripts/version.py --sync` | rewrite every sink from `VERSION` (idempotent) |
+| `python scripts/version.py --check` | fail if any location has drifted |
+| `python scripts/version.py --check --release` | as above, plus a changelog warning |
+
+`--check` runs in CI on every push and again in the release workflow, so drift
+can never reach a release.
+
+### Adding a new version location
+
+Add one entry to `SINKS` in `scripts/version.py` — `PackageJsonSink`,
+`PackageLockSink` or `RegexSink`. `--set`, `--sync`, `--check` and `--list` all
+pick it up with no further changes. If instead the new location can *derive* the
+version at runtime, prefer that and add a guard to `_FORBIDDEN` so a literal can
+never creep back in.
 
 ### Where users see the version
 
@@ -164,8 +218,9 @@ unreachable or rate-limited, the static links still resolve.
 
 ## Release checklist
 
-- [ ] `CHANGELOG.md` has a section for the new version
-- [ ] `python scripts/version.py --set X.Y.Z`
+- [ ] `CHANGELOG.md` has a section for the new version (optional; warning only)
+- [ ] `python scripts/version.py --set X.Y.Z` — never edit a version by hand
+- [ ] `python scripts/version.py --check` passes locally
 - [ ] CI green on `main`
 - [ ] Dry run via `workflow_dispatch` for a major release
 - [ ] Tag and push

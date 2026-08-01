@@ -1,7 +1,7 @@
 {
   "name": "redforge-desktop",
   "productName": "RedForge",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "RedForge — the local AI engineering platform, as a native desktop app.",
   "author": "RedForge <hello@redforge.site>",
   "license": "SEE LICENSE IN ../LICENSE",
