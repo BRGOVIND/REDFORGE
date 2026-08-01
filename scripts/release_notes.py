@@ -55,7 +55,9 @@ def downloads_table(version: str) -> str:
         ("Windows", "Portable (no install)", f"RedForge-v{version}-Portable.zip"),
         ("macOS", "Apple Silicon", f"RedForge-v{version}-arm64.dmg"),
         ("macOS", "Intel", f"RedForge-v{version}-x64.dmg"),
-        ("Linux", "AppImage", f"RedForge-v{version}-x64.AppImage"),
+        # AppImage uses the x86_64 convention, deb uses amd64 — see
+        # scripts/artifact_names.py (electron-builder getArtifactArchName).
+        ("Linux", "AppImage", f"RedForge-v{version}-x86_64.AppImage"),
         ("Linux", "Debian / Ubuntu", f"RedForge-v{version}-amd64.deb"),
     ]
     base = f"{REPO}/releases/download/v{version}"

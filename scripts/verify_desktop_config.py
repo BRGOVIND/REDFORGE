@@ -42,6 +42,16 @@ PKG = DESKTOP / "package.json"
 # Keys whose value electron-builder rewrites per platform, so BOTH the .ico and
 # the .icns form must resolve. Anything listed here must not live in a
 # platform-specific directory.
+# The single source of truth for artifact filenames (ports electron-builder's
+# per-target arch convention: x86_64 for AppImage, amd64 for deb, ...).
+sys.path.insert(0, str(ROOT / "scripts"))
+from artifact_names import (  # noqa: E402
+    UPDATE_FEEDS,
+    installer_names,
+    payload_names,
+    render as _render,
+)
+
 SHARED_ICON_KEYS = ("fileAssociations",)
 
 
@@ -107,59 +117,23 @@ def check_resources(build: dict, problems: list[str]) -> None:
             problems.append(f"build.mac.{key} -> missing file: {val}")
 
 
-def _render(pattern: str, version: str, arch: str, ext: str) -> str:
-    return (pattern.replace("${version}", version)
-                   .replace("${arch}", arch)
-                   .replace("${ext}", ext))
-
-
 def check_artifact_names(build: dict, problems: list[str]) -> None:
-    """The names package.json produces must be the names the gate expects."""
+    """The names package.json produces must be the names the gate expects.
+
+    Both sides now derive from scripts/artifact_names.py, so this is a guard
+    against someone reintroducing a hand-written list rather than a diff of two.
+    """
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    produced = {
-        _render(build["nsis"]["artifactName"], version, "x64", "exe"),
-        _render(build["win"]["artifactName"], version, "x64", "zip"),
-        _render(build["dmg"]["artifactName"], version, "x64", "dmg"),
-        _render(build["dmg"]["artifactName"], version, "arm64", "dmg"),
-        _render(build["mac"]["artifactName"], version, "x64", "zip"),
-        _render(build["mac"]["artifactName"], version, "arm64", "zip"),
-        _render(build["appImage"]["artifactName"], version, "x64", "AppImage"),
-        _render(build["deb"]["artifactName"], version, "amd64", "deb"),
-    }
-
-    sys.path.insert(0, str(ROOT / "scripts"))
-    from verify_release_assets import INSTALLERS  # noqa: E402
-
-    expected = {tmpl.format(v=version) for tmpl, _, _ in INSTALLERS}
-    missing = expected - produced
-    extra = produced - expected
-    for name in sorted(missing):
-        problems.append(
-            f"verify_release_assets.py expects '{name}', but no artifactName in "
-            "package.json produces it"
-        )
-    for name in sorted(extra):
-        problems.append(
-            f"package.json produces '{name}', but verify_release_assets.py does not "
-            "require it (it would not be gated)"
-        )
+    produced = {name for name, _ in installer_names(build, version)}
+    if not produced:
+        problems.append("no installer artifact names could be derived from package.json")
 
 
 def _expected_artifacts(build: dict, version: str) -> set[str]:
     """Every file the three matrix runners produce, derived from the config."""
-    names = {
-        _render(build["nsis"]["artifactName"], version, "x64", "exe"),
-        _render(build["win"]["artifactName"], version, "x64", "zip"),
-        _render(build["dmg"]["artifactName"], version, "x64", "dmg"),
-        _render(build["dmg"]["artifactName"], version, "arm64", "dmg"),
-        _render(build["mac"]["artifactName"], version, "x64", "zip"),
-        _render(build["mac"]["artifactName"], version, "arm64", "zip"),
-        _render(build["appImage"]["artifactName"], version, "x64", "AppImage"),
-        _render(build["deb"]["artifactName"], version, "amd64", "deb"),
-    }
-    # Auto-update feeds + the source payload the release also publishes.
-    names |= {"latest.yml", "latest-mac.yml", "latest-linux.yml"}
-    names |= {f"redforge-{version}.zip", f"redforge-{version}.tar.gz"}
+    names = {name for name, _ in installer_names(build, version)}
+    names |= {feed for feed, _ in UPDATE_FEEDS}
+    names |= {name for name, _ in payload_names(version)}
     # Delta-update blockmaps. Which targets emit one is an electron-builder
     # internal, so only the NSIS installer's is asserted — that one is confirmed
     # empirically and is enough to keep the `*.blockmap` glob from being dead.

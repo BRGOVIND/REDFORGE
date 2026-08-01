@@ -64,7 +64,9 @@ function staticFilename(id: string, version: string): string {
     case 'win-portable':   return `RedForge-v${version}-Portable.zip`;
     case 'mac-arm64':      return `RedForge-v${version}-arm64.dmg`;
     case 'mac-x64':        return `RedForge-v${version}-x64.dmg`;
-    case 'linux-appimage': return `RedForge-v${version}-x64.AppImage`;
+    // AppImage uses x86_64, deb uses amd64 (electron-builder's per-target
+    // arch convention). These must match scripts/artifact_names.py.
+    case 'linux-appimage': return `RedForge-v${version}-x86_64.AppImage`;
     case 'linux-deb':      return `RedForge-v${version}-amd64.deb`;
     default:               return '';
   }
