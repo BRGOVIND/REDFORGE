@@ -309,7 +309,7 @@ Outputs include:
 
 Generate professional reports.
 
-Formats:
+Format:
 
 - Markdown
 - JSON
