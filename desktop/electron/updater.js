@@ -66,6 +66,7 @@ class UpdateManager {
   // -- boot bookkeeping -----------------------------------------------------
 
   /** Call at startup, before the backend is launched. Detects a fresh update. */
+  /** @returns {{changed: boolean, from: string|null, to: string}} */
   recordLaunch() {
     const current = app.getVersion();
     const installed = store.get('installedVersion', null);
@@ -78,9 +79,12 @@ class UpdateManager {
         updatedAt: new Date().toISOString(),
       });
       this.log(`updated: ${installed} → ${current}`);
-    } else if (!installed) {
+      return { changed: true, from: installed, to: current };
+    }
+    if (!installed) {
       store.merge({ installedVersion: current, bootFailures: 0 });
     }
+    return { changed: false, from: installed, to: current };
   }
 
   /** Call once the app is genuinely usable. Marks this version known-good. */

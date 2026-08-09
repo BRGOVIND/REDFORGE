@@ -54,14 +54,34 @@ def run(cmd, cwd=None):
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
+def check_assets(directory: Path, compare: Path | None = None) -> None:
+    """Fail staging if a build's code-split chunk graph is incomplete.
+
+    Every copy in the pipeline is checked, because a dropped or mismatched chunk
+    is invisible until a user navigates to the one route that needs it.
+    """
+    cmd = [sys.executable, str(ROOT / "scripts" / "verify_frontend_assets.py"), str(directory)]
+    if compare is not None:
+        cmd += ["--compare", str(compare)]
+    run(cmd)
+
+
 def build_frontend():
     npm = "npm.cmd" if os.name == "nt" else "npm"
+    dist = FRONTEND / "dist"
+    # Vite empties outDir itself, but only for the outDir IT knows about. Removing
+    # the tree first makes the build reproducible regardless of vite config or of
+    # what a previous/interrupted run left behind: no file can outlive its build
+    # and get packaged next to assets from a different one.
+    if dist.exists():
+        shutil.rmtree(dist)
     run([npm, "ci"], cwd=FRONTEND)
     run([npm, "run", "build"], cwd=FRONTEND)
-    dist = FRONTEND / "dist"
+    check_assets(dist)
     if STATIC.exists():
         shutil.rmtree(STATIC)
     shutil.copytree(dist, STATIC)
+    check_assets(STATIC, compare=dist)
     print(f"staged frontend -> {STATIC}")
 
 
@@ -122,8 +142,27 @@ def verify() -> list[str]:
     problems: list[str] = []
     if not (RESOURCES / EXE).is_file():
         problems.append(f"missing frozen backend binary: {RESOURCES / EXE}")
-    if not (RESOURCES / "app" / "static" / "index.html").is_file():
-        problems.append(f"missing bundled UI: {RESOURCES / 'app' / 'static' / 'index.html'}")
+
+    # The UI the packaged app actually serves. desktop/electron/backend.js points
+    # REDFORGE_STATIC_DIR at this directory, so this — not the copy PyInstaller
+    # bakes into _internal — is what users load.
+    served = RESOURCES / "app" / "static"
+    if not (served / "index.html").is_file():
+        problems.append(f"missing bundled UI: {served / 'index.html'}")
+    else:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from verify_frontend_assets import check as check_graph, compare as compare_copies
+
+        graph_problems, _ = check_graph(served)
+        problems += graph_problems
+        if STATIC.is_dir():
+            problems += compare_copies(served, STATIC)
+        # PyInstaller's --collect-data also bakes app/static into _internal. It is
+        # the fallback when REDFORGE_STATIC_DIR is unset (running the binary
+        # directly), so a divergence here means two different UIs in one package.
+        collected = RESOURCES / "_internal" / "app" / "static"
+        if collected.is_dir():
+            problems += compare_copies(collected, served)
     # Without this file on disk the managed training runtime cannot be launched.
     worker_candidates = [
         RESOURCES / "app" / "training_runtime" / "worker.py",

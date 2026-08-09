@@ -3,6 +3,48 @@
 All notable changes to RedForge. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.4]
+
+A fix-only release. Upgrading from 2.0.3 could leave the app unable to open
+pages; this release fixes that and prevents the whole class of failure.
+
+### Fixed
+- **Navigation failed after an upgrade** — pages failed to open with
+  `TypeError: Failed to fetch dynamically imported module`. The backend served
+  `index.html` with no `Cache-Control`, so browsers applied heuristic freshness
+  and reused the *previous* version's app shell from a cache that survives
+  upgrades. That stale shell asked for code-split chunks by their old content
+  hashes, which the new build no longer contains. The shell (and every unhashed
+  file) is now served `no-cache, must-revalidate`, so an upgraded install can
+  never boot the old one's UI. No assets were missing from any release.
+- **Existing 2.0.3 installs are repaired on upgrade** — the desktop app clears
+  its HTTP cache when the application version changes. This affects the cache
+  only; settings, projects and other local data are untouched.
+- **A missing frontend asset returned the app shell** — a request for a
+  `.js`/`.css`/image/font path that does not exist now returns a 404 instead of
+  `index.html`, so a packaging fault is diagnosable rather than surfacing as an
+  unrelated error inside the app.
+- **The desktop app could attach to an older RedForge on the same port** — the
+  backend port is fixed, and any process answering `/healthz` was accepted. If a
+  previously installed RedForge held the port, the new app loaded *that* build's
+  UI. The supervisor now verifies the responding backend reports the expected
+  application version and reports a clear error instead.
+
+### Changed
+- Content-hashed build output under `/assets/` is now explicitly cached as
+  `immutable` for a year. Only the shell revalidates, so start-up stays fast.
+
+### Added
+- `scripts/verify_frontend_assets.py` — validates the complete frontend chunk
+  reference graph (missing chunks, mixed builds, empty asset directories) and
+  can compare two copies of a build byte-for-byte. Runs in CI after every
+  frontend build and at each stage of desktop packaging.
+- `scripts/smoke_packaged_app.py` — starts the packaged backend and fetches
+  every lazily loaded chunk over HTTP, checking status, MIME type and cache
+  policy. Runs in the release pipeline before installers are built.
+- Regression coverage for the upgrade scenario, the cache and 404 contract, the
+  port/version guard, and upgrade detection.
+
 ## [2.0.0]
 
 RedForge becomes a **local AI engineering platform**. All v1.2 functionality is

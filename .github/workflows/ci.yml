@@ -83,6 +83,20 @@ jobs:
         working-directory: backend
         run: python -m pytest -q
 
+  desktop:
+    name: Desktop main process (node:test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # No install step: the tests stub `electron` and use only Node built-ins,
+      # so they run in seconds without pulling a ~100 MB Electron download.
+      - name: Supervisor + updater guards
+        working-directory: desktop
+        run: npm test
+
   frontend:
     name: Frontend (tsc + vite build)
     runs-on: ubuntu-latest
@@ -93,6 +107,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install
         working-directory: frontend
@@ -108,3 +125,9 @@ jobs:
 
       - name: Assert the bundle carries the VERSION string
         run: grep -rq "$(cat VERSION)" frontend/dist/assets || (echo "__APP_VERSION__ not injected" && exit 1)
+
+      # Code splitting means a dropped or mismatched chunk stays invisible until a
+      # user opens the one route that needs it, and then reports itself as a React
+      # error rather than a build error. Check the whole reference graph instead.
+      - name: Every lazy-loaded chunk resolves
+        run: python scripts/verify_frontend_assets.py frontend/dist

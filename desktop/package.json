@@ -25,6 +25,7 @@
   ],
   "scripts": {
     "start": "electron .",
+    "test": "node --test \"test/*.test.js\"",
     "stage-backend": "python scripts/stage-backend.py",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",

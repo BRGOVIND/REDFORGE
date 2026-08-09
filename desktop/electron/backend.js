@@ -170,22 +170,51 @@ class BackendSupervisor extends EventEmitter {
   }
 
   // -- health -------------------------------------------------------------
-  _ping(timeout = 2000) {
+  /** @returns {Promise<{ok: boolean, version: string|null}>} */
+  _probe(timeout = 2000) {
     return new Promise((resolve) => {
       const req = http.get(`${this.baseUrl()}/healthz`, { timeout }, (res) => {
-        res.resume();
-        resolve(res.statusCode === 200);
+        if (res.statusCode !== 200) { res.resume(); resolve({ ok: false, version: null }); return; }
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (c) => { if (body.length < 4096) body += c; });
+        res.on('end', () => {
+          let version = null;
+          try { version = JSON.parse(body).version || null; } catch { /* not our JSON */ }
+          resolve({ ok: true, version });
+        });
       });
-      req.on('error', () => resolve(false));
-      req.on('timeout', () => { req.destroy(); resolve(false); });
+      req.on('error', () => resolve({ ok: false, version: null }));
+      req.on('timeout', () => { req.destroy(); resolve({ ok: false, version: null }); });
     });
+  }
+
+  _ping(timeout = 2000) {
+    return this._probe(timeout).then((r) => r.ok);
   }
 
   async _waitHealthy(timeoutMs) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       if (!this.proc) throw new Error('backend process exited before it became ready');
-      if (await this._ping()) return;
+      const { ok, version } = await this._probe();
+      if (ok) {
+        // The port is fixed, so "something answered" is not the same as "our
+        // backend answered". If an older RedForge (or a `redforge start`) already
+        // holds the port, ours fails to bind and we would happily load THAT
+        // build's UI — whose code-split chunks do not exist in this install, so
+        // every route fails with "Failed to fetch dynamically imported module".
+        // Our own backend always reports this exact version: _env() pins
+        // REDFORGE_VERSION to it.
+        if (this.appVersion && version && version !== this.appVersion) {
+          throw new Error(
+            `port ${this.port} is already served by RedForge ${version}, but this app is ` +
+            `${this.appVersion}. Close the other RedForge (or the \`redforge start\` using ` +
+            `that port) and try again.`
+          );
+        }
+        return;
+      }
       await new Promise((r) => setTimeout(r, 500));
     }
     throw new Error('backend did not become healthy in time');

@@ -14,7 +14,7 @@
  * live in the web app + backend — the desktop shell boots them, it does not
  * reimplement them.
  */
-const { app, BrowserWindow, dialog, shell, ipcMain, Menu, clipboard } = require('electron');
+const { app, BrowserWindow, dialog, shell, ipcMain, Menu, clipboard, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const config = require('./config');
@@ -70,6 +70,31 @@ function openProjectFile(filePath) {
     win.webContents.send('open-file', { path: filePath });
     pendingOpenFile = null;
     win.focus();
+  }
+}
+
+/**
+ * Drop the HTTP cache when the app version changes.
+ *
+ * Every version serves the UI from the same origin (http://127.0.0.1:<port>) and
+ * Chromium's cache lives in the user profile, so it outlives the upgrade. If a
+ * stale `index.html` or entry bundle is reused, the new backend is asked for
+ * code-split chunks under the OLD content hashes and answers 404 — the app boots
+ * from cache and then dies on the first navigation to a route it had not visited
+ * before ("Failed to fetch dynamically imported module").
+ *
+ * The backend now sends `no-cache` on the shell, which prevents this happening
+ * again. This clear is what rescues profiles that were already poisoned by a
+ * build that did not, so upgrading is enough to fix them.
+ */
+async function invalidateCacheOnUpgrade(launch) {
+  if (!launch || !launch.changed) return;
+  try {
+    await session.defaultSession.clearCache();
+    log(`cleared HTTP cache after upgrade ${launch.from} -> ${launch.to}`);
+  } catch (err) {
+    // Never block startup on this; a warm cache is a performance detail.
+    log(`could not clear HTTP cache: ${err.message}`);
   }
 }
 
@@ -146,7 +171,8 @@ async function main() {
   config.ensureDirs();
 
   updates = new UpdateManager({ isDev, getWindow: () => win, log });
-  updates.recordLaunch();          // detect "we just updated" before anything can fail
+  const launch = updates.recordLaunch();   // detect "we just updated" before anything can fail
+  await invalidateCacheOnUpgrade(launch);
 
   pendingOpenFile = fileFromArgv(process.argv);
   createSplash();
