@@ -49,6 +49,17 @@ from verify_frontend_assets import references  # noqa: E402
 BOOT_TIMEOUT_S = 90.0
 
 
+def exe_name() -> str:
+    """The frozen backend's filename — the packaging contract, in one place.
+
+    PyInstaller names the executable after ``--name`` and appends ``.exe`` on
+    Windows only, so `desktop/scripts/stage-backend.py` stages
+    ``redforge-backend.exe`` on Windows and ``redforge-backend`` elsewhere, and
+    `desktop/electron/backend.js` looks for exactly those. This mirrors both.
+    """
+    return "redforge-backend.exe" if os.name == "nt" else "redforge-backend"
+
+
 def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -101,12 +112,22 @@ def launch(bundle: Path | None, static: Path, port: int, home: Path,
     buffer after a few dozen of them and the server blocks mid-write — which
     looks exactly like the app hanging, and is purely an artefact of how the test
     captured output. A file has no such limit.
+
+    Every path handed to the child MUST be absolute. We pass ``cwd``, and on
+    POSIX the child calls ``chdir(cwd)`` *before* ``exec``, so a relative program
+    path is resolved against the bundle instead of against our own directory —
+    `<bundle>/<bundle>/redforge-backend`, which does not exist. Windows resolves
+    it against the parent's directory instead and happens to work, so this fails
+    on macOS and Linux only. The same trap applies to REDFORGE_STATIC_DIR and
+    REDFORGE_HOME, which the child would otherwise resolve from its new cwd.
     """
+    assert bundle is None or bundle.is_absolute(), f"bundle must be absolute: {bundle}"
+    assert static.is_absolute(), f"static dir must be absolute: {static}"
     env = {
         **os.environ,
         "REDFORGE_PORT": str(port),
         "REDFORGE_HOST": "127.0.0.1",
-        "REDFORGE_HOME": str(home),
+        "REDFORGE_HOME": str(home.resolve()),
         "REDFORGE_STATIC_DIR": str(static),
         "PYTHONUNBUFFERED": "1",
     }
@@ -115,7 +136,7 @@ def launch(bundle: Path | None, static: Path, port: int, home: Path,
     sink = log.open("wb")
     sinks.append(sink)
     if bundle is not None:
-        exe = bundle / ("redforge-backend.exe" if os.name == "nt" else "redforge-backend")
+        exe = bundle / exe_name()
         print(f"launching frozen backend: {exe}")
         return subprocess.Popen([str(exe)], cwd=str(bundle), env=env,
                                 stdout=sink, stderr=subprocess.STDOUT)
@@ -199,20 +220,29 @@ def main() -> int:
                     help="serve this frontend build instead of the bundle's own")
     args = ap.parse_args()
 
-    bundle: Path | None = args.bundle
+    # Resolve everything up front. The child process runs with cwd=bundle, so a
+    # relative path handed to it — the program, the static dir, the home dir —
+    # would be interpreted from there rather than from here. See launch().
+    bundle: Path | None = args.bundle.resolve() if args.bundle is not None else None
     if bundle is not None and not bundle.is_dir():
         print(f"not a directory: {bundle}", file=sys.stderr)
         return 1
 
-    static = args.static or (bundle / "app" / "static" if bundle else ROOT / "backend" / "app" / "static")
+    static = (args.static.resolve() if args.static
+              else (bundle / "app" / "static" if bundle else ROOT / "backend" / "app" / "static"))
     if not (static / "index.html").is_file():
         print(f"no frontend build at {static}", file=sys.stderr)
         return 1
 
-    exe_name = "redforge-backend.exe" if os.name == "nt" else "redforge-backend"
-    if bundle is not None and not (bundle / exe_name).is_file():
-        print(f"note: no frozen binary in {bundle}; running the backend from source")
-        bundle = None
+    # A bundle was named explicitly, so the frozen binary is what we were asked to
+    # test. Quietly falling back to the source backend here would let a release
+    # ship a package whose executable never started, with a green smoke test.
+    if bundle is not None and not (bundle / exe_name()).is_file():
+        print(f"no frozen backend at {bundle / exe_name()}", file=sys.stderr)
+        print("the packaged app cannot start without it. Directory contains:", file=sys.stderr)
+        for entry in sorted(bundle.iterdir())[:25]:
+            print(f"    {entry.name}{'/' if entry.is_dir() else ''}", file=sys.stderr)
+        return 1
 
     port = free_port()
     base = f"http://127.0.0.1:{port}"
