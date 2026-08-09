@@ -23,6 +23,17 @@
     "broke the macOS build. Leave fileAssociations without an icon so it inherits the",
     "app icon, or place BOTH .ico and .icns under build/ with the same basename."
   ],
+  "//dmg": [
+    "`dmg.title` MUST keep its ${arch} token. The title becomes the DMG's volume",
+    "name, and electron-builder mounts it at /Volumes/<title>. x64 and arm64 DMGs",
+    "are built CONCURRENTLY, so without the arch token both want the same mount",
+    "point: one build sees the other's live mount, treats it as a stale leftover",
+    "and unmounts it, and the loser dies with",
+    "  'hdiutil detach -force -debug /Volumes/RedForge 2.0.4' -> No such file or directory.",
+    "electron-builder's own default title appends the arch suffix for exactly this",
+    "reason (dmg-builder computeVolumeName); a custom title only gets it if you ask.",
+    "This does NOT affect artifact filenames — dmg.artifactName is a separate key."
+  ],
   "//test": [
     "`cd test && node --test` — do not 'simplify' this to a glob or a directory.",
     "Node's test runner changed how positional arguments work: v20 accepts a",
@@ -128,7 +139,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "RedForge ${version}",
+      "title": "RedForge ${version}${arch}",
       "artifactName": "RedForge-v${version}-${arch}.${ext}"
     },
     "linux": {

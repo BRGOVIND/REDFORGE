@@ -213,6 +213,43 @@ def check_workflow_globs(build: dict, problems: list[str]) -> None:
             )
 
 
+def check_dmg_volume_name(build: dict, problems: list[str]) -> None:
+    """Multi-arch DMGs must not want the same /Volumes mount point.
+
+    electron-builder builds the x64 and arm64 DMGs concurrently, and each mounts
+    its staging image at ``/Volumes/<dmg.title>``. Before attaching, it unmounts
+    anything already sitting at that path — so with one shared title, whichever
+    build is second treats the FIRST one's live mount as a stale leftover and
+    detaches it. The two then race, and the loser fails the whole release with
+
+        hdiutil detach -force -debug /Volumes/RedForge 2.0.4
+        hdiutil: detach failed - No such file or directory
+
+    electron-builder's default title appends the arch suffix for precisely this
+    reason (dmg-builder ``computeVolumeName``); a custom title only gets it if it
+    contains ``${arch}``. Artifact filenames come from ``dmg.artifactName`` and
+    are unaffected either way.
+    """
+    dmg = build.get("dmg") or {}
+    title = dmg.get("title")
+    if title is None:
+        return  # the default is already arch-scoped
+
+    archs: set[str] = set()
+    for target in (build.get("mac") or {}).get("target") or []:
+        if isinstance(target, dict) and target.get("target") == "dmg":
+            archs |= set(target.get("arch") or [])
+    if len(archs) < 2:
+        return  # a single-arch DMG cannot collide with itself
+
+    if "${arch}" not in title:
+        problems.append(
+            f"build.dmg.title is {title!r} but DMGs are built for {sorted(archs)}: "
+            "both would mount at the same /Volumes path and race during packaging "
+            "(hdiutil detach ... No such file or directory). Add ${arch} to the title."
+        )
+
+
 def check_publish(build: dict, problems: list[str]) -> None:
     publish = build.get("publish") or []
     if not publish:
@@ -233,6 +270,7 @@ def main() -> int:
     check_icons(build, problems)
     check_resources(build, problems)
     check_artifact_names(build, problems)
+    check_dmg_volume_name(build, problems)
     check_workflow_globs(build, problems)
     check_publish(build, problems)
 
