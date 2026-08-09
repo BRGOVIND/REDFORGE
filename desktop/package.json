@@ -23,9 +23,20 @@
     "broke the macOS build. Leave fileAssociations without an icon so it inherits the",
     "app icon, or place BOTH .ico and .icns under build/ with the same basename."
   ],
+  "//test": [
+    "`cd test && node --test` — do not 'simplify' this to a glob or a directory.",
+    "Node's test runner changed how positional arguments work: v20 accepts a",
+    "DIRECTORY but no globs, while v22+ accepts GLOBS but rejects a bare directory",
+    "('Cannot find module .../test'). So `node --test \"test/*.test.js\"` passes on a",
+    "dev machine running v24 and fails CI on v20 with \"Could not find\", and",
+    "`node --test test` does the reverse. Running the runner with NO arguments uses",
+    "Node's own discovery on every version; `cd test` is what scopes that discovery",
+    "to the tests instead of walking build output under desktop/. `cd x && y` is",
+    "valid in both cmd.exe and sh, so it works on Windows, macOS and Linux."
+  ],
   "scripts": {
     "start": "electron .",
-    "test": "node --test \"test/*.test.js\"",
+    "test": "cd test && node --test",
     "stage-backend": "python scripts/stage-backend.py",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
