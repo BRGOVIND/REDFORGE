@@ -55,9 +55,30 @@ fetched before, so it had to go to the network. Nothing was missing from the
 package — the 2.0.3 installer contained a complete, internally consistent asset
 set.
 
-`desktop/electron/main.js` additionally clears the HTTP cache whenever the app
-version changes. The header fix prevents the problem; the cache clear is what
-repairs profiles already poisoned by a build that shipped without it.
+The header fix alone cannot repair a profile that is *already* poisoned: the
+browser considers its cached copy fresh, so it never contacts the server and
+never sees the new header. `desktop/electron/ui-cache.js` is what does that — it
+drops the HTTP cache when the profile was last written by a different version,
+before any window loads a URL.
+
+**The version marker lives inside the Electron profile**, next to the cache it
+describes, and that placement is the whole design. An earlier attempt keyed off
+`installedVersion` in `desktop-state.json`, which lives under
+`config.redforgeHome()`. For an installed build that sits inside the profile, so
+it worked; for a **portable** build `redforgeHome()` is
+`<portableDir>/RedForge-Data`, beside the executable, while the Chromium profile
+stays in the per-user data directory. A freshly downloaded portable copy read
+"no previous version — first run" and silently inherited the poisoned cache an
+installed build had left behind. Keeping the marker with the cache makes
+installed, portable and development builds answer the question identically,
+because the two can never be separated.
+
+A profile carrying a cache but no marker is treated as "written by an unknown
+version" and cleared — which is exactly every 2.0.3 user, since the marker did
+not exist before 2.0.4. The marker is written **only after** the clear succeeds,
+so a failed invalidation is retried on the next launch instead of being
+permanently forgotten. Only `clearCache()` is called: cookies, localStorage,
+IndexedDB and the RedForge workspace are never touched.
 
 ## Missing assets must stay visible
 
