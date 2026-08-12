@@ -13,7 +13,7 @@ The Local AI Engineering Platform
 Build • Fine-tune • Benchmark • Secure • Evaluate • Deploy
 </p>
 
-<p align="center">
+<p align="center">fef
 A desktop-first IDE for Local AI development.
 </p>
 
