@@ -1,11 +1,23 @@
-import { useState } from 'react';
-import { Check, Copy, Terminal } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 import { Reveal } from '../motion';
 
-const COMMANDS: { cmd: string; note: string }[] = [
-  { cmd: 'pip install redforge', note: 'Get the CLI (Python 3.11+).' },
-  { cmd: 'redforge install', note: 'Sets up the runtime and dependencies.' },
-  { cmd: 'redforge start', note: 'Runs the same platform, headless.' },
+/**
+ * "Prefer the terminal?" — the CLI is NOT publicly available yet, so this
+ * section shows a preview of it rather than installation instructions.
+ *
+ * Nothing here is runnable and nothing is copyable: advertising
+ * `pip install redforge` while the package is unpublished sends people to a
+ * dead end. When the CLI ships, replace <CliPreview /> below with the real
+ * install steps — the surrounding heading, copy and compatibility table are
+ * already written for that future and need no changes.
+ */
+
+/** Commands the CLI will expose. Presentation only — see the note above. */
+const PREVIEW_COMMANDS: { cmd: string; desc: string }[] = [
+  { cmd: 'evaluate', desc: 'Run model evaluations' },
+  { cmd: 'benchmark', desc: 'Benchmark a model' },
+  { cmd: 'attack', desc: 'Run security tests' },
+  { cmd: 'report', desc: 'Generate reports' },
 ];
 
 const COMPAT: { k: string; v: string }[] = [
@@ -15,34 +27,64 @@ const COMPAT: { k: string; v: string }[] = [
   { k: 'Node.js', v: 'Not required to run' },
 ];
 
-const CLI: { cmd: string; v: string }[] = [
-  { cmd: 'redforge doctor', v: 'Check your system' },
-  { cmd: 'redforge models', v: 'List installed models' },
-  { cmd: 'redforge evaluate <model>', v: 'Run an evaluation' },
-  { cmd: 'redforge diagnose', v: 'Write a support bundle' },
-  { cmd: 'redforge update', v: 'Update to the latest release' },
-];
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    } catch {
-      /* clipboard unavailable — non-fatal */
-    }
-  };
+/**
+ * A silhouette of the CLI — deliberately low-contrast so it reads as something
+ * on the way rather than something you can use. Exposed to assistive tech as a
+ * single labelled image so a screen reader never dictates it as instructions.
+ */
+function CliPreview() {
   return (
-    <button
-      type="button"
-      onClick={onCopy}
-      aria-label={copied ? 'Copied' : `Copy command: ${text}`}
-      className="shrink-0 rounded-md border border-steel-800 bg-char/60 p-2 text-steel-400 transition-colors hover:border-forge/40 hover:text-forge focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forge"
+    <figure
+      role="img"
+      aria-label="Preview of the RedForge command-line interface. The CLI is not available yet."
+      className="glow-forge overflow-hidden rounded-xl border border-steel-800 bg-char/70"
     >
-      {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
-    </button>
+      {/* Title bar */}
+      <div className="flex items-center gap-3 border-b border-steel-800 bg-ink/60 px-4 py-3 sm:px-5">
+        <span aria-hidden className="flex gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-steel-600" />
+          <span className="h-2.5 w-2.5 rounded-full bg-steel-600" />
+          <span className="h-2.5 w-2.5 rounded-full bg-steel-600" />
+        </span>
+        <span className="label ml-auto flex items-center gap-2 text-steel-500">
+          <span aria-hidden className="h-1.5 w-1.5 animate-ember-flicker rounded-full bg-forge" />
+          RedForge CLI
+        </span>
+      </div>
+
+      {/* Body */}
+      <div className="relative px-4 py-6 font-mono sm:px-7 sm:py-8">
+        <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-40" />
+        <div className="relative space-y-5 text-[12px] leading-relaxed sm:text-[13.5px]">
+          <p className="text-bone/70">
+            <span className="select-none text-steel-500">$ </span>
+            redforge
+            <span
+              aria-hidden
+              className="ml-1.5 inline-block h-[1em] w-[0.5em] translate-y-[0.12em] animate-ember-flicker bg-forge/70"
+            />
+          </p>
+
+          <p className="text-steel-400">Local AI engineering from your terminal.</p>
+
+          <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 sm:gap-x-6">
+            {PREVIEW_COMMANDS.map((c) => (
+              <div key={c.cmd} className="contents">
+                <dt className="text-steel-200">
+                  <span aria-hidden className="select-none text-forge/70">
+                    &gt;{' '}
+                  </span>
+                  {c.cmd}
+                </dt>
+                <dd className="min-w-0 text-steel-500">{c.desc}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <p className="label pt-1 text-steel-600">CLI preview</p>
+        </div>
+      </div>
+    </figure>
   );
 }
 
@@ -60,72 +102,53 @@ export function QuickInstall() {
             Prefer the terminal<span className="text-forge">?</span>
           </h2>
         </Reveal>
+
         <Reveal delay={160}>
-          <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-steel-300">
-            Most people should just{' '}
-            <a href="#download" className="text-bone underline decoration-forge/40 underline-offset-4 hover:decoration-forge">
-              download the app
-            </a>
-            . For servers, CI, and headless machines there is a full CLI — same
-            platform, no window. Everything still runs on your machine.
-          </p>
+          <div className="mt-6 flex items-center gap-3">
+            <Terminal size={13} className="text-forge" aria-hidden />
+            <span className="label text-forge">CLI — Coming soon</span>
+          </div>
         </Reveal>
 
-        {/* The three commands */}
-        <ol className="mt-12 space-y-3">
-          {COMMANDS.map((c, i) => (
-            <Reveal key={c.cmd} delay={i * 90}>
-              <li className="flex items-center gap-4 rounded-lg border border-steel-800 bg-char/40 px-4 py-3.5 sm:px-5">
-                <span
-                  aria-hidden
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-forge/40 font-mono text-[13px] text-forge"
-                >
-                  {i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <code className="block break-all font-mono text-[15px] text-bone sm:text-base">
-                    <span className="select-none text-steel-500">$ </span>
-                    {c.cmd}
-                  </code>
-                  <p className="mt-1 text-[13px] text-steel-400">{c.note}</p>
-                </div>
-                <CopyButton text={c.cmd} />
-              </li>
-            </Reveal>
-          ))}
-        </ol>
+        <Reveal delay={200}>
+          <div className="mt-5 max-w-xl space-y-3 text-[15px] leading-relaxed">
+            <p className="text-bone">RedForge CLI is coming soon.</p>
+            <p className="text-steel-300">
+              Run evaluations, benchmarks, and workflows from the terminal — without opening the
+              desktop app.
+            </p>
+            <p className="text-steel-400">
+              Until then,{' '}
+              <a
+                href="#download"
+                className="text-bone underline decoration-forge/40 underline-offset-4 hover:decoration-forge"
+              >
+                download the app
+              </a>
+              . Everything already runs on your machine.
+            </p>
+          </div>
+        </Reveal>
 
-        {/* Compatibility + CLI reference */}
-        <div className="mt-14 grid gap-6 sm:grid-cols-2">
-          <Reveal>
-            <div className="h-full rounded-lg border border-steel-800 bg-char/30 p-6">
-              <h3 className="label text-steel-400">Compatibility</h3>
-              <dl className="mt-4 space-y-2.5">
-                {COMPAT.map((r) => (
-                  <div key={r.k} className="flex items-baseline justify-between gap-4">
-                    <dt className="text-[13px] text-steel-400">{r.k}</dt>
-                    <dd className="text-right text-[13px] text-bone">{r.v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          </Reveal>
-          <Reveal delay={90}>
-            <div className="h-full rounded-lg border border-steel-800 bg-char/30 p-6">
-              <h3 className="label flex items-center gap-2 text-steel-400">
-                <Terminal size={13} aria-hidden /> CLI reference
-              </h3>
-              <dl className="mt-4 space-y-2.5">
-                {CLI.map((r) => (
-                  <div key={r.cmd} className="flex items-baseline justify-between gap-4">
-                    <dt className="font-mono text-[12.5px] text-bone">{r.cmd}</dt>
-                    <dd className="text-right text-[12.5px] text-steel-400">{r.v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          </Reveal>
-        </div>
+        <Reveal delay={240} y={40}>
+          <div className="mt-12">
+            <CliPreview />
+          </div>
+        </Reveal>
+
+        <Reveal delay={120}>
+          <div className="mt-14 rounded-lg border border-steel-800 bg-char/30 p-6">
+            <h3 className="label text-steel-400">Planned compatibility</h3>
+            <dl className="mt-4 grid gap-2.5 sm:grid-cols-2 sm:gap-x-10">
+              {COMPAT.map((r) => (
+                <div key={r.k} className="flex items-baseline justify-between gap-4">
+                  <dt className="text-[13px] text-steel-400">{r.k}</dt>
+                  <dd className="text-right text-[13px] text-bone">{r.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
