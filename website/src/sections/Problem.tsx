@@ -16,7 +16,7 @@ const FAILURES = [
   {
     n: '03',
     title: 'Hallucination',
-    line: 'Confident, fluent, and completely fabricated — presented as fact.',
+    line: 'Confident, fluent, and completely fabricated, presented as fact.',
   },
   {
     n: '04',
@@ -43,7 +43,7 @@ export function Problem() {
           </Reveal>
           <Reveal delay={240}>
             <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-steel-300">
-              RedForge keeps a full red-teaming engine built in — now one capability inside a
+              RedForge keeps a full red-teaming engine built in, now one capability inside a
               complete platform. Throw thousands of adversarial prompts at any local model and see
               exactly where it breaks, with deterministic, exportable results.
             </p>

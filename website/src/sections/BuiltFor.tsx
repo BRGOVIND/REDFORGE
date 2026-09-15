@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { cn } from '../lib/cn';
 
 const AUDIENCES = [
-  { k: 'AI Engineers', v: 'A single local workspace to discover models, engineer prompts, benchmark, evaluate, and ship — without stitching five tools together.' },
-  { k: 'ML Engineers', v: 'Manage datasets, fine-tune (experimental), track experiments, and compare results with real metrics and full lineage — on your own hardware.' },
-  { k: 'Researchers', v: 'Reproducible, citable runs with a versioned benchmark and deterministic evaluation — no prompt ever leaves your machine.' },
+  { k: 'AI Engineers', v: 'A single local workspace to discover models, engineer prompts, benchmark, evaluate, and ship, without stitching five tools together.' },
+  { k: 'ML Engineers', v: 'Manage datasets, fine-tune (experimental), track experiments, and compare results with real metrics and full lineage, on your own hardware.' },
+  { k: 'Researchers', v: 'Reproducible, citable runs with a versioned benchmark and deterministic evaluation, no prompt ever leaves your machine.' },
   { k: 'Students', v: 'A hands-on way to learn the entire local-AI workflow, end to end, for free on a laptop.' },
-  { k: 'Security Engineers', v: 'Red-team any local model in minutes and export findings your team can act on — one capability inside a full platform.' },
+  { k: 'Security Engineers', v: 'Red-team any local model in minutes and export findings your team can act on, one capability inside a full platform.' },
   { k: 'Developers & Hobbyists', v: 'Run models locally with zero API cost, unlimited experimentation, and a native desktop app that just works.' },
 ];
 

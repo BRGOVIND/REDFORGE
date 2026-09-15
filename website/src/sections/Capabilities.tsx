@@ -4,24 +4,24 @@ import {
 } from 'lucide-react';
 import { Reveal } from '../motion';
 
-/** The platform capabilities — RedForge as a complete Local AI Engineering Platform,
+/** The platform capabilities, RedForge as a complete Local AI Engineering Platform,
  *  with security repositioned as one capability among many. */
 const CAPS: { k: string; d: string; icon: typeof Server; exp?: boolean }[] = [
-  { k: 'Runtime Manager', icon: Server, d: 'Detect, connect, and monitor local runtimes — Ollama, LM Studio, llama.cpp, vLLM — from one place.' },
+  { k: 'Runtime Manager', icon: Server, d: 'Detect, connect, and monitor local runtimes (Ollama, LM Studio, llama.cpp, vLLM) from one place.' },
   { k: 'Model Hub', icon: Package, d: 'Browse and one-click download models from Hugging Face and Ollama. No terminal, no manual setup.' },
   { k: 'Projects & Workspaces', icon: Boxes, d: 'Organize models, datasets, runs, and reports into projects with full local lineage.' },
-  { k: 'Datasets', icon: Database, d: 'Import, preprocess, version, and inspect datasets for training and evaluation — all on disk.' },
+  { k: 'Datasets', icon: Database, d: 'Import, preprocess, version, and inspect datasets for training and evaluation, all on disk.' },
   { k: 'Prompt Workbench', icon: FlaskConical, d: 'Design, test, and regression-check prompts across models with side-by-side results.' },
   { k: 'Benchmark Center', icon: Gauge, d: 'Score and compare models across suites; track results over time with real metrics.' },
   { k: 'Evaluation Engine', icon: ScrollText, d: 'Deterministic, reproducible evaluation with heuristics or LLM-as-judge, and clear verdicts.' },
-  { k: 'Security Testing', icon: ShieldCheck, d: 'Red-team any local model with a library of adversarial attacks — one capability, not the whole product.' },
+  { k: 'Security Testing', icon: ShieldCheck, d: 'Red-team any local model with a library of adversarial attacks, one capability, not the whole product.' },
   { k: 'Reports & Analytics', icon: Activity, d: 'Turn runs into structured reports: executive summaries, findings, evidence, and recommendations.' },
-  { k: 'Training', icon: Dumbbell, exp: true, d: 'Fine-tune local models with LoRA / QLoRA. Actively evolving — clearly marked Experimental.' },
-  { k: 'Global Task Manager', icon: Command, d: 'Every long-running job — downloads, benchmarks, training — with progress, ETA, logs, and background execution.' },
+  { k: 'Training', icon: Dumbbell, exp: true, d: 'Fine-tune local models with LoRA / QLoRA. Actively evolving, clearly marked Experimental.' },
+  { k: 'Global Task Manager', icon: Command, d: 'Every long-running job (downloads, benchmarks, training) with progress, ETA, logs, and background execution.' },
   { k: 'Health Engine', icon: HeartPulse, d: 'Continuous checks on Python, CUDA, runtimes, and GPU, with clear, actionable guidance.' },
   { k: 'Model Registry', icon: Layers, d: 'Register runnable checkpoints and adapters with versioned, local metadata.' },
   { k: 'Foundation Models', icon: Brain, d: 'Resolve runtime tags to real Hugging Face repositories, ready for training and export.' },
-  { k: 'Plugin Architecture', icon: Plug, d: 'Extensible by design — add runtimes, attacks, evaluators, and workflows.' },
+  { k: 'Plugin Architecture', icon: Plug, d: 'Extensible by design: add runtimes, attacks, evaluators, and workflows.' },
 ];
 
 export function Capabilities() {
@@ -35,7 +35,7 @@ export function Capabilities() {
           </h2>
           <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-steel-300">
             Discover models, manage runtimes, engineer prompts, benchmark, evaluate, secure, and
-            fine-tune — think VS Code, Docker Desktop, MLflow, and LM Studio for local AI, in one
+            fine-tune, think VS Code, Docker Desktop, MLflow, and LM Studio for local AI, in one
             cohesive, offline-first platform.
           </p>
         </Reveal>

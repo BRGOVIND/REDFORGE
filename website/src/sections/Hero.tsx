@@ -1,7 +1,7 @@
 import { ArrowDown } from 'lucide-react';
 import { ForgeMesh } from './ForgeMesh';
 
-/** Section 2 — Hero. Typography is the hero; whitespace does the rest. */
+/** Section 2, Hero. Typography is the hero; whitespace does the rest. */
 export function Hero({ started }: { started: boolean }) {
   const words = ['BUILD.', 'EVALUATE.', 'MANAGE.'];
   const words2 = ['LOCAL', 'AI.'];
@@ -66,9 +66,9 @@ export function Hero({ started }: { started: boolean }) {
         >
           <span className="mt-1 h-10 w-px shrink-0 bg-forge" />
           <p className="text-[15px] leading-relaxed text-steel-200 sm:text-base">
-            The complete Local AI Engineering Platform. Discover models, manage runtimes,
-            engineer prompts, benchmark, evaluate, secure, and fine-tune — everything you need to
-            build with local AI, running entirely on your machine.
+            RedForge is an open-source desktop workspace for building, evaluating, and securing AI
+            models through Ollama, LM Studio, llama.cpp, and vLLM. Your models, prompts, datasets,
+            and results stay on your machine.
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export function Hero({ started }: { started: boolean }) {
             href="#capabilities"
             className="focus-ring inline-flex items-center gap-2 rounded-full border border-steel-600 px-6 py-3 text-[14px] text-bone transition-colors duration-300 hover:border-steel-400"
           >
-            View Documentation
+            Explore platform
           </a>
           <span className="ml-1 hidden items-center gap-4 text-[12px] text-steel-400 sm:flex">
             <span>⭐ 100% Local</span>
