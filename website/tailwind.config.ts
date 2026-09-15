@@ -1,9 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * RedForge website palette — black + blood red. Pure-black bases, cold steel
+ * RedForge website palette, black + blood red. Pure-black bases, cold steel
  * greys, crisp white, and a single deep "forge red" (blood red, not saffron)
- * used with restraint — glow like hot steel, never LEDs. Intentionally NOT the
+ * used with restraint, glow like hot steel, never LEDs. Intentionally NOT the
  * app's dashboard theme; editorial, cinematic, intimidating.
  */
 const config: Config = {
@@ -24,7 +24,7 @@ const config: Config = {
           200: '#A6A6AF',
         },
         bone: '#EDECE8', // warm off-white
-        // Blood red — deep and restrained. DEFAULT is the accent; `bright` is the
+        // Blood red, deep and restrained. DEFAULT is the accent; `bright` is the
         // hottest allowed tone (hover/active); `deep`/`ember` are shadow reds for
         // gradients and glows. No saffron/orange anywhere.
         forge: {

@@ -1,8 +1,8 @@
-# RedForge — Website
+# RedForge Website
 
 A separate, standalone marketing website for RedForge. **This project does not
 touch `/frontend`** (the application). It is an editorial, cinematic, scroll-told
-experience — a "classified AI security laboratory," not a dashboard or a
+experience, a "classified AI security laboratory," not a dashboard or a
 template.
 
 ```
@@ -33,19 +33,19 @@ src/
 
 ## The story (scroll = narrative)
 
-1. **Entry** — black screen, a forged red line draws itself, the wordmark rises, the curtain lifts.
-2. **Hero** — *Break your model. Before attackers do.*
-3. **The Problem** — the four ways LLMs fail, revealed on interaction.
-4. **Why RedForge Exists** — local-first vision; no cloud, no keys, no subscriptions.
-5. **How It Works** — a pinned, scroll-drawn pipeline: Model → Planner → Attack → Judge → Analysis → Report.
-6. **Under Attack** — an animated scene: adversarial prompts travelling into the model core.
-7. **Benchmark Engine** — 800 cases, adaptive attacks, autonomous evaluation, research mode.
-8. **Built For** — researchers, students, security engineers, companies, contributors.
-9. **Everything Local** — pinned statement: *Your model. Your machine. Your data.*
-10. **Download** — GitHub, Documentation, Roadmap.
-11. **The Horizon** — enterprise, fine-tuning, connectors, research platform + footer.
+1. **Entry**: black screen, a forged red line draws itself, the wordmark rises, the curtain lifts.
+2. **Hero**: *Break your model. Before attackers do.*
+3. **The Problem**: the four ways LLMs fail, revealed on interaction.
+4. **Why RedForge Exists**: local-first vision; no cloud, no keys, no subscriptions.
+5. **How It Works**: a pinned, scroll-drawn pipeline: Model → Planner → Attack → Judge → Analysis → Report.
+6. **Under Attack**: an animated scene: adversarial prompts travelling into the model core.
+7. **Benchmark Engine**: 800 cases, adaptive attacks, autonomous evaluation, research mode.
+8. **Built For**: researchers, students, security engineers, companies, contributors.
+9. **Everything Local**: pinned statement: *Your model. Your machine. Your data.*
+10. **Download**: GitHub, Documentation, Roadmap.
+11. **The Horizon**: enterprise, fine-tuning, connectors, research platform + footer.
 
-## Motion — a deliberate substitution
+## Motion: a deliberate substitution
 
 The brief specifies **GSAP + Framer Motion + Lenis**. This project was built in an
 environment **with no network access**, so those packages could not be installed
@@ -60,7 +60,7 @@ the same feel:
 | Lenis smooth scroll | native smooth scroll + eased reveals (no scroll hijack, so `sticky` pins stay correct) | `index.css` |
 
 **To swap in the real libraries** once a registry is reachable:
-`npm i gsap framer-motion lenis`, then replace the four primitives above — the
+`npm i gsap framer-motion lenis`, then replace the four primitives above, the
 consuming sections don't need to change, only the toolkit internals.
 
 The `node_modules` here is a junction to `/frontend/node_modules` (offline
