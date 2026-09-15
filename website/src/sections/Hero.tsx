@@ -1,6 +1,5 @@
 import { ArrowDown } from 'lucide-react';
-import { Parallax } from '../motion';
-import { HeroSilhouette } from './HeroSilhouette';
+import { ForgeMesh } from './ForgeMesh';
 
 /** Section 2 — Hero. Typography is the hero; whitespace does the rest. */
 export function Hero({ started }: { started: boolean }) {
@@ -10,10 +9,7 @@ export function Hero({ started }: { started: boolean }) {
   const wordStyle = (i: number): React.CSSProperties => ({
     opacity: started ? 1 : 0,
     transform: started ? 'translate3d(0,0,0)' : 'translate3d(0,28px,0)',
-    filter: started ? 'blur(0)' : 'blur(8px)',
-    transition: `opacity 1s cubic-bezier(0.16,1,0.3,1) ${300 + i * 90}ms, transform 1s cubic-bezier(0.16,1,0.3,1) ${300 + i * 90}ms, filter 1s ease ${300 + i * 90}ms`,
-    // GPU-composite the entrance so the blur/translate doesn't flicker.
-    willChange: 'transform, opacity, filter',
+    transition: `opacity 600ms ease ${i * 55}ms, transform 700ms cubic-bezier(0.16,1,0.3,1) ${i * 55}ms`,
     backfaceVisibility: 'hidden',
   });
 
@@ -22,30 +18,29 @@ export function Hero({ started }: { started: boolean }) {
     // first paint (no layout shift); 100svh avoids the mobile URL-bar resize jump.
     <section
       id="top"
-      className="relative flex min-h-screen min-h-[100svh] items-center overflow-hidden pt-16"
+      className="forge-hero relative flex min-h-[100svh] items-center overflow-hidden pb-28 pt-24"
     >
-      <Parallax distance={120} className="pointer-events-none absolute inset-0">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="blueprint-grid absolute inset-0 opacity-50" />
         <div
           className="absolute inset-0"
           style={{ background: 'radial-gradient(120% 80% at 50% 0%, transparent 40%, #050506 100%)' }}
         />
-      </Parallax>
+      </div>
 
       {/* faint ember bloom */}
       <div
-        className="pointer-events-none absolute left-[8%] top-1/3 h-[420px] w-[420px] rounded-full blur-[120px]"
+        className="pointer-events-none absolute inset-0"
         style={{ background: 'radial-gradient(circle, rgba(90,0,0,0.20), transparent 65%)' }}
       />
 
-      {/* barely-visible shadow-fortress skyline — depth behind the text */}
-      <HeroSilhouette />
+      <ForgeMesh active={started} />
 
       <div className="relative mx-auto w-full max-w-editorial px-6 sm:px-10">
-        <h1 className="display text-bone text-[14vw] leading-[0.92] sm:text-[12vw] lg:text-[9.5vw]">
+        <h1 className="display text-bone text-[14vw] leading-[0.92] sm:text-[12vw] lg:text-[min(9.5vw,148px)]">
           <span className="block">
             {words.map((w, i) => (
-              <span key={w} className="inline-block" style={wordStyle(i)}>
+              <span key={w} data-mesh-quiet className="inline-block" style={wordStyle(i)}>
                 {w}&nbsp;
               </span>
             ))}
@@ -54,6 +49,7 @@ export function Hero({ started }: { started: boolean }) {
             {words2.map((w, i) => (
               <span
                 key={w}
+                data-mesh-quiet
                 className={cnWord(w)}
                 style={wordStyle(i + 3)}
               >
@@ -64,8 +60,9 @@ export function Hero({ started }: { started: boolean }) {
         </h1>
 
         <div
+          data-mesh-quiet
           className="mt-10 flex max-w-2xl items-start gap-4 sm:mt-14"
-          style={{ opacity: started ? 1 : 0, transition: 'opacity 1.2s ease 900ms' }}
+          style={{ opacity: started ? 1 : 0, transition: 'opacity 650ms ease 280ms' }}
         >
           <span className="mt-1 h-10 w-px shrink-0 bg-forge" />
           <p className="text-[15px] leading-relaxed text-steel-200 sm:text-base">
@@ -77,8 +74,9 @@ export function Hero({ started }: { started: boolean }) {
 
         {/* Primary + secondary CTAs */}
         <div
+          data-mesh-quiet
           className="mt-9 flex flex-wrap items-center gap-3 sm:mt-11"
-          style={{ opacity: started ? 1 : 0, transition: 'opacity 1.2s ease 1100ms' }}
+          style={{ opacity: started ? 1 : 0, transition: 'opacity 650ms ease 380ms' }}
         >
           <a
             href="#download"
@@ -103,8 +101,9 @@ export function Hero({ started }: { started: boolean }) {
 
       <a
         href="#capabilities"
-        className="focus-ring absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-steel-300"
-        style={{ opacity: started ? 1 : 0, transition: 'opacity 1s ease 1400ms' }}
+        data-mesh-quiet
+        className="focus-ring absolute bottom-7 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-steel-300"
+        style={{ opacity: started ? 1 : 0, transition: 'opacity 650ms ease 480ms' }}
         aria-label="Scroll to begin"
       >
         <span className="label">Scroll</span>
