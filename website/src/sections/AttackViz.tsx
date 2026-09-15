@@ -31,7 +31,7 @@ export function AttackViz() {
             <Reveal delay={240}>
               <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-steel-300">
                 Every category fires waves of adversarial prompts at the core. When one lands, the
-                model lights up — and RedForge records exactly what broke and why.
+                model lights up, and RedForge records exactly what broke and why.
               </p>
             </Reveal>
           </div>

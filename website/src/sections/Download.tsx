@@ -21,12 +21,12 @@ import {
   type OS,
 } from '../config/downloads';
 
-// The desktop app bundles its own backend — Python is NOT a requirement any more.
+// The desktop app bundles its own backend, Python is NOT a requirement any more.
 const REQUIREMENTS = [
   'Windows 10+, macOS 12+, or Linux',
   '8 GB RAM (16 GB recommended)',
   '~2 GB disk for the app',
-  'NVIDIA GPU optional — for training',
+  'NVIDIA GPU optional, for training',
 ];
 
 export function Download() {
@@ -66,7 +66,7 @@ export function Download() {
                   href={primary.url}
                   download={primary.filename}
                   className="focus-ring group mt-8 flex w-full items-center gap-4 rounded-xl border border-forge/50 bg-forge/10 px-5 py-4 transition-all duration-300 ease-forge hover:border-forge/70 hover:bg-forge/20 sm:px-6 sm:py-5"
-                  aria-label={`${primary.label} — ${primary.filename}`}
+                  aria-label={`${primary.label}: ${primary.filename}`}
                 >
                   <DownloadIcon size={22} className="shrink-0 text-forge" />
                   <div className="flex-1">
@@ -146,7 +146,7 @@ export function Download() {
               )}
             </Reveal>
 
-            {/* Install flow — no terminal required */}
+            {/* Install flow, no terminal required */}
             <Reveal delay={400}>
               <div className="mt-8 max-w-sm rounded-lg border border-steel-700 bg-char/60 p-4 text-[13px] leading-relaxed text-steel-300">
                 <span className="label text-steel-500">Three steps</span>

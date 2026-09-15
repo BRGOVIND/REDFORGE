@@ -3,7 +3,7 @@ import { Reveal } from '../motion';
 const LOCAL = ['Ollama', 'LM Studio', 'llama.cpp', 'GGUF', 'Hugging Face', 'vLLM'];
 const CLOUD = ['OpenAI', 'Anthropic', 'Gemini', 'Groq', 'OpenRouter'];
 
-/** Supported technologies — RedForge as the orchestration layer connecting them all. */
+/** Supported technologies, RedForge as the orchestration layer connecting them all. */
 export function Stack() {
   return (
     <section id="stack" className="relative border-t border-steel-800 py-24 sm:py-32">
@@ -14,7 +14,7 @@ export function Stack() {
             The orchestration layer for local &amp; hosted AI.
           </h2>
           <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-steel-300">
-            RedForge connects the runtimes and providers you already use — with local, offline-first
+            RedForge connects the runtimes and providers you already use, with local, offline-first
             execution at its core and hosted providers available when you want them.
           </p>
         </Reveal>

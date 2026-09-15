@@ -2,17 +2,17 @@ import { Terminal } from 'lucide-react';
 import { Reveal } from '../motion';
 
 /**
- * "Prefer the terminal?" — the CLI is NOT publicly available yet, so this
+ * "Prefer the terminal?", the CLI is NOT publicly available yet, so this
  * section shows a preview of it rather than installation instructions.
  *
  * Nothing here is runnable and nothing is copyable: advertising
  * `pip install redforge` while the package is unpublished sends people to a
  * dead end. When the CLI ships, replace <CliPreview /> below with the real
- * install steps — the surrounding heading, copy and compatibility table are
+ * install steps, the surrounding heading, copy and compatibility table are
  * already written for that future and need no changes.
  */
 
-/** Commands the CLI will expose. Presentation only — see the note above. */
+/** Commands the CLI will expose. Presentation only, see the note above. */
 const PREVIEW_COMMANDS: { cmd: string; desc: string }[] = [
   { cmd: 'evaluate', desc: 'Run model evaluations' },
   { cmd: 'benchmark', desc: 'Benchmark a model' },
@@ -28,7 +28,7 @@ const COMPAT: { k: string; v: string }[] = [
 ];
 
 /**
- * A silhouette of the CLI — deliberately low-contrast so it reads as something
+ * A silhouette of the CLI, deliberately low-contrast so it reads as something
  * on the way rather than something you can use. Exposed to assistive tech as a
  * single labelled image so a screen reader never dictates it as instructions.
  */
@@ -106,7 +106,7 @@ export function QuickInstall() {
         <Reveal delay={160}>
           <div className="mt-6 flex items-center gap-3">
             <Terminal size={13} className="text-forge" aria-hidden />
-            <span className="label text-forge">CLI — Coming soon</span>
+            <span className="label text-forge">CLI: Coming soon</span>
           </div>
         </Reveal>
 
@@ -114,7 +114,7 @@ export function QuickInstall() {
           <div className="mt-5 max-w-xl space-y-3 text-[15px] leading-relaxed">
             <p className="text-bone">RedForge CLI is coming soon.</p>
             <p className="text-steel-300">
-              Run evaluations, benchmarks, and workflows from the terminal — without opening the
+              Run evaluations, benchmarks, and workflows from the terminal, without opening the
               desktop app.
             </p>
             <p className="text-steel-400">

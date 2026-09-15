@@ -21,9 +21,9 @@ function CountUp({ to, duration = 1600 }: { to: number; duration?: number }) {
 }
 
 const CAPABILITIES = [
-  { k: 'Adaptive attacks', v: 'Prompts that mutate and escalate in response to a model that resists — the harder it holds, the harder it pushes.' },
+  { k: 'Adaptive attacks', v: 'Prompts that mutate and escalate in response to a model that resists. The harder it holds, the harder it pushes.' },
   { k: 'Autonomous evaluation', v: 'An agent that runs the whole loop unattended, bounded by round, token, and time budgets.' },
-  { k: 'Research mode', v: 'Deterministic, reproducible runs with a versioned dataset — built for results you can cite.' },
+  { k: 'Research mode', v: 'Deterministic, reproducible runs with a versioned dataset, built for results you can cite.' },
 ];
 
 export function Benchmark() {

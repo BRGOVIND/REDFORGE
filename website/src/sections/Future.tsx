@@ -1,11 +1,11 @@
 import { Reveal } from '../motion';
 
 const HORIZON = [
-  { k: 'Real fine-tuning', v: 'Graduate Training from Experimental to production — full local LoRA / QLoRA with real GPU execution.' },
+  { k: 'Real fine-tuning', v: 'Graduate Training from Experimental to production, full local LoRA / QLoRA with real GPU execution.' },
   { k: 'Distributed training', v: 'Scale runs across multiple GPUs and machines, orchestrated from one workspace.' },
   { k: 'Plugin marketplace', v: 'Install community runtimes, attacks, evaluators, and workflows in one click.' },
   { k: 'Agent workflows', v: 'Compose multi-step agentic pipelines over your local models and tools.' },
-  { k: 'Cloud sync & collaboration', v: 'Optional sync and team workspaces — for those who want to share, without giving up local-first.' },
+  { k: 'Cloud sync & collaboration', v: 'Optional sync and team workspaces, for those who want to share, without giving up local-first.' },
 ];
 
 export function Future() {

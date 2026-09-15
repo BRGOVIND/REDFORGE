@@ -2,15 +2,15 @@ import { Package, Database, Dumbbell, Gauge, ShieldCheck, FileText } from 'lucid
 import { usePinProgress } from '../motion';
 import { cn, clamp } from '../lib/cn';
 
-// One connected engineering workflow — not isolated tools. Everything below runs
+// One connected engineering workflow, not isolated tools. Everything below runs
 // locally and flows into the next stage, with full lineage.
 const STAGES = [
-  { k: 'Discover', icon: Package, d: 'Browse the Model Hub and one-click download models from Hugging Face or Ollama — into a local project. No terminal.' },
+  { k: 'Discover', icon: Package, d: 'Browse the Model Hub and one-click download models from Hugging Face or Ollama, into a local project. No terminal.' },
   { k: 'Datasets', icon: Database, d: 'Import, preprocess, and version datasets for training and evaluation. Everything stays on disk, under your control.' },
-  { k: 'Train', icon: Dumbbell, d: 'Fine-tune with LoRA / QLoRA. The workflow mirrors real execution today and is actively evolving — marked Experimental.' },
-  { k: 'Benchmark', icon: Gauge, d: 'Score and compare models across suites, tracked over time — so you know what actually improved.' },
-  { k: 'Secure & Evaluate', icon: ShieldCheck, d: 'Red-team and evaluate any local model with deterministic verdicts — security as one capability among many.' },
-  { k: 'Report & Export', icon: FileText, d: 'Turn runs into structured reports and export results — adapters, GGUF, or an Ollama model — ready to ship.' },
+  { k: 'Train', icon: Dumbbell, d: 'Fine-tune with LoRA / QLoRA. The workflow mirrors real execution today and is actively evolving, marked Experimental.' },
+  { k: 'Benchmark', icon: Gauge, d: 'Score and compare models across suites, tracked over time, so you know what actually improved.' },
+  { k: 'Secure & Evaluate', icon: ShieldCheck, d: 'Red-team and evaluate any local model with deterministic verdicts, security as one capability among many.' },
+  { k: 'Report & Export', icon: FileText, d: 'Turn runs into structured reports and export results (adapters, GGUF, or an Ollama model) ready to ship.' },
 ];
 
 export function Pipeline() {
@@ -23,7 +23,7 @@ export function Pipeline() {
       <div className="sticky top-0 flex h-screen items-center overflow-hidden border-t border-steel-800">
         <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-40" />
         <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
-          {/* Left — the active stage, cross-fading */}
+          {/* Left, the active stage, cross-fading */}
           <div>
             <div className="relative h-[220px] sm:h-[280px]">
               {STAGES.map((s, i) => (
@@ -45,7 +45,7 @@ export function Pipeline() {
             </div>
           </div>
 
-          {/* Right — the drawing pipeline */}
+          {/* Right, the drawing pipeline */}
           <div className="relative mx-auto w-full max-w-sm">
             <div className="absolute bottom-3 left-[19px] top-3 w-px bg-steel-700" />
             <div

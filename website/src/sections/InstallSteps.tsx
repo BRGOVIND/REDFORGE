@@ -3,7 +3,7 @@ import { Reveal } from '../motion';
 
 const STEPS = [
   { icon: Download, k: 'Download', v: 'One installer for your platform. Nothing to configure.', cmd: 'Setup.exe · .dmg · .AppImage' },
-  { icon: Package, k: 'Install', v: 'A normal desktop install — shortcuts, Start menu, uninstaller.', cmd: 'double-click' },
+  { icon: Package, k: 'Install', v: 'A normal desktop install with shortcuts, Start menu, uninstaller.', cmd: 'double-click' },
   { icon: Server, k: 'Launch', v: 'RedForge starts its own backend. No Python, no terminal.', cmd: 'automatic' },
   { icon: Cpu, k: 'Hardware detected', v: 'GPU, VRAM and installed runtimes are found for you.', cmd: 'first-run wizard' },
   { icon: Sparkles, k: 'Get a model', v: 'Pick one from the built-in Model Hub and download it in a click.', cmd: 'Model Hub' },
@@ -46,7 +46,7 @@ export function InstallSteps() {
 
         <Reveal delay={120}>
           <p className="mt-14 text-center text-sm text-steel-400">
-            The backend is <span className="text-bone">bundled</span> — no Python, no Node.js, no
+            The backend is <span className="text-bone">bundled</span>, no Python, no Node.js, no
             terminal. A local runtime (<span className="text-bone">Ollama</span>, LM Studio,
             llama.cpp, or vLLM) is only needed to run models, and RedForge helps you install one.
           </p>
