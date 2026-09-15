@@ -67,7 +67,7 @@ export function Footer() {
             <Wordmark />
             <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-steel-500">
               The Local AI Engineering Platform. Discover, benchmark, evaluate, secure, and
-              fine-tune — everything on your machine.
+              fine-tune, everything on your machine.
             </p>
           </div>
 
@@ -93,7 +93,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-start justify-between gap-3 border-t border-steel-800 pt-8 sm:flex-row sm:items-center">
           <span className="text-[13px] text-steel-500">© 2026 RedForge</span>
-          <span className="label text-steel-600">The Local AI Engineering Platform — forged in the open</span>
+          <span className="label text-steel-600">The Local AI Engineering Platform, forged in the open</span>
         </div>
       </div>
     </footer>
