@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
 import { Download } from 'lucide-react';
 import { Wordmark } from './marks';
 import { cn } from '../lib/cn';
@@ -10,7 +10,7 @@ const LINKS = [
   { href: '#local', label: 'Local' },
 ];
 
-export function Nav({ visible }: { visible: boolean }) {
+export function Nav({ visible, logoRef }: { visible: boolean; logoRef: RefObject<HTMLDivElement> }) {
   const [progress, setProgress] = useState(0);
   const [scrolled, setScrolled] = useState(false);
 
@@ -35,21 +35,21 @@ export function Nav({ visible }: { visible: boolean }) {
   return (
     <header
       className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-all duration-700',
-        visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+        'forge-nav fixed inset-x-0 top-0',
+        visible ? 'is-ready' : 'is-forging'
       )}
     >
       <div
         className={cn(
           'border-b transition-colors duration-500',
-          scrolled ? 'border-steel-700/80 bg-ink/70 backdrop-blur-xl' : 'border-transparent'
+          scrolled && visible ? 'border-steel-700/80 bg-ink/70 backdrop-blur-xl' : 'border-transparent'
         )}
       >
         <nav className="mx-auto flex max-w-editorial items-center justify-between px-6 py-4 sm:px-10">
-          <a href="#top" className="focus-ring rounded" aria-label="RedForge home">
-            <Wordmark />
+          <a href="#top" className="focus-ring rounded" aria-label="RedForge home" data-forge-home>
+            <div ref={logoRef} className="forge-nav-logo"><Wordmark /></div>
           </a>
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="forge-nav-reveal hidden items-center gap-8 md:flex">
             {LINKS.map((l) => (
               <a
                 key={l.href}
@@ -62,7 +62,7 @@ export function Nav({ visible }: { visible: boolean }) {
           </div>
           <a
             href="#download"
-            className="focus-ring group flex items-center gap-2 rounded-full border border-steel-600 px-4 py-2.5 text-[13px] text-bone transition-colors duration-300 hover:border-forge hover:bg-forge/10 sm:py-2"
+            className="forge-nav-reveal focus-ring group flex items-center gap-2 rounded-full border border-steel-600 px-4 py-2.5 text-[13px] text-bone transition-colors duration-300 hover:border-forge hover:bg-forge/10 sm:py-2"
           >
             <Download size={14} className="text-steel-300 transition-colors group-hover:text-forge" />
             Download
@@ -71,7 +71,7 @@ export function Nav({ visible }: { visible: boolean }) {
       </div>
       {/* Forge progress line */}
       <div
-        className="h-px origin-left"
+        className="forge-nav-reveal h-px origin-left"
         style={{
           background: 'linear-gradient(90deg, #5A0000, #A11212, #D12A2A)',
           transform: `scaleX(${progress})`,

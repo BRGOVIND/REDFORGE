@@ -1,105 +1,147 @@
-import { useEffect, useState } from 'react';
-import { Wordmark } from './marks';
+import { useLayoutEffect, useRef, type RefObject } from 'react';
 
-/**
- * Cinematic entry: black → a forged red line draws itself → an ember catches →
- * the wordmark rises → the curtain lifts to reveal the hero. Elegant, slow,
- * silent. Honors reduced-motion by resolving almost instantly.
- */
-export function Entry({ onDone }: { onDone: () => void }) {
-  const [phase, setPhase] = useState(0); // 0 black · 1 line · 2 mark · 3 lift
-  const [gone, setGone] = useState(false);
+const DURATION = 2420;
+const EASE = 'cubic-bezier(0.65, 0, 0.2, 1)';
 
-  useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const seq = reduced ? [50, 120, 200, 320] : [350, 1500, 2900, 3700];
-    const timers = [
-      window.setTimeout(() => setPhase(1), seq[0]),
-      window.setTimeout(() => setPhase(2), seq[1]),
-      window.setTimeout(() => setPhase(3), seq[2]),
-      window.setTimeout(() => {
-        setGone(true);
-        onDone();
-      }, seq[3]),
-    ];
-    document.body.style.overflow = 'hidden';
-    window.scrollTo(0, 0);
-    return () => {
-      timers.forEach(clearTimeout);
-      document.body.style.overflow = '';
+interface EntryProps {
+  logoRef: RefObject<HTMLDivElement>;
+  onDone: () => void;
+}
+
+/** The navbar owns the only logo. This overlay choreographs it in place. */
+export function Entry({ logoRef, onDone }: EntryProps) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const logo = logoRef.current;
+    const overlay = overlayRef.current;
+    if (!logo || !overlay) { onDone(); return; }
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduced.matches || document.hidden || window.scrollY > 4 || location.hash) {
+      onDone();
+      return;
+    }
+
+    const animations: Animation[] = [];
+    let finished = false;
+    let docking: Animation;
+    const started = performance.now();
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (overlay.contains(document.activeElement)) {
+        logo.closest<HTMLAnchorElement>('a')?.focus({ preventScroll: true });
+      }
+      onDone();
     };
-  }, [onDone]);
+    const animate = (element: Element | null, frames: Keyframe[], duration: number, delay = 0) => {
+      if (!element) return;
+      const animation = element.animate(frames, { duration, delay, easing: EASE, fill: 'both' });
+      animations.push(animation);
+    };
 
-  useEffect(() => {
-    if (phase === 3) document.body.style.overflow = '';
-  }, [phase]);
+    const target = logo.getBoundingClientRect();
+    const scale = innerWidth < 640 ? 2 : 2.6;
+    const markSize = logo.querySelector('svg')?.getBoundingClientRect().width ?? 22;
+    const centerY = innerHeight * 0.44;
+    const translate = (x: number, y: number, s: number) => `translate3d(${x}px, ${y}px, 0) scale(${s})`;
+    const markCentered = translate(innerWidth / 2 - target.left - markSize * scale / 2,
+      centerY - target.top - target.height * scale / 2, scale);
+    const wordCentered = translate(innerWidth / 2 - target.left - target.width * scale / 2,
+      centerY - target.top - target.height * scale / 2, scale);
 
-  if (gone) return null;
+    docking = logo.animate([
+      { transform: markCentered, offset: 0 },
+      { transform: markCentered, offset: 0.43, easing: EASE },
+      { transform: wordCentered, offset: 0.64 },
+      { transform: wordCentered, offset: 0.69, easing: EASE },
+      { transform: 'none', offset: 1 },
+    ], { duration: DURATION, fill: 'both', easing: 'linear' });
+    animations.push(docking);
+    docking.onfinish = finish;
+
+    // Flatten the actual chevrons onto the ember axis, contract, then unfold.
+    for (const selector of ['.forge-angle-top', '.forge-angle-bottom']) {
+      animate(logo.querySelector(selector), [
+        { transform: 'scale(0.01, 0.015)', stroke: '#D12A2A', opacity: 0, offset: 0 },
+        { transform: 'scale(9, 0.015)', stroke: '#A11212', opacity: 0.7, offset: 0.28 },
+        { transform: 'scale(1, 0.015)', stroke: '#D12A2A', opacity: 1, offset: 0.66 },
+        { transform: 'none', stroke: '#55555F', opacity: 1, offset: 1 },
+      ], 1320);
+    }
+    animate(logo.querySelector('.forge-flame'), [
+      { transform: 'scale(0.2, 0.12)', opacity: 0, offset: 0 },
+      { transform: 'scale(0.8, 0.28)', opacity: 1, offset: 0.22, fill: '#D12A2A' },
+      { transform: 'scale(0.8, 0.28)', opacity: 1, offset: 0.55, fill: '#D12A2A' },
+      { transform: 'none', opacity: 1, fill: '#A11212', offset: 1 },
+    ], 1320);
+    animate(logo.querySelector('.forge-word'), [
+      { opacity: 0, transform: 'translateX(-8px)', clipPath: 'inset(0 100% 0 0)' },
+      { opacity: 1, transform: 'none', clipPath: 'inset(0 0% 0 0)' },
+    ], 440, 1040);
+    animate(overlay, [{ opacity: 1 }, { opacity: 0 }], 660, 1760);
+    animate(overlay.querySelector('p'), [
+      { opacity: 0, offset: 0 }, { opacity: 0.7, offset: 0.35 },
+      { opacity: 0.7, offset: 0.65 }, { opacity: 0, offset: 1 },
+    ], 1550, 300);
+
+    const resize = () => {
+      if (finished) return;
+      // Rebase from the current visual position to the newly measured navbar slot.
+      const current = logo.getBoundingClientRect();
+      docking.cancel();
+      const destination = logo.getBoundingClientRect();
+      docking = logo.animate([
+        { transform: translate(current.left - destination.left, current.top - destination.top,
+          current.width / destination.width) },
+        { transform: 'none' },
+      ], { duration: Math.max(120, DURATION - (performance.now() - started)), easing: EASE, fill: 'both' });
+      animations.push(docking);
+      docking.onfinish = finish;
+    };
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape' || event.key === 'Tab') finish(); };
+    const visibility = () => { if (document.hidden) finish(); };
+    const interact = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest('a, button')) finish();
+    };
+    const fallback = window.setTimeout(finish, DURATION + 160);
+    let logoWidth = logo.offsetWidth;
+    const logoObserver = new ResizeObserver(() => {
+      if (logo.offsetWidth !== logoWidth) {
+        logoWidth = logo.offsetWidth;
+        resize();
+      }
+    });
+    logoObserver.observe(logo);
+    window.addEventListener('resize', resize);
+    window.addEventListener('keydown', key);
+    window.addEventListener('wheel', finish, { passive: true });
+    window.addEventListener('touchmove', finish, { passive: true });
+    document.addEventListener('pointerdown', interact);
+    document.addEventListener('focusin', interact);
+    document.addEventListener('visibilitychange', visibility);
+    reduced.addEventListener('change', finish);
+    return () => {
+      finished = true;
+      clearTimeout(fallback);
+      logoObserver.disconnect();
+      animations.forEach(animation => animation.cancel());
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('keydown', key);
+      window.removeEventListener('wheel', finish);
+      window.removeEventListener('touchmove', finish);
+      document.removeEventListener('pointerdown', interact);
+      document.removeEventListener('focusin', interact);
+      document.removeEventListener('visibilitychange', visibility);
+      reduced.removeEventListener('change', finish);
+    };
+  }, [logoRef, onDone]);
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink"
-      style={{
-        transform: phase === 3 ? 'translateY(-100%)' : 'none',
-        opacity: phase === 3 ? 0 : 1,
-        transition: 'transform 1000ms cubic-bezier(0.7,0,0.2,1), opacity 900ms ease',
-      }}
-      aria-hidden={phase === 3}
-    >
-      {/* Wordmark rises */}
-      <div
-        className="mb-8"
-        style={{
-          opacity: phase >= 2 ? 1 : 0,
-          transform: phase >= 2 ? 'translateY(0)' : 'translateY(14px)',
-          filter: phase >= 2 ? 'blur(0)' : 'blur(6px)',
-          transition: 'opacity 900ms ease, transform 900ms cubic-bezier(0.16,1,0.3,1), filter 900ms ease',
-        }}
-      >
-        <Wordmark className="scale-[1.6]" />
-      </div>
-
-      {/* Forged line + ember */}
-      <div className="relative flex h-6 w-[min(60vw,520px)] items-center justify-center">
-        <div
-          className="absolute h-px w-full origin-center"
-          style={{
-            background: 'linear-gradient(90deg, transparent, #A11212 20%, #D12A2A 50%, #A11212 80%, transparent)',
-            transform: `scaleX(${phase >= 1 ? 1 : 0})`,
-            opacity: phase >= 1 ? 1 : 0,
-            boxShadow: '0 0 24px 1px rgba(122,0,0,0.5)',
-            transition: 'transform 1100ms cubic-bezier(0.16,1,0.3,1), opacity 700ms ease',
-          }}
-        />
-        <div
-          className="absolute h-2.5 w-2.5 rounded-full"
-          style={{
-            background: 'radial-gradient(circle, #D12A2A, #A11212 45%, #5A0000 75%)',
-            boxShadow: '0 0 24px 6px rgba(122,0,0,0.6)',
-            opacity: phase >= 1 ? 1 : 0,
-            transform: phase >= 1 ? 'scale(1)' : 'scale(0.3)',
-            transition: 'opacity 600ms ease 200ms, transform 900ms cubic-bezier(0.16,1,0.3,1) 200ms',
-          }}
-        />
-      </div>
-
-      <p
-        className="label mt-10"
-        style={{ opacity: phase === 2 ? 0.7 : 0, transition: 'opacity 800ms ease 300ms' }}
-      >
-        Local AI Security Laboratory
-      </p>
-
-      <button
-        onClick={() => {
-          setGone(true);
-          document.body.style.overflow = '';
-          onDone();
-        }}
-        className="focus-ring absolute bottom-8 right-8 label hover:text-steel-200"
-      >
-        Skip
-      </button>
+    <div ref={overlayRef} className="forge-entry">
+      <p className="label forge-entry-caption" aria-hidden="true">Local AI Security Laboratory</p>
+      <button onClick={onDone} className="focus-ring forge-entry-skip label hover:text-steel-200">Skip</button>
     </div>
   );
 }
