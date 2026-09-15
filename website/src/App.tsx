@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Entry } from './components/Entry';
 import { Nav } from './components/Nav';
 import { Hero } from './sections/Hero';
@@ -20,11 +20,13 @@ import { Footer } from './components/Footer';
 
 export default function App() {
   const [entered, setEntered] = useState(false);
+  const logoRef = useRef<HTMLDivElement>(null);
+  const finishEntry = useCallback(() => setEntered(true), []);
 
   return (
     <div className="grain relative min-h-screen bg-ink">
-      {!entered && <Entry onDone={() => setEntered(true)} />}
-      <Nav visible={entered} />
+      <Nav visible={entered} logoRef={logoRef} />
+      {!entered && <Entry logoRef={logoRef} onDone={finishEntry} />}
       <main>
         <Hero started={entered} />
         <Capabilities />
