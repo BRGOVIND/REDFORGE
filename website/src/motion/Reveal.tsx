@@ -18,7 +18,7 @@ interface RevealProps {
 }
 
 /**
- * Slow, confident reveal — the site's primary entrance motion. Fades + eases a
+ * Slow, confident reveal, the site's primary entrance motion. Fades + eases a
  * slight translate/blur as the element enters view. (A drop-in for the
  * Framer-Motion `whileInView` the brief mentions; the API is intentionally
  * similar.)
@@ -45,7 +45,7 @@ export function Reveal({
   };
 
   return (
-    // @ts-expect-error — ref typing across the polymorphic tag union is safe here
+    // @ts-expect-error, ref typing across the polymorphic tag union is safe here
     <Tag ref={ref} style={style} className={cn(className)}>
       {children}
     </Tag>

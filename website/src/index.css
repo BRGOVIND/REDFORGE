@@ -103,6 +103,57 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
+  /* Shared axis keeps principle markers centered on their connecting rail. */
+  .principle-list {
+    --principle-axis: 0.5rem;
+    --principle-center: 0.75rem;
+  }
+
+  .principle-item {
+    position: relative;
+    padding-left: 2.5rem;
+    padding-bottom: 3rem;
+  }
+
+  .principle-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .principle-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: var(--principle-axis);
+    top: var(--principle-center);
+    bottom: calc(-1 * var(--principle-center));
+    width: 1px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, #562326, #26262b 45%, #562326);
+    pointer-events: none;
+  }
+
+  .principle-node {
+    position: absolute;
+    z-index: 1;
+    left: var(--principle-axis);
+    top: var(--principle-center);
+    width: 1rem;
+    height: 1rem;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(161, 18, 18, 0.5);
+    border-radius: 50%;
+    background: #050506;
+    box-shadow: 0 0 12px rgba(161, 18, 18, 0.12);
+    pointer-events: none;
+  }
+
+  .principle-node::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    background: #c42a2a;
+  }
+
   /* Vertical hairline */
   .hairline {
     background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.14), transparent);

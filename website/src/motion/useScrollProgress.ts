@@ -4,7 +4,7 @@ import { clamp } from '../lib/cn';
 /**
  * Progress (0→1) of an element travelling through the viewport:
  * 0 as its top reaches the bottom of the screen, 1 as its bottom leaves the top.
- * rAF-throttled, passive — the basis for parallax and scroll-linked motion.
+ * rAF-throttled, passive, the basis for parallax and scroll-linked motion.
  */
 export function useScrollProgress<T extends HTMLElement = HTMLDivElement>(): [
   React.RefObject<T>,

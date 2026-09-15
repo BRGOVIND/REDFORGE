@@ -6,7 +6,7 @@ interface Options {
   margin?: string;
 }
 
-/** IntersectionObserver hook — the backbone of every scroll reveal. */
+/** IntersectionObserver hook, the backbone of every scroll reveal. */
 export function useInView<T extends HTMLElement = HTMLDivElement>({
   once = true,
   threshold = 0.15,
