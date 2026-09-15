@@ -1,7 +1,7 @@
 {
-  "name": "RedForge — Local AI Red Teaming",
+  "name": "RedForge: Local AI Red Teaming",
   "short_name": "RedForge",
-  "description": "A local AI security laboratory. Adversarial evaluation for LLMs — on your machine, no cloud.",
+  "description": "A local AI security laboratory. Adversarial evaluation for LLMs, on your machine, no cloud.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

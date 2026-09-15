@@ -1,12 +1,12 @@
 /**
- * Download configuration — the single source of truth for the distribution portal.
+ * Download configuration, the single source of truth for the distribution portal.
  *
  * Two layers, so the buttons are never wrong and never need a site rebuild:
  *
- *   1. **Static fallback** — filenames derived from the VERSION baked in at build
+ *   1. **Static fallback**: filenames derived from the VERSION baked in at build
  *      time. Always renders instantly, works with JS disabled, and matches the
  *      artifactName patterns in `desktop/package.json` exactly.
- *   2. **Live resolution** — on mount we ask the GitHub Releases API for the
+ *   2. **Live resolution**: on mount we ask the GitHub Releases API for the
  *      *latest* release and swap in its real assets. Publishing a new release is
  *      therefore enough; the site follows automatically.
  *
@@ -77,7 +77,7 @@ export interface Release {
   assets: Asset[];
   notesUrl: string;
   checksumsUrl: string;
-  /** Where the data came from — 'static' means the live lookup hasn't landed. */
+  /** Where the data came from, 'static' means the live lookup hasn't landed. */
   source: 'static' | 'github';
 }
 
@@ -118,7 +118,7 @@ export async function fetchLatestRelease(signal?: AbortSignal): Promise<Release 
         assets.push({ id, label, note, filename: hit.name, url: hit.browser_download_url, size: hit.size });
       }
     }
-    // A release with no recognisable installers is not useful — keep the fallback.
+    // A release with no recognisable installers is not useful, keep the fallback.
     if (assets.length === 0) return null;
 
     const sums = data.assets.find((a) => /^SHA256SUMS/i.test(a.name));
@@ -130,7 +130,7 @@ export async function fetchLatestRelease(signal?: AbortSignal): Promise<Release 
       source: 'github',
     };
   } catch {
-    return null; // offline, rate-limited, or blocked — the fallback stands
+    return null; // offline, rate-limited, or blocked, the fallback stands
   }
 }
 
@@ -157,7 +157,7 @@ export function useLatestRelease(): { release: Release; live: boolean } {
       setRelease(latest);
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(latest));
-      } catch { /* storage disabled — not fatal */ }
+      } catch { /* storage disabled, not fatal */ }
     });
     return () => controller.abort();
   }, []);
