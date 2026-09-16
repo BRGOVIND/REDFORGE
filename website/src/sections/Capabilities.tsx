@@ -29,7 +29,6 @@ export function Capabilities() {
     <section id="capabilities" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <p className="label mb-5">The platform</p>
           <h2 className="display max-w-3xl text-4xl leading-[1.04] text-bone sm:text-5xl lg:text-6xl">
             One application for the entire <span className="text-ember-gradient">local AI</span> workflow.
           </h2>

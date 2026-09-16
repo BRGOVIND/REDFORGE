@@ -138,7 +138,7 @@ export function QuickInstall() {
 
         <Reveal delay={120}>
           <div className="mt-14 rounded-lg border border-steel-800 bg-char/30 p-6">
-            <h3 className="label text-steel-400">Planned compatibility</h3>
+            <h3 className="text-sm font-medium text-bone">CLI compatibility</h3>
             <dl className="mt-4 grid gap-2.5 sm:grid-cols-2 sm:gap-x-10">
               {COMPAT.map((r) => (
                 <div key={r.k} className="flex items-baseline justify-between gap-4">

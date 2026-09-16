@@ -45,7 +45,6 @@ export function BuiltFor() {
 
           <div className="lg:col-span-5 lg:pt-6">
             <div className="sticky top-32 border-l border-steel-700 pl-8">
-              <p className="label mb-6">In practice</p>
               <div className="relative min-h-[140px]">
                 {AUDIENCES.map((a, i) => (
                   <p

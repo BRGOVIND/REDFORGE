@@ -9,7 +9,6 @@ export function Stack() {
     <section id="stack" className="relative border-t border-steel-800 py-24 sm:py-32">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <p className="label mb-5">Supported technologies</p>
           <h2 className="display max-w-2xl text-4xl leading-[1.05] text-bone sm:text-5xl">
             The orchestration layer for local &amp; hosted AI.
           </h2>
@@ -21,7 +20,7 @@ export function Stack() {
 
         <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
           <Reveal>
-            <p className="label mb-4 text-forge">Local runtimes</p>
+            <h3 className="mb-4 text-sm font-medium text-bone">Local runtimes</h3>
             <div className="flex flex-wrap gap-2.5">
               {LOCAL.map((t) => (
                 <span key={t} className="rounded-lg border border-steel-700 bg-char/50 px-3.5 py-2 text-[13px] text-bone">
@@ -31,7 +30,7 @@ export function Stack() {
             </div>
           </Reveal>
           <Reveal delay={120}>
-            <p className="label mb-4">Hosted providers</p>
+            <h3 className="mb-4 text-sm font-medium text-bone">Hosted providers</h3>
             <div className="flex flex-wrap gap-2.5">
               {CLOUD.map((t) => (
                 <span key={t} className="rounded-lg border border-steel-800 bg-ink px-3.5 py-2 text-[13px] text-steel-200">

@@ -32,9 +32,6 @@ export function Problem() {
     <section id="security" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-4">
-          <Reveal delay={80}>
-            <p className="label mb-4">Security testing · one capability</p>
-          </Reveal>
           <Reveal delay={120}>
             <h2 className="display text-5xl text-bone sm:text-6xl">
               Every model has a<br />
