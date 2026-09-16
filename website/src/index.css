@@ -188,12 +188,11 @@
 
 @layer utilities {
   .label {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 400;
-    font-size: 11px;
-    letter-spacing: 0.3em;
-    line-height: 1;
-    text-transform: uppercase;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
     color: #82828c;
     -webkit-font-smoothing: antialiased;
     text-rendering: geometricPrecision;

@@ -73,7 +73,7 @@ export function Footer() {
 
           {COLUMNS.map((col) => (
             <nav key={col.title} aria-label={col.title}>
-              <p className="label mb-4 text-steel-500">{col.title}</p>
+              <h2 className="mb-4 text-sm font-medium text-bone">{col.title}</h2>
               <ul className="space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.label}>
@@ -93,7 +93,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-start justify-between gap-3 border-t border-steel-800 pt-8 sm:flex-row sm:items-center">
           <span className="text-[13px] text-steel-500">© 2026 RedForge</span>
-          <span className="label text-steel-600">The Local AI Engineering Platform, forged in the open</span>
+          <span className="text-[12px] text-steel-600">The Local AI Engineering Platform, forged in the open</span>
         </div>
       </div>
     </footer>
