@@ -1,10 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * RedForge website palette, black + blood red. Pure-black bases, cold steel
- * greys, crisp white, and a single deep "forge red" (blood red, not saffron)
- * used with restraint, glow like hot steel, never LEDs. Intentionally NOT the
- * app's dashboard theme; editorial, cinematic, intimidating.
+ * Legacy semantic colors used by the landing sections. The light theme maps
+ * these utilities to warm paper, charcoal, and RedForge red in index.css.
+ * The black palette remains available for the brief entry animation.
  */
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],

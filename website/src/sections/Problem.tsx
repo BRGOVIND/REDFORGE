@@ -77,7 +77,7 @@ export function Problem() {
                   <p
                     className="mt-4 max-w-lg text-[14px] leading-relaxed text-steel-400 transition-all duration-500 ease-forge"
                     style={{
-                      opacity: active === i ? 1 : 0.35,
+                      opacity: active === i ? 1 : 0.8,
                     }}
                   >
                     {f.line}

@@ -27,5 +27,5 @@
     "typescript": "^5.5.4",
     "vite": "^7.3.6"
   },
-  "comment": "Motion is implemented in-house (see src/motion). The design brief calls for GSAP + Framer Motion + Lenis; add them with `npm i gsap framer-motion lenis` when a registry is reachable and swap the in-house primitives in src/motion, the seams are documented there."
+  "comment": "Motion uses the small local utilities in src/motion."
 }

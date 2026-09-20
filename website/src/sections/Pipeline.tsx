@@ -16,16 +16,15 @@ const STAGES = [
 export function Pipeline() {
   const [ref, progress] = usePinProgress<HTMLDivElement>();
   const active = clamp(Math.floor(progress * STAGES.length), 0, STAGES.length - 1);
-  const drawn = clamp(progress * 1.02, 0, 1);
 
   return (
     <section id="how" ref={ref} className="relative" style={{ height: '360vh' }}>
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden border-t border-steel-800">
+      <div className="pipeline-pin sticky top-0 flex h-screen items-center overflow-hidden">
         <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-40" />
         <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
           {/* Left, the active stage, cross-fading */}
           <div>
-            <div className="relative h-[220px] sm:h-[280px]">
+            <div className="pipeline-stage relative h-[220px] sm:h-[280px]">
               {STAGES.map((s, i) => (
                 <div
                   key={s.k}
@@ -47,29 +46,20 @@ export function Pipeline() {
 
           {/* Right, the drawing pipeline */}
           <div className="relative mx-auto w-full max-w-sm">
-            <div className="absolute bottom-3 left-[19px] top-3 w-px bg-steel-700" />
-            <div
-              className="absolute left-[19px] top-3 w-px origin-top"
-              style={{
-                height: `calc((100% - 24px) * ${drawn})`,
-                background: 'linear-gradient(180deg, #D12A2A, #A11212, #5A0000)',
-                boxShadow: '0 0 12px rgba(122,0,0,0.5)',
-              }}
-            />
-            <div className="flex flex-col gap-6 sm:gap-9">
+            <div className="pipeline-timeline flex flex-col">
               {STAGES.map((s, i) => {
                 const lit = i <= active;
                 const Icon = s.icon;
                 return (
-                  <div key={s.k} className="flex items-center gap-5">
+                  <div key={s.k} className={cn('pipeline-step relative flex items-center gap-5', i < active && 'is-complete')}>
                     <span
                       className={cn(
                         'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-500 ease-forge',
                         lit
-                          ? 'border-forge bg-forge/10 text-forge'
+                          ? 'border-forge bg-[#f8f6f2] text-forge'
                           : 'border-steel-700 bg-char text-steel-500'
                       )}
-                      style={lit ? { boxShadow: '0 0 22px -4px rgba(122,0,0,0.6)' } : undefined}
+                      style={lit ? { boxShadow: '0 3px 12px rgba(122,0,0,0.1)' } : undefined}
                     >
                       <Icon size={16} />
                     </span>

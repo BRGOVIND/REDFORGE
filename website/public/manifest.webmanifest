@@ -1,12 +1,12 @@
 {
-  "name": "RedForge: Local AI Red Teaming",
+  "name": "RedForge: Build locally. Know what works.",
   "short_name": "RedForge",
-  "description": "A local AI security laboratory. Adversarial evaluation for LLMs, on your machine, no cloud.",
+  "description": "An open-source desktop workspace for local AI. Discover models, compare runs, test prompts, and check security.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#050506",
-  "theme_color": "#050506",
+  "background_color": "#f2efe8",
+  "theme_color": "#f2efe8",
   "icons": [
     { "src": "/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
     { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },

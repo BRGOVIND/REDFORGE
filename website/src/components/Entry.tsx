@@ -140,7 +140,7 @@ export function Entry({ logoRef, onDone }: EntryProps) {
 
   return (
     <div ref={overlayRef} className="forge-entry">
-      <p className="label forge-entry-caption" aria-hidden="true">Local AI Security Laboratory</p>
+      <p className="label forge-entry-caption" aria-hidden="true">RedForge desktop workspace</p>
       <button onClick={onDone} className="focus-ring forge-entry-skip label hover:text-steel-200">Skip</button>
     </div>
   );

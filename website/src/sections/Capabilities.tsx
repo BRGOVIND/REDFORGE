@@ -1,66 +1,78 @@
-import {
-  Server, Package, Boxes, Database, FlaskConical, Gauge, ShieldCheck, ScrollText,
-  Dumbbell, Activity, HeartPulse, Layers, Brain, Plug, Command,
-} from 'lucide-react';
+import { useState } from 'react';
 import { Reveal } from '../motion';
 
-/** The platform capabilities, RedForge as a complete Local AI Engineering Platform,
- *  with security repositioned as one capability among many. */
-const CAPS: { k: string; d: string; icon: typeof Server; exp?: boolean }[] = [
-  { k: 'Runtime Manager', icon: Server, d: 'Detect, connect, and monitor local runtimes (Ollama, LM Studio, llama.cpp, vLLM) from one place.' },
-  { k: 'Model Hub', icon: Package, d: 'Browse and one-click download models from Hugging Face and Ollama. No terminal, no manual setup.' },
-  { k: 'Projects & Workspaces', icon: Boxes, d: 'Organize models, datasets, runs, and reports into projects with full local lineage.' },
-  { k: 'Datasets', icon: Database, d: 'Import, preprocess, version, and inspect datasets for training and evaluation, all on disk.' },
-  { k: 'Prompt Workbench', icon: FlaskConical, d: 'Design, test, and regression-check prompts across models with side-by-side results.' },
-  { k: 'Benchmark Center', icon: Gauge, d: 'Score and compare models across suites; track results over time with real metrics.' },
-  { k: 'Evaluation Engine', icon: ScrollText, d: 'Deterministic, reproducible evaluation with heuristics or LLM-as-judge, and clear verdicts.' },
-  { k: 'Security Testing', icon: ShieldCheck, d: 'Red-team any local model with a library of adversarial attacks, one capability, not the whole product.' },
-  { k: 'Reports & Analytics', icon: Activity, d: 'Turn runs into structured reports: executive summaries, findings, evidence, and recommendations.' },
-  { k: 'Training', icon: Dumbbell, exp: true, d: 'Fine-tune local models with LoRA / QLoRA. Actively evolving, clearly marked Experimental.' },
-  { k: 'Global Task Manager', icon: Command, d: 'Every long-running job (downloads, benchmarks, training) with progress, ETA, logs, and background execution.' },
-  { k: 'Health Engine', icon: HeartPulse, d: 'Continuous checks on Python, CUDA, runtimes, and GPU, with clear, actionable guidance.' },
-  { k: 'Model Registry', icon: Layers, d: 'Register runnable checkpoints and adapters with versioned, local metadata.' },
-  { k: 'Foundation Models', icon: Brain, d: 'Resolve runtime tags to real Hugging Face repositories, ready for training and export.' },
-  { k: 'Plugin Architecture', icon: Plug, d: 'Extensible by design: add runtimes, attacks, evaluators, and workflows.' },
+const CAPS = [
+  { k: 'Runtime Manager', d: 'Detect, connect, and monitor Ollama, LM Studio, llama.cpp, and vLLM from one place.' },
+  { k: 'Model Hub', d: 'Browse and download models from Hugging Face and Ollama without a terminal.' },
+  { k: 'Projects & Workspaces', d: 'Keep models, datasets, runs, and reports together in local projects.' },
+  { k: 'Datasets', d: 'Import, prepare, version, and inspect datasets on your own disk.' },
+  { k: 'Prompt Workbench', d: 'Design, test, and compare prompts across models.' },
+  { k: 'Benchmark Center', d: 'Run benchmark suites and compare models with recorded results.' },
+  { k: 'Evaluation Engine', d: 'Use reproducible evaluations with clear verdicts.' },
+  { k: 'Security Testing', d: 'Red-team local models with a library of adversarial attacks.' },
+  { k: 'Reports & Analytics', d: 'Turn runs into reports with findings and evidence.' },
+  { k: 'Training', d: 'Explore local fine-tuning with LoRA and QLoRA.', exp: true },
+  { k: 'Global Task Manager', d: 'Track downloads, benchmarks, and training jobs with progress and logs.' },
+  { k: 'Health Engine', d: 'Check Python, CUDA, runtimes, and GPU health.' },
+  { k: 'Model Registry', d: 'Register checkpoints and adapters with versioned local metadata.' },
+  { k: 'Foundation Models', d: 'Connect runtime tags to Hugging Face repositories for training and export.' },
+  { k: 'Plugin Architecture', d: 'Add runtimes, attacks, evaluators, and workflows.' },
+];
+
+const GROUPS = [
+  { title: 'Get started', note: 'Set up a local workspace', items: CAPS.slice(0, 5) },
+  { title: 'Test and improve', note: 'See what works and why', items: CAPS.slice(5, 10) },
+  { title: 'Run and extend', note: 'Keep the work moving', items: CAPS.slice(10) },
 ];
 
 export function Capabilities() {
+  const [active, setActive] = useState(0);
+
   return (
-    <section id="capabilities" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+    <section id="capabilities" className="workbench-features">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
-          <h2 className="display max-w-3xl text-4xl leading-[1.04] text-bone sm:text-5xl lg:text-6xl">
-            One application for the entire <span className="text-ember-gradient">local AI</span> workflow.
-          </h2>
-          <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-steel-300">
-            Discover models, manage runtimes, engineer prompts, benchmark, evaluate, secure, and
-            fine-tune, think VS Code, Docker Desktop, MLflow, and LM Studio for local AI, in one
-            cohesive, offline-first platform.
+          <h2>One place for the whole job.</h2>
+          <p className="workbench-features-intro">
+            Start with a model. Build a workflow around it. Keep the evidence when you are done.
           </p>
         </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-steel-800 bg-steel-800 sm:grid-cols-2 lg:grid-cols-3">
-          {CAPS.map((c, i) => {
-            const Icon = c.icon;
-            return (
-              <Reveal key={c.k} delay={(i % 3) * 80}>
-                <div className="group relative h-full bg-ink p-6 transition-colors duration-300 hover:bg-char/60">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-steel-700 bg-char text-steel-300 transition-colors duration-300 group-hover:border-forge group-hover:text-forge">
-                      <Icon size={16} />
-                    </span>
-                    <h3 className="display text-lg text-bone">{c.k}</h3>
-                    {c.exp && (
-                      <span className="rounded bg-forge/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-forge">
-                        Experimental
-                      </span>
-                    )}
+        <div className="workbench-features-layout">
+          <div className="workbench-features-groups" aria-label="Explore RedForge capabilities">
+            {GROUPS.map((group, index) => (
+              <button
+                key={group.title}
+                type="button"
+                aria-pressed={active === index}
+                onClick={() => setActive(index)}
+                className="workbench-features-group focus-ring"
+              >
+                <span className="workbench-features-group-number">0{index + 1}</span>
+                <span>
+                  <strong>{group.title}</strong>
+                  <small>{group.note}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="workbench-features-detail" aria-live="polite">
+            <p>{GROUPS[active].title} in RedForge</p>
+            <ul>
+              {GROUPS[active].items.map((item, index) => (
+                <li key={item.k}>
+                  <span className="workbench-features-item-number">0{index + 1}</span>
+                  <div>
+                    <h3>
+                      {item.k}
+                      {'exp' in item && item.exp && <span>Experimental</span>}
+                    </h3>
+                    <p>{item.d}</p>
                   </div>
-                  <p className="mt-3 text-[13px] leading-relaxed text-steel-400">{c.d}</p>
-                </div>
-              </Reveal>
-            );
-          })}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>

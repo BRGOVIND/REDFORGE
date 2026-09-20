@@ -22,8 +22,8 @@ export function Local() {
                 'display text-[13vw] leading-[1.02] transition-all duration-700 ease-forge lg:text-[8.5vw]'
               )}
               style={{
-                color: i <= active ? '#EDECE8' : '#2A2A31',
-                opacity: i <= active ? 1 : 0.5,
+                color: i <= active ? '#272321' : '#b8b0a5',
+                opacity: i <= active ? 1 : 0.7,
                 transform: i === active ? 'scale(1)' : 'scale(0.985)',
               }}
             >
@@ -40,7 +40,7 @@ export function Local() {
             transition: 'opacity 700ms ease, transform 700ms cubic-bezier(0.16,1,0.3,1)',
           }}
         >
-          {['No API keys', 'No cloud', 'No vendor lock-in'].map((t) => (
+          {['Local by default', 'No account for local use', 'Hosted when you choose'].map((t) => (
             <span key={t} className="label flex items-center gap-2 text-steel-300">
               <span className="h-1 w-1 rounded-full bg-forge" />
               {t}

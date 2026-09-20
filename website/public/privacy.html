@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Privacy Policy | RedForge</title>
-    <meta name="description" content="RedForge privacy policy. RedForge is a local-first application, your data never leaves your machine." />
+    <meta name="description" content="RedForge privacy policy for local runtimes, optional hosted providers, and website services." />
     <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/legal.css" />
   </head>
@@ -17,39 +17,41 @@
     </header>
     <main class="wrap">
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated · July 2026</p>
+      <p class="updated">Last updated · September 2026</p>
 
       <p>
-        RedForge is a <strong>local-first application</strong>. The core principle behind it is
-        that your data stays on your machine, and this policy simply describes what that means.
+        RedForge is a <strong>local-first application</strong>. You can run models through local
+        runtimes or choose to connect a hosted provider. This page describes how those choices
+        affect your data.
       </p>
 
       <h2>What the application collects</h2>
       <p>
-        <strong>Nothing.</strong> RedForge runs entirely on your computer and communicates only with
-        your local Ollama instance. It does not send prompts, model responses, evaluation results,
-        reports, or usage data to any remote server. There is no account, no login, and no telemetry.
+        RedForge does not require a RedForge account or send prompts and results to a RedForge
+        cloud service. With a local runtime, model inference stays on your computer. If you connect
+        a hosted provider, the requests you send to it leave your machine and are handled under
+        that provider's policies.
       </p>
 
       <h2>Where your data lives</h2>
       <p>
-        All evaluation data (attacks, model responses, sessions, findings, and reports) is stored in
-        a local SQLite database on your machine. You own it, you can inspect it, and you can delete it
-        at any time. Nothing is transmitted off-device.
+        Workspace records, including evaluation sessions, findings, and reports, are stored in a
+        local SQLite database on your machine. Requests sent to a hosted provider are also processed
+        by that provider. Review its privacy policy before sending sensitive material.
       </p>
 
       <h2>This website</h2>
       <p>
         This marketing website is a static site. It sets no tracking cookies and runs no analytics.
-        It loads web fonts from Google Fonts; when it does, your browser contacts Google's servers,
-        and Google's own privacy policy applies to that request. No other third-party services are used.
+        It loads fonts from Google Fonts and requests release information from GitHub so download
+        links can point to current installers. Your browser contacts those services for those requests.
       </p>
 
       <h2>Third parties</h2>
       <p>
-        RedForge depends on <a href="https://ollama.com">Ollama</a> to run models locally. Ollama runs
-        on your machine as well; refer to its documentation for its own behavior. RedForge itself adds
-        no external network calls.
+        Local runtimes such as <a href="https://ollama.com">Ollama</a> run on your machine. Downloading
+        models contacts the selected model source. If you choose a hosted provider, RedForge sends
+        requests to that provider using the connection you configure.
       </p>
 
       <h2>Contact</h2>
@@ -58,7 +60,7 @@
     <footer class="legal">
       <div class="wrap">
         <span>© 2026 RedForge</span>
-        <span>Built for local AI security research</span>
+        <span>Built for local AI work</span>
       </div>
     </footer>
   </body>

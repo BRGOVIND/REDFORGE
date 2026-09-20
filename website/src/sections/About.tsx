@@ -3,7 +3,7 @@ import { Reveal } from '../motion';
 const PRINCIPLES = [
   {
     k: 'Local by default',
-    v: 'Every model runs through a local runtime on your machine, Ollama, LM Studio, llama.cpp, or vLLM. Prompts, data, and results never leave it: no server to trust, no API key to leak.',
+    v: 'Use Ollama, LM Studio, llama.cpp, or vLLM to keep inference on your machine. Hosted providers are available when you choose to connect them.',
   },
   {
     k: 'Simulation-first architecture',
@@ -22,25 +22,21 @@ export function About() {
         <div className="lg:col-span-5">
           <Reveal delay={120}>
             <h2 className="display text-5xl leading-[1.02] text-bone sm:text-6xl">
-              A platform
+              Your workspace.
               <br />
-              that never leaves
-              <br />
-              <span className="text-steel-400">your machine.</span>
+              <span className="text-steel-400">Your machine.</span>
             </h2>
           </Reveal>
           <Reveal delay={240}>
             <p className="mt-8 max-w-md text-[15px] leading-relaxed text-steel-300">
-              RedForge began as a local AI security &amp; evaluation lab. It has grown into a complete
-              Local AI Engineering Platform. Discover and manage models, engineer prompts, work with
-              datasets, benchmark, evaluate, fine-tune, and secure, all from one native desktop app.
+              RedForge began as a local model security lab. It now brings models, prompts, datasets,
+              benchmarks, and evaluation into one desktop workspace. Fine-tuning remains experimental.
             </p>
           </Reveal>
           <Reveal delay={320}>
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-steel-400">
-              Everything runs through a local runtime you control, no prompt, dataset, or result
-              leaves your hardware. Security is still here, sharper than ever, but now it's one
-              capability among many in a cohesive engineering workflow.
+              With a local runtime, prompts and evaluation results stay on your hardware. Hosted
+              providers are optional. Security remains one capability within the wider workflow.
             </p>
           </Reveal>
         </div>

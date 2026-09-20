@@ -1,9 +1,9 @@
 import { Reveal } from '../motion';
 
 const PRINCIPLES = [
-  { k: 'No cloud', v: 'Inference never leaves the machine. There is no server to trust.' },
-  { k: 'No API keys', v: 'Nothing to sign up for, nothing to rotate, nothing to leak.' },
-  { k: 'No subscriptions', v: 'Open source. Yours to run, fork, and audit, forever.' },
+  { k: 'Local by default', v: 'Use a local runtime to keep model inference, prompts, and results on your machine.' },
+  { k: 'No account for local use', v: 'Get started locally without an account or API keys. Hosted providers are optional.' },
+  { k: 'Open source', v: 'Run, inspect, and contribute to RedForge without a subscription.' },
 ];
 
 export function Vision() {
@@ -26,9 +26,8 @@ export function Vision() {
           </Reveal>
           <Reveal delay={260}>
             <p className="mt-8 max-w-md text-[15px] leading-relaxed text-steel-300">
-              Hosted evaluation platforms want your prompts, your responses, and a subscription.
-              RedForge was built on the opposite belief that the most sensitive testing you do
-              should happen entirely on your own machine.
+              Choose a local runtime for sensitive evaluations so prompts and responses stay on
+              your machine. Hosted providers remain available when you choose to connect them.
             </p>
           </Reveal>
         </div>

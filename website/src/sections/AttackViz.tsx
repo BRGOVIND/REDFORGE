@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Reveal } from '../motion';
 
 const NODES = [
@@ -17,6 +18,32 @@ function pathFor(x: number, y: number): string {
 }
 
 export function AttackViz() {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let inView = false;
+    const syncMotion = () => {
+      if (inView && !reduced.matches && !document.hidden) svg.unpauseAnimations();
+      else svg.pauseAnimations();
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      syncMotion();
+    }, { rootMargin: '80px' });
+    observer.observe(svg);
+    reduced.addEventListener('change', syncMotion);
+    document.addEventListener('visibilitychange', syncMotion);
+    syncMotion();
+    return () => {
+      observer.disconnect();
+      reduced.removeEventListener('change', syncMotion);
+      document.removeEventListener('visibilitychange', syncMotion);
+    };
+  }, []);
+
   return (
     <section className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
@@ -38,7 +65,7 @@ export function AttackViz() {
 
           <div className="lg:col-span-8">
             <Reveal delay={200}>
-              <svg viewBox="-72 0 744 400" className="w-full overflow-visible" role="img" aria-label="Attacks travelling into a model core">
+              <svg ref={svgRef} viewBox="-72 0 744 400" className="w-full overflow-visible" role="img" aria-label="Attacks travelling into a model core">
                 <defs>
                   <radialGradient id="core" cx="50%" cy="50%">
                     <stop offset="0%" stopColor="#D12A2A" />
@@ -52,7 +79,7 @@ export function AttackViz() {
                   const d = pathFor(n.x, n.y);
                   return (
                     <g key={n.id}>
-                      <path d={d} fill="none" stroke="#2A2A31" strokeWidth="1" />
+                      <path d={d} fill="none" stroke="#c7beb4" strokeWidth="1" />
                       <circle r="3.5" fill="#A11212">
                         <animateMotion dur="2.4s" begin={n.delay} repeatCount="indefinite" path={d} />
                         <animate attributeName="opacity" values="0;1;1;0" dur="2.4s" begin={n.delay} repeatCount="indefinite" />
@@ -64,7 +91,7 @@ export function AttackViz() {
                 {/* category nodes */}
                 {NODES.map((n) => (
                   <g key={`node-${n.id}`}>
-                    <circle cx={n.x} cy={n.y} r="7" fill="#0B0B0D" stroke="#3A3A42" strokeWidth="1.5" />
+                    <circle cx={n.x} cy={n.y} r="7" fill="#f2efe8" stroke="#8f857a" strokeWidth="1.5" />
                     <circle cx={n.x} cy={n.y} r="2.5" fill="#A11212" />
                     <text
                       x={n.x < CX ? n.x - 14 : n.x + 14}
@@ -88,7 +115,7 @@ export function AttackViz() {
                   <animate attributeName="r" values="34;52;34" dur="2.4s" repeatCount="indefinite" />
                   <animate attributeName="opacity" values="0.5;0;0.5" dur="2.4s" repeatCount="indefinite" />
                 </circle>
-                <text x={CX} y={CY + 4} textAnchor="middle" className="fill-black" style={{ font: "600 12px 'Space Grotesk', sans-serif" }}>
+                <text x={CX} y={CY + 4} textAnchor="middle" className="fill-white" style={{ font: "600 12px 'Space Grotesk', sans-serif" }}>
                   MODEL
                 </text>
               </svg>

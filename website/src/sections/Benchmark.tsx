@@ -6,6 +6,10 @@ function CountUp({ to, duration = 1600 }: { to: number; duration?: number }) {
   const [n, setN] = useState(0);
   useEffect(() => {
     if (!inView) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setN(to);
+      return;
+    }
     let raf = 0;
     const start = performance.now();
     const tick = (t: number) => {

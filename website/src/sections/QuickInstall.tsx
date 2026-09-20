@@ -125,7 +125,7 @@ export function QuickInstall() {
               >
                 download the app
               </a>
-              . Everything already runs on your machine.
+              . Local workflows run on your machine.
             </p>
           </div>
         </Reveal>

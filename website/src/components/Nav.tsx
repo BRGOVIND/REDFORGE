@@ -36,13 +36,16 @@ export function Nav({ visible, logoRef }: { visible: boolean; logoRef: RefObject
     <header
       className={cn(
         'forge-nav fixed inset-x-0 top-0',
-        visible ? 'is-ready' : 'is-forging'
+        visible ? 'is-ready' : 'is-forging',
+        visible && 'is-on-light'
       )}
     >
       <div
         className={cn(
           'border-b transition-colors duration-500',
-          scrolled && visible ? 'border-steel-700/80 bg-ink/70 backdrop-blur-xl' : 'border-transparent'
+          scrolled && visible
+            ? 'border-stone-300/80 bg-[#f2efe8]/90 backdrop-blur-xl'
+            : 'border-transparent'
         )}
       >
         <nav className="mx-auto flex max-w-editorial items-center justify-between px-6 py-4 sm:px-10">

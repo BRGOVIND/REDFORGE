@@ -1,68 +1,39 @@
 # RedForge Website
 
-A separate, standalone marketing website for RedForge. **This project does not
-touch `/frontend`** (the application). It is an editorial, cinematic, scroll-told
-experience, a "classified AI security laboratory," not a dashboard or a
-template.
+Standalone marketing site in `website/`. The desktop application lives in
+`frontend/` and is not part of this site.
 
-```
+The page uses warm paper, charcoal, and RedForge red. A brief black logo intro
+leads into a product-focused hero, interactive workspace preview, grouped
+capabilities, workflow, security sections, local runtime story, downloads, and
+the roadmap. Linked legal pages use the same light palette.
+
+```text
 npm run dev        # http://localhost:5174
-npm run build      # production build → dist/
+npm run build      # TypeScript check and production bundle in dist/
 npm run typecheck
 ```
 
 ## Structure
 
-```
-src/
-├── App.tsx                 # composes the entry + 11 scroll sections
-├── index.css               # design tokens, blueprint grid, grain, gradients
-├── components/
-│   ├── Entry.tsx           # cinematic entry (black → forged line → wordmark → lift)
-│   ├── Nav.tsx             # minimal nav + forge scroll-progress line
-│   └── marks.tsx           # ForgeMark, Wordmark, SectionLabel
-├── motion/                 # in-house motion toolkit (see note below)
-│   ├── useInView.ts        # IntersectionObserver reveal
-│   ├── useScrollProgress.ts# viewport-pass + pinned-section progress
-│   ├── Reveal.tsx          # slow, confident entrance
-│   └── Parallax.tsx
-└── sections/               # one file per narrative section
-    ├── Hero · Problem · Vision · Pipeline · AttackViz
-    ├── Benchmark · BuiltFor · Local · Download · Future
-```
+- `src/App.tsx` composes the landing page.
+- `src/index.css` contains the light theme, section fades, and responsive styles.
+- `src/components/Entry.tsx` animates the logo into the navigation bar.
+- `src/sections/WorkbenchPreview.tsx` provides the three interactive previews.
+- `src/sections/Pipeline.tsx` runs the scroll-linked workflow.
+- `src/motion/` contains small, local reveal and scroll utilities.
+- `public/` contains icons, legal pages, sitemap, and the social preview image.
+- `og-card-source.html` is the source layout for the 1200 x 630 social image.
 
-## The story (scroll = narrative)
+## Downloads
 
-1. **Entry**: black screen, a forged red line draws itself, the wordmark rises, the curtain lifts.
-2. **Hero**: *Break your model. Before attackers do.*
-3. **The Problem**: the four ways LLMs fail, revealed on interaction.
-4. **Why RedForge Exists**: local-first vision; no cloud, no keys, no subscriptions.
-5. **How It Works**: a pinned, scroll-drawn pipeline: Model → Planner → Attack → Judge → Analysis → Report.
-6. **Under Attack**: an animated scene: adversarial prompts travelling into the model core.
-7. **Benchmark Engine**: 800 cases, adaptive attacks, autonomous evaluation, research mode.
-8. **Built For**: researchers, students, security engineers, companies, contributors.
-9. **Everything Local**: pinned statement: *Your model. Your machine. Your data.*
-10. **Download**: GitHub, Documentation, Roadmap.
-11. **The Horizon**: enterprise, fine-tuning, connectors, research platform + footer.
+`src/config/downloads.ts` checks the latest GitHub release for installer assets.
+If that request fails, it uses the last verified published release. Keep
+`PUBLISHED_FALLBACK_VERSION` current when publishing a new installer release.
+The repository `VERSION` can be newer than the published installers.
 
-## Motion: a deliberate substitution
+## Motion
 
-The brief specifies **GSAP + Framer Motion + Lenis**. This project was built in an
-environment **with no network access**, so those packages could not be installed
-from the registry. Rather than block, the motion is implemented **in-house** with
-the same feel:
-
-| Brief | Here | Where |
-|-------|------|-------|
-| Framer Motion `whileInView` | `Reveal` (IntersectionObserver + eased CSS transitions) | `motion/Reveal.tsx` |
-| GSAP ScrollTrigger / pin | `usePinProgress` + `position: sticky` | `motion/useScrollProgress.ts`, `sections/Pipeline.tsx`, `sections/Local.tsx` |
-| GSAP scroll-linked tweens | `useScrollProgress` + `Parallax` | `motion/*` |
-| Lenis smooth scroll | native smooth scroll + eased reveals (no scroll hijack, so `sticky` pins stay correct) | `index.css` |
-
-**To swap in the real libraries** once a registry is reachable:
-`npm i gsap framer-motion lenis`, then replace the four primitives above, the
-consuming sections don't need to change, only the toolkit internals.
-
-The `node_modules` here is a junction to `/frontend/node_modules` (offline
-toolchain reuse); with network, run a normal `npm install` in this folder to make
-it fully independent.
+The site uses CSS transitions, IntersectionObserver, and a small scroll progress
+hook. Continuous SVG motion pauses when offscreen or when reduced motion is
+requested. No animation package is needed to build the site.

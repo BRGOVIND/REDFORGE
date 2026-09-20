@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
+      body { font-family: Inter, Arial, sans-serif; color: #272321; }
+      .card { position: relative; width: 1200px; height: 630px; overflow: hidden; padding: 44px 66px; background: radial-gradient(circle at 82% 70%, rgba(31, 26, 24, .12), transparent 30%), #f2efe8; }
+      .card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, transparent 70%, rgba(28, 25, 23, .055)); }
+      .brand { display: flex; align-items: center; gap: 10px; font-family: 'Space Grotesk', Arial, sans-serif; font-size: 25px; font-weight: 700; letter-spacing: -.04em; }
+      .brand svg { width: 29px; height: 29px; }
+      .brand span { color: #a11212; }
+      h1 { position: relative; z-index: 2; margin: 104px 0 0; font-family: 'Space Grotesk', Arial, sans-serif; font-size: 85px; font-weight: 600; letter-spacing: -.075em; line-height: .98; }
+      h1 span { color: #a11212; }
+      .description { position: relative; z-index: 2; max-width: 650px; margin-top: 32px; color: #5c5650; font-size: 21px; line-height: 1.45; }
+      .rule { position: absolute; bottom: 52px; left: 66px; width: 580px; height: 1px; background: #cbbfb2; }
+      .footer { position: absolute; bottom: 24px; left: 66px; color: #6d655d; font-size: 14px; }
+      .artifact { position: absolute; top: 191px; right: 75px; width: 255px; height: 255px; transform: rotate(-10deg); }
+      .artifact::before { content: ''; position: absolute; inset: 13px -15px -18px 15px; border-radius: 14px; background: #a11212; box-shadow: 0 25px 38px rgba(70, 40, 32, .18); }
+      .artifact-face { position: relative; display: grid; place-items: center; width: 100%; height: 100%; border: 1px solid #bdb4a8; border-radius: 14px; background: #fcfbf8; box-shadow: 0 10px 0 #e2d9cc, 0 15px 25px rgba(64, 42, 29, .12); }
+      .artifact svg { width: 100px; height: 100px; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 9 L16 4 L26 9" stroke="#55555f" stroke-width="1.5" stroke-linecap="round"/><path d="M6 23 L16 28 L26 23" stroke="#55555f" stroke-width="1.5" stroke-linecap="round"/><path d="M16 10 C13 13 13 16 16 18 C19 16 19 13 16 10 Z M16 18 C14.5 19.5 14.5 21.5 16 23 C17.5 21.5 17.5 19.5 16 18 Z" fill="#a11212"/></svg>
+        <div>Red<span>Forge</span></div>
+      </div>
+      <h1>Build locally.<br /><span>Know what works.</span></h1>
+      <p class="description">Find models, compare runs, test prompts, and check security in one desktop workspace.</p>
+      <div class="artifact" aria-hidden="true"><div class="artifact-face"><svg viewBox="0 0 32 32" fill="none"><path d="M6 9 L16 4 L26 9" stroke="#55555f" stroke-width="1.5" stroke-linecap="round"/><path d="M6 23 L16 28 L26 23" stroke="#55555f" stroke-width="1.5" stroke-linecap="round"/><path d="M16 10 C13 13 13 16 16 18 C19 16 19 13 16 10 Z M16 18 C14.5 19.5 14.5 21.5 16 23 C17.5 21.5 17.5 19.5 16 18 Z" fill="#a11212"/></svg></div></div>
+      <div class="rule"></div>
+      <div class="footer">Open-source desktop workspace</div>
+    </main>
+  </body>
+</html>

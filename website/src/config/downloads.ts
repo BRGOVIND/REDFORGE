@@ -3,8 +3,8 @@
  *
  * Two layers, so the buttons are never wrong and never need a site rebuild:
  *
- *   1. **Static fallback**: filenames derived from the VERSION baked in at build
- *      time. Always renders instantly, works with JS disabled, and matches the
+ *   1. **Static fallback**: filenames for the last verified published release.
+ *      Renders instantly when the GitHub API is unavailable and matches the
  *      artifactName patterns in `desktop/package.json` exactly.
  *   2. **Live resolution**: on mount we ask the GitHub Releases API for the
  *      *latest* release and swap in its real assets. Publishing a new release is
@@ -19,6 +19,8 @@ import { useEffect, useState } from 'react';
 declare const __APP_VERSION__: string;
 export const VERSION: string =
   typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.0';
+// The repository VERSION can advance before its installers are published.
+const PUBLISHED_FALLBACK_VERSION = '2.0.3';
 
 export const REPO = 'https://github.com/BRGOVIND/REDFORGE';
 const OWNER_REPO = 'BRGOVIND/REDFORGE';
@@ -82,7 +84,7 @@ export interface Release {
 }
 
 /** The build-time fallback release. Rendered immediately, before any network. */
-export function staticRelease(version = VERSION): Release {
+export function staticRelease(version = PUBLISHED_FALLBACK_VERSION): Release {
   const assets = PATTERNS.map(({ id, label, note }) => {
     const filename = staticFilename(id, version);
     return { id, label, note, filename, url: staticUrl(version, filename) };

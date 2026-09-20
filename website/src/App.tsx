@@ -24,7 +24,7 @@ export default function App() {
   const finishEntry = useCallback(() => setEntered(true), []);
 
   return (
-    <div className="grain relative min-h-screen bg-ink">
+    <div className="grain landing-light relative min-h-screen">
       <Nav visible={entered} logoRef={logoRef} />
       {!entered && <Entry logoRef={logoRef} onDone={finishEntry} />}
       <main>
