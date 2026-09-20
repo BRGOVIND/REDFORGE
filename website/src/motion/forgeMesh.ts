@@ -1,12 +1,11 @@
 interface MeshNode {
   u: number; v: number; x: number; y: number;
   ox: number; oy: number; vx: number; vy: number;
-  phase: number; heat: number; quiet: number; label: string;
+  phase: number; heat: number; quiet: number; accent: boolean;
 }
 interface QuietZone { left: number; top: number; right: number; bottom: number }
 
 const TAU = Math.PI * 2;
-const LABELS = ['model', 'runtime', 'guard'];
 const MAX_LINKS = 3;
 
 /** Isolated mutable renderer. React participates only in mounting and cleanup. */
@@ -64,14 +63,13 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    context.font = '10px "JetBrains Mono", monospace';
     zones = Array.from(hero.querySelectorAll<HTMLElement>('[data-mesh-quiet]')).map(element => {
       const box = element.getBoundingClientRect();
       return { left: box.left - rect.left - 10, right: box.right - rect.left + 10,
         top: box.top - rect.top - 18, bottom: box.bottom - rect.top + 20 };
     });
-    const count = mobile ? Math.min(32, Math.max(24, Math.round(width * height / 16000)))
-      : Math.min(72, Math.max(50, Math.round(width * height / 26000)));
+    const count = mobile ? Math.min(28, Math.max(20, Math.round(width * height / 18000)))
+      : Math.min(58, Math.max(44, Math.round(width * height / 22000)));
     if (nodes.length !== count) {
       // Stratified, seeded placement keeps the mesh sparse and resize-stable.
       let seed = 7419;
@@ -83,8 +81,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
         v: (Math.floor(i / across) + 0.15 + random() * 0.7) / down,
         x: 0, y: 0, ox: 0, oy: 0, vx: 0, vy: 0,
         phase: random() * TAU, heat: 0, quiet: 1,
-        label: i === across - 1 ? LABELS[0] : i === count - across - 1 ? LABELS[1]
-          : !mobile && i === across * 2 - 1 ? LABELS[2] : '',
+        accent: i % 11 === 3,
       }));
       next = new Int16Array(count);
       degree = new Uint8Array(count);
@@ -167,16 +164,16 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
             const heat = Math.max(a.heat, b.heat);
             const quiet = Math.min(a.quiet, b.quiet, quietAt((a.x + b.x) / 2, (a.y + b.y) / 2));
             const strength = (1 - distance2 / link2) * quiet * entrance;
-            context.strokeStyle = heat > 0.1 ? '#A11212' : '#55555F';
-            context.globalAlpha = strength * (0.32 + heat * 0.4);
+            context.strokeStyle = heat > 0.1 ? '#A11212' : '#6E6258';
+            context.globalAlpha = strength * (0.43 + heat * 0.45);
             context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke();
             // A few short signal hops, never a growing list of particles.
             const phase = (time * 0.16 + a.phase) % 1;
             if (!reduced.matches && i % 13 === 0 && phase < 0.22 && quiet > 0.4) {
               const progress = phase / 0.22;
               const px = a.x + (b.x - a.x) * progress, py = a.y + (b.y - a.y) * progress;
-              context.globalAlpha = Math.sin(progress * Math.PI) * entrance * 0.4;
-              context.fillStyle = '#D12A2A';
+              context.globalAlpha = Math.sin(progress * Math.PI) * entrance * 0.5;
+              context.fillStyle = '#A11212';
               context.beginPath(); context.arc(px, py, 1.6, 0, TAU); context.fill();
             }
           }
@@ -185,22 +182,15 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     }
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-      const accent = node.label ? 0.3 : 0;
+      const accent = node.accent ? 0.3 : 0;
       const intensity = Math.max(accent, node.heat);
       if (intensity > 0.05) {
         context.globalAlpha = intensity * node.quiet * entrance * 0.7;
         context.drawImage(sprite, node.x - 18, node.y - 18, 36, 36);
       }
-      context.globalAlpha = node.quiet * entrance * (0.42 + node.heat * 0.35);
-      context.fillStyle = intensity > 0.15 ? '#A11212' : '#7A7A85';
-      context.beginPath(); context.arc(node.x, node.y, node.label ? 2 : 1.25, 0, TAU); context.fill();
-      const labelLeft = node.x > width - 78;
-      if (node.label && node.quiet > 0.8 && quietAt(node.x + (labelLeft ? -35 : 35), node.y) > 0.8) {
-        context.globalAlpha = entrance * 0.48;
-        context.fillStyle = '#7A7A85';
-        context.textAlign = labelLeft ? 'right' : 'left';
-        context.fillText(node.label, node.x + (labelLeft ? -9 : 9), node.y + 3);
-      }
+      context.globalAlpha = node.quiet * entrance * (node.accent ? 0.76 : 0.56 + node.heat * 0.35);
+      context.fillStyle = intensity > 0.15 ? '#A11212' : '#6E6258';
+      context.beginPath(); context.arc(node.x, node.y, node.accent ? 2.2 : 1.4, 0, TAU); context.fill();
     }
     context.globalAlpha = 1;
   }

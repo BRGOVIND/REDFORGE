@@ -1,13 +1,15 @@
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { ForgeMark } from '../components/marks';
 import { WorkbenchPreview } from './WorkbenchPreview';
+import { ForgeMesh } from './ForgeMesh';
 
 export function Hero({ started }: { started: boolean }) {
   return (
     <section id="top" className="forge-hero">
       <div className="forge-hero-paper">
         <div className="forge-hero-content">
-          <div className="forge-hero-copy">
+          <ForgeMesh active={started} />
+          <div className="forge-hero-copy" data-mesh-quiet>
             <h1 className={started ? 'forge-hero-entered' : ''}>
               Build locally.
               <br />
@@ -28,13 +30,12 @@ export function Hero({ started }: { started: boolean }) {
             <p className="forge-hero-meta">Open source <span aria-hidden="true">/</span> Windows, macOS, Linux</p>
           </div>
 
-          <div className="forge-hero-artifact" aria-hidden="true">
+          <div className="forge-hero-artifact" aria-hidden="true" data-mesh-quiet>
             <div className="forge-hero-artifact-shadow" />
             <div className="forge-hero-artifact-back" />
             <div className="forge-hero-artifact-face">
               <ForgeMark size={90} />
             </div>
-            <span className="forge-hero-artifact-note">A place for the work.</span>
           </div>
         </div>
 

@@ -98,6 +98,16 @@
     margin: 0 auto;
     padding: 168px 40px 118px;
   }
+  .forge-hero-content::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(94, 75, 65, 0.16) 0.7px, transparent 0.8px);
+    background-size: 24px 24px;
+    mask-image: linear-gradient(90deg, transparent 25%, #000 92%);
+    opacity: 0.55;
+  }
   .forge-hero-copy { position: relative; z-index: 1; }
   .forge-hero-copy h1 {
     margin: 0;
@@ -129,7 +139,7 @@
   .forge-hero-secondary { padding: 0 2px; color: #38312d; text-decoration: underline; text-decoration-color: #a6a099; text-underline-offset: 5px; }
   .forge-hero-secondary:hover { color: #a11212; text-decoration-color: currentColor; }
   .forge-hero-meta { display: flex; gap: 12px; margin-top: 26px; color: #777069; font-size: 12px; }
-  .forge-hero-artifact { position: relative; width: min(100%, 300px); aspect-ratio: 1; justify-self: center; }
+  .forge-hero-artifact { position: relative; z-index: 1; width: min(100%, 300px); aspect-ratio: 1; justify-self: center; }
   .forge-hero-artifact-shadow { position: absolute; inset: 20%; border-radius: 50%; background: rgba(53, 35, 28, 0.18); filter: blur(40px); transform: translate(18px, 35px); }
   .forge-hero-artifact-back,
   .forge-hero-artifact-face { position: absolute; inset: 14%; border-radius: 12px; transform: rotate(-12deg) skew(-3deg, 2deg); }
@@ -137,7 +147,6 @@
   .forge-hero-artifact-face { display: grid; place-items: center; border: 1px solid #bdb4a8; background: #fcfbf8; box-shadow: 0 7px 0 #e2d9cc, 0 12px 25px rgba(64, 42, 29, 0.1); transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1); }
   .forge-hero-artifact:hover .forge-hero-artifact-face { transform: rotate(-7deg) skew(-3deg, 2deg) translateY(-7px); }
   .forge-hero-artifact-face svg { width: 38%; height: 38%; }
-  .forge-hero-artifact-note { position: absolute; bottom: 4%; right: 0; color: #82796f; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
   .forge-hero-preview-wrap { max-width: 1320px; margin: 0 auto; padding: 0 40px 108px; }
   .workbench-preview { overflow: hidden; border: 1px solid #cfc8bd; border-radius: 11px; background: #fff; box-shadow: 0 25px 65px rgba(70, 51, 37, 0.11); color: #242321; }
   .workbench-preview-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 22px; border-bottom: 1px solid #e6e1d9; font-size: 12px; }
@@ -168,7 +177,6 @@
     .forge-hero-actions { align-items: flex-start; flex-direction: column; gap: 12px; margin-top: 26px; }
     .forge-hero-meta { margin-top: 21px; }
     .forge-hero-artifact { position: absolute; top: 78px; right: 28px; width: 120px; }
-    .forge-hero-artifact-note { display: none; }
     .forge-hero-preview-wrap { padding: 0 16px 72px; }
     .workbench-preview-topbar { padding: 0 16px; }
     .workbench-preview-body { display: block; }
@@ -387,6 +395,10 @@
   .landing-light #how .blueprint-grid-fine {
     -webkit-mask-image: linear-gradient(180deg, transparent, #000 130px, #000 calc(100% - 130px), transparent);
     mask-image: linear-gradient(180deg, transparent, #000 130px, #000 calc(100% - 130px), transparent);
+  }
+  .landing-light #how .forge-mesh {
+    opacity: 0.7;
+    mask-image: linear-gradient(90deg, transparent 14%, #000 65%);
   }
   .pipeline-timeline { --node-size: 40px; --step-gap: 24px; gap: var(--step-gap); }
   @media (min-width: 640px) { .pipeline-timeline { --step-gap: 36px; } }

@@ -1,6 +1,7 @@
 import { Package, Database, Dumbbell, Gauge, ShieldCheck, FileText } from 'lucide-react';
 import { usePinProgress } from '../motion';
 import { cn, clamp } from '../lib/cn';
+import { ForgeMesh } from './ForgeMesh';
 
 // One connected engineering workflow, not isolated tools. Everything below runs
 // locally and flows into the next stage, with full lineage.
@@ -20,11 +21,12 @@ export function Pipeline() {
   return (
     <section id="how" ref={ref} className="relative" style={{ height: '360vh' }}>
       <div className="pipeline-pin sticky top-0 flex h-screen items-center overflow-hidden">
+        <ForgeMesh active host=".pipeline-pin" />
         <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-40" />
         <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
           {/* Left, the active stage, cross-fading */}
           <div>
-            <div className="pipeline-stage relative h-[220px] sm:h-[280px]">
+            <div className="pipeline-stage relative h-[220px] sm:h-[280px]" data-mesh-quiet>
               {STAGES.map((s, i) => (
                 <div
                   key={s.k}
