@@ -8,8 +8,8 @@ export function Local() {
   const active = clamp(Math.floor(progress * LINES.length + 0.15), 0, LINES.length - 1);
 
   return (
-    <section id="local" ref={ref} className="relative" style={{ height: '260vh' }}>
-      <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden border-t border-steel-800">
+    <section id="local" ref={ref} className="relative" style={{ height: '190vh' }}>
+      <div className="sticky top-0 flex h-dvh flex-col items-center justify-center overflow-hidden border-t border-steel-800">
         <div
           className="pointer-events-none absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[160px]"
           style={{ background: 'radial-gradient(circle, rgba(90,0,0,0.16), transparent 60%)' }}
@@ -33,7 +33,7 @@ export function Local() {
         </div>
 
         <div
-          className="relative mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-2"
+          className="relative mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 sm:mt-10"
           style={{
             opacity: progress > 0.6 ? 1 : 0,
             transform: progress > 0.6 ? 'none' : 'translateY(16px)',

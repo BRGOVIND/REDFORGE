@@ -18,8 +18,8 @@ export function Pipeline() {
   const [ref, active] = usePinStage<HTMLDivElement>(STAGES.length);
 
   return (
-    <section id="how" ref={ref} className="relative" style={{ height: '360vh' }}>
-      <div className="pipeline-pin sticky top-0 flex h-screen items-center overflow-hidden">
+    <section id="how" ref={ref} className="relative" style={{ height: '280vh' }}>
+      <div className="pipeline-pin sticky top-0 flex h-dvh items-center overflow-hidden">
         <ForgeMesh active host=".pipeline-pin" />
         <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-40" />
         <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">

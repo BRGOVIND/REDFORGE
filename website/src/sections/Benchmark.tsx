@@ -32,7 +32,7 @@ const CAPABILITIES = [
 
 export function Benchmark() {
   return (
-    <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+    <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-16 sm:py-20 lg:py-24">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
           <Reveal delay={120}>
