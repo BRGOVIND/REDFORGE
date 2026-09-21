@@ -16,6 +16,7 @@ export function useScrollProgress<T extends HTMLElement = HTMLDivElement>(): [
   useEffect(() => {
     let raf = 0;
     const compute = () => {
+      raf = 0;
       const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
@@ -25,8 +26,7 @@ export function useScrollProgress<T extends HTMLElement = HTMLDivElement>(): [
       setProgress(clamp(passed / total, 0, 1));
     };
     const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(compute);
+      if (!raf) raf = requestAnimationFrame(compute);
     };
     compute();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -56,6 +56,7 @@ export function usePinProgress<T extends HTMLElement = HTMLDivElement>(): [
   useEffect(() => {
     let raf = 0;
     const compute = () => {
+      raf = 0;
       const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
@@ -67,8 +68,7 @@ export function usePinProgress<T extends HTMLElement = HTMLDivElement>(): [
       setProgress(clamp(-rect.top / scrollable, 0, 1));
     };
     const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(compute);
+      if (!raf) raf = requestAnimationFrame(compute);
     };
     compute();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -81,4 +81,42 @@ export function usePinProgress<T extends HTMLElement = HTMLDivElement>(): [
   }, []);
 
   return [ref, progress];
+}
+
+/** Only rerender when a pinned section changes stage, not on every scroll frame. */
+export function usePinStage<T extends HTMLElement = HTMLDivElement>(stages: number): [
+  React.RefObject<T>,
+  number
+] {
+  const ref = useRef<T>(null);
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    let raf = 0;
+    let current = 0;
+    const compute = () => {
+      raf = 0;
+      const el = ref.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const scrollable = rect.height - window.innerHeight;
+      const progress = scrollable > 0 ? clamp(-rect.top / scrollable, 0, 1) : 0;
+      const next = clamp(Math.floor(progress * stages), 0, stages - 1);
+      if (next !== current) {
+        current = next;
+        setStage(next);
+      }
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(compute); };
+    compute();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [stages]);
+
+  return [ref, stage];
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Download } from 'lucide-react';
 import { Wordmark } from './marks';
 import { cn } from '../lib/cn';
@@ -11,23 +11,29 @@ const LINKS = [
 ];
 
 export function Nav({ visible, logoRef }: { visible: boolean; logoRef: RefObject<HTMLDivElement> }) {
-  const [progress, setProgress] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
+    let wasScrolled = false;
+    const compute = () => {
+        raf = 0;
         const max = document.documentElement.scrollHeight - window.innerHeight;
-        setProgress(max > 0 ? window.scrollY / max : 0);
-        setScrolled(window.scrollY > 40);
-      });
+        progressRef.current?.style.setProperty('transform', `scaleX(${max > 0 ? window.scrollY / max : 0})`);
+        const next = window.scrollY > 40;
+        if (next !== wasScrolled) {
+          wasScrolled = next;
+          setScrolled(next);
+        }
     };
-    onScroll();
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(compute); };
+    compute();
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
     return () => {
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
       cancelAnimationFrame(raf);
     };
   }, []);
@@ -74,10 +80,11 @@ export function Nav({ visible, logoRef }: { visible: boolean; logoRef: RefObject
       </div>
       {/* Forge progress line */}
       <div
+        ref={progressRef}
         className="forge-nav-reveal h-px origin-left"
         style={{
           background: 'linear-gradient(90deg, #5A0000, #A11212, #D12A2A)',
-          transform: `scaleX(${progress})`,
+          transform: 'scaleX(0)',
           transition: 'transform 120ms linear',
         }}
       />

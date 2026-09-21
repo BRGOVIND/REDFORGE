@@ -1,6 +1,6 @@
 import { Package, Database, Dumbbell, Gauge, ShieldCheck, FileText } from 'lucide-react';
-import { usePinProgress } from '../motion';
-import { cn, clamp } from '../lib/cn';
+import { usePinStage } from '../motion';
+import { cn } from '../lib/cn';
 import { ForgeMesh } from './ForgeMesh';
 
 // One connected engineering workflow, not isolated tools. Everything below runs
@@ -15,8 +15,7 @@ const STAGES = [
 ];
 
 export function Pipeline() {
-  const [ref, progress] = usePinProgress<HTMLDivElement>();
-  const active = clamp(Math.floor(progress * STAGES.length), 0, STAGES.length - 1);
+  const [ref, active] = usePinStage<HTMLDivElement>(STAGES.length);
 
   return (
     <section id="how" ref={ref} className="relative" style={{ height: '360vh' }}>

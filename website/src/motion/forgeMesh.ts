@@ -4,6 +4,7 @@ interface MeshNode {
   phase: number; heat: number; quiet: number; accent: boolean;
 }
 interface QuietZone { left: number; top: number; right: number; bottom: number }
+interface MeshEdge { a: number; b: number }
 
 const TAU = Math.PI * 2;
 const MAX_LINKS = 3;
@@ -28,14 +29,11 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   }
 
   let nodes: MeshNode[] = [];
+  let edges: MeshEdge[] = [];
   let zones: QuietZone[] = [];
-  let heads = new Int16Array(0);
-  let next = new Int16Array(0);
-  let degree = new Uint8Array(0);
-  let width = 0, height = 0, columns = 0, rows = 0, link = 200;
-  let documentTop = 0, documentLeft = 0;
+  let width = 0, height = 0, link = 200;
   let mobile = false, visible = false, disposed = false;
-  let raf = 0, last = 0, nextPaint = 0, time = 0, lastPointerTime = 0;
+  let raf = 0, timer = 0, last = 0, time = 0, lastPointerTime = 0;
   let resizeTimer = 0;
   const pointer = { x: -10000, y: -10000, active: false };
   const scan = { x: 0, y: 0, age: 10 };
@@ -54,12 +52,10 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   function measure() {
     if (disposed) return;
     const rect = hero.getBoundingClientRect();
-    documentTop = rect.top + scrollY;
-    documentLeft = rect.left + scrollX;
     width = rect.width;
     height = rect.height;
     mobile = coarse.matches || width < 640;
-    const dpr = Math.min(devicePixelRatio || 1, mobile ? 1.25 : 1.5);
+    const dpr = Math.min(devicePixelRatio || 1, mobile ? 1 : 1.25);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -83,20 +79,34 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
         phase: random() * TAU, heat: 0, quiet: 1,
         accent: i % 11 === 3,
       }));
-      next = new Int16Array(count);
-      degree = new Uint8Array(count);
     }
     link = Math.min(mobile ? 160 : 270, Math.sqrt(width * height / count) * 1.45);
-    columns = Math.ceil(width / link) + 2;
-    rows = Math.ceil(height / link) + 2;
-    heads = new Int16Array(columns * rows);
+    // Connect nearest anchors once. Stable topology avoids per-frame searches
+    // and keeps the constellation from flickering as nodes respond to input.
+    const candidates: Array<MeshEdge & { distance: number }> = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = (nodes[i].u - nodes[j].u) * width;
+        const dy = (nodes[i].v - nodes[j].v) * height;
+        const distance = dx * dx + dy * dy;
+        if (distance < link * link) candidates.push({ a: i, b: j, distance });
+      }
+    }
+    candidates.sort((a, b) => a.distance - b.distance);
+    const degree = new Uint8Array(nodes.length);
+    edges = [];
+    for (const edge of candidates) {
+      if (degree[edge.a] >= MAX_LINKS || degree[edge.b] >= MAX_LINKS) continue;
+      degree[edge.a]++;
+      degree[edge.b]++;
+      edges.push({ a: edge.a, b: edge.b });
+    }
     update(0);
-    if (visible && !document.hidden) draw();
     sync();
   }
 
   function update(dt: number) {
-    const radius = mobile ? 110 : 180;
+    const radius = mobile ? 130 : 220;
     const radius2 = radius * radius;
     const damping = Math.exp(-9 * dt);
     for (let i = 0; i < nodes.length; i++) {
@@ -109,7 +119,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
       if (pointer.active && distance2 < radius2 && !reduced.matches) {
         const distance = Math.sqrt(distance2);
         heat = 1 - distance / radius;
-        const force = heat * heat * 720 / Math.max(distance, 1);
+        const force = heat * heat * 1050 / Math.max(distance, 1);
         forceX = dx * force;
         forceY = dy * force;
       }
@@ -135,49 +145,27 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   function draw() {
     context.clearRect(0, 0, width, height);
     const entrance = reduced.matches ? 1 : Math.min(1, time / 0.65);
-    heads.fill(-1);
-    degree.fill(0);
-    // Reuse typed-array buckets; visit only neighboring cells, with bounded degree.
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      const cx = Math.max(0, Math.min(columns - 1, Math.floor(node.x / link) + 1));
-      const cy = Math.max(0, Math.min(rows - 1, Math.floor(node.y / link) + 1));
-      const cell = cy * columns + cx;
-      next[i] = heads[cell];
-      heads[cell] = i;
-    }
     context.lineWidth = 0.75;
     const link2 = link * link;
-    for (let i = 0; i < nodes.length; i++) {
-      const a = nodes[i];
-      const cx = Math.max(0, Math.min(columns - 1, Math.floor(a.x / link) + 1));
-      const cy = Math.max(0, Math.min(rows - 1, Math.floor(a.y / link) + 1));
-      for (let y = Math.max(0, cy - 1); y <= Math.min(rows - 1, cy + 1); y++) {
-        for (let x = Math.max(0, cx - 1); x <= Math.min(columns - 1, cx + 1); x++) {
-          for (let j = heads[y * columns + x]; j !== -1 && degree[i] < MAX_LINKS; j = next[j]) {
-            if (j <= i || degree[j] >= MAX_LINKS) continue;
-            const b = nodes[j];
-            const dx = a.x - b.x, dy = a.y - b.y;
-            const distance2 = dx * dx + dy * dy;
-            if (distance2 > link2) continue;
-            degree[i]++; degree[j]++;
-            const heat = Math.max(a.heat, b.heat);
-            const quiet = Math.min(a.quiet, b.quiet, quietAt((a.x + b.x) / 2, (a.y + b.y) / 2));
-            const strength = (1 - distance2 / link2) * quiet * entrance;
-            context.strokeStyle = heat > 0.1 ? '#A11212' : '#6E6258';
-            context.globalAlpha = strength * (0.43 + heat * 0.45);
-            context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke();
-            // A few short signal hops, never a growing list of particles.
-            const phase = (time * 0.16 + a.phase) % 1;
-            if (!reduced.matches && i % 13 === 0 && phase < 0.22 && quiet > 0.4) {
-              const progress = phase / 0.22;
-              const px = a.x + (b.x - a.x) * progress, py = a.y + (b.y - a.y) * progress;
-              context.globalAlpha = Math.sin(progress * Math.PI) * entrance * 0.5;
-              context.fillStyle = '#A11212';
-              context.beginPath(); context.arc(px, py, 1.6, 0, TAU); context.fill();
-            }
-          }
-        }
+    for (let i = 0; i < edges.length; i++) {
+      const a = nodes[edges[i].a];
+      const b = nodes[edges[i].b];
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const distance2 = dx * dx + dy * dy;
+      const heat = Math.max(a.heat, b.heat);
+      const quiet = Math.min(a.quiet, b.quiet, quietAt((a.x + b.x) / 2, (a.y + b.y) / 2));
+      const strength = Math.max(0, 1 - distance2 / link2) * quiet * entrance;
+      context.strokeStyle = heat > 0.1 ? '#A11212' : '#6E6258';
+      context.globalAlpha = strength * (0.43 + heat * 0.55);
+      context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke();
+      // A few short signal hops, never a growing list of particles.
+      const phase = (time * 0.16 + a.phase) % 1;
+      if (!reduced.matches && i % 13 === 0 && phase < 0.22 && quiet > 0.4) {
+        const progress = phase / 0.22;
+        const px = a.x + (b.x - a.x) * progress, py = a.y + (b.y - a.y) * progress;
+        context.globalAlpha = Math.sin(progress * Math.PI) * entrance * 0.5;
+        context.fillStyle = '#A11212';
+        context.beginPath(); context.arc(px, py, 1.6, 0, TAU); context.fill();
       }
     }
     for (let i = 0; i < nodes.length; i++) {
@@ -192,51 +180,96 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
       context.fillStyle = intensity > 0.15 ? '#A11212' : '#6E6258';
       context.beginPath(); context.arc(node.x, node.y, node.accent ? 2.2 : 1.4, 0, TAU); context.fill();
     }
+    if (pointer.active && !reduced.matches) {
+      const quiet = quietAt(pointer.x, pointer.y);
+      if (quiet > 0.35) {
+        const reach = mobile ? 130 : 200;
+        let connected = 0;
+        context.strokeStyle = '#A11212';
+        context.lineWidth = 0.9;
+        for (const node of nodes) {
+          const dx = pointer.x - node.x, dy = pointer.y - node.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance > reach || node.quiet < 0.4) continue;
+          context.globalAlpha = (1 - distance / reach) * quiet * entrance * 0.48;
+          context.beginPath(); context.moveTo(pointer.x, pointer.y); context.lineTo(node.x, node.y); context.stroke();
+          if (++connected === 5) break;
+        }
+        context.globalAlpha = quiet * entrance * 0.22;
+        context.drawImage(sprite, pointer.x - 32, pointer.y - 32);
+        context.globalAlpha = quiet * entrance * 0.55;
+        context.beginPath(); context.arc(pointer.x, pointer.y, 2, 0, TAU); context.fillStyle = '#A11212'; context.fill();
+      }
+    }
+    if (scan.age < 1.2 && !reduced.matches) {
+      context.strokeStyle = '#A11212';
+      context.lineWidth = 1;
+      context.globalAlpha = (1 - scan.age / 1.2) * quietAt(scan.x, scan.y) * 0.38;
+      context.beginPath(); context.arc(scan.x, scan.y, scan.age * 230, 0, TAU); context.stroke();
+    }
     context.globalAlpha = 1;
   }
 
   function frame(now: number) {
     raf = 0;
     if (!visible || document.hidden || reduced.matches || disposed) return;
-    const interval = mobile && now - lastPointerTime > 1400 ? 1000 / 30 : 1000 / 60;
-    if (!last || now >= nextPaint - 0.5) {
-      const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
-      last = now;
-      // Carry the deadline forward so 90/144 Hz displays do not drop to 45/48 FPS.
-      nextPaint += interval;
-      if (nextPaint <= now) nextPaint = now + interval;
-      time += dt;
-      scan.age += dt;
-      update(dt);
-      draw();
+    const dt = last ? Math.min((now - last) / 1000, 0.08) : 1 / 60;
+    last = now;
+    time += dt;
+    scan.age += dt;
+    update(dt);
+    draw();
+    schedule();
+  }
+
+  function schedule(immediate = false) {
+    if (!visible || document.hidden || reduced.matches || disposed) return;
+    if (immediate) {
+      clearTimeout(timer);
+      timer = 0;
+      if (!raf) raf = requestAnimationFrame(frame);
+      return;
     }
-    raf = requestAnimationFrame(frame);
+    const responsive = performance.now() - lastPointerTime < 900 || scan.age < 1.2;
+    if (responsive) raf = requestAnimationFrame(frame);
+    else timer = window.setTimeout(() => {
+      timer = 0;
+      raf = requestAnimationFrame(frame);
+    }, mobile ? 70 : 38);
   }
 
   function sync() {
     cancelAnimationFrame(raf);
+    clearTimeout(timer);
     raf = 0;
+    timer = 0;
     last = 0;
-    nextPaint = 0;
     if (document.hidden) pointer.active = false;
     if (!visible || document.hidden || disposed) return;
     if (reduced.matches) {
       pointer.active = false;
       for (const node of nodes) { node.ox = node.oy = node.vx = node.vy = node.heat = 0; }
       update(0); draw();
-    } else raf = requestAnimationFrame(frame);
+    } else schedule(true);
   }
   function position(event: PointerEvent) {
-    pointer.x = event.clientX + scrollX - documentLeft;
-    pointer.y = event.clientY + scrollY - documentTop;
+    const rect = hero.getBoundingClientRect();
+    pointer.x = event.clientX - rect.left;
+    pointer.y = event.clientY - rect.top;
     pointer.active = true;
     lastPointerTime = performance.now();
+    schedule(true);
   }
-  function leave() { pointer.active = false; }
+  function leave() {
+    if (!pointer.active) return;
+    pointer.active = false;
+    schedule(true);
+  }
   function down(event: PointerEvent) {
     if (reduced.matches || event.button !== 0 || (event.target instanceof Element && event.target.closest('a, button, input'))) return;
     position(event);
     scan.x = pointer.x; scan.y = pointer.y; scan.age = 0;
+    schedule(true);
   }
   function up(event: PointerEvent) { if (event.pointerType !== 'mouse') leave(); }
   function queueMeasure() { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(measure, 80); }
@@ -246,7 +279,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   const observer = new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
     sync();
-  });
+  }, { threshold: 0.05 });
   const resizer = new ResizeObserver(queueMeasure);
   observer.observe(hero);
   resizer.observe(hero);
@@ -267,6 +300,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   return () => {
     disposed = true;
     cancelAnimationFrame(raf);
+    clearTimeout(timer);
     clearTimeout(resizeTimer);
     observer.disconnect(); resizer.disconnect();
     hero.removeEventListener('pointermove', position);

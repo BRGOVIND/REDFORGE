@@ -41,7 +41,6 @@ export function Reveal({
     transform: inView ? 'none' : `translate3d(${x}px, ${y}px, 0)`,
     filter: inView || !blur ? 'none' : 'blur(10px)',
     transition: `opacity ${duration}ms ${EASE_FORGE} ${delay}ms, transform ${duration}ms ${EASE_FORGE} ${delay}ms, filter ${duration}ms ${EASE_FORGE} ${delay}ms`,
-    willChange: 'opacity, transform',
   };
 
   return (
