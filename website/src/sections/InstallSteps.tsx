@@ -12,7 +12,7 @@ const STEPS = [
 
 export function InstallSteps() {
   return (
-    <section id="install" className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+    <section id="install" className="relative overflow-hidden border-t border-steel-800 py-16 sm:py-20 lg:py-24">
       <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-30" />
       <div className="relative mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal delay={120}>
@@ -22,7 +22,7 @@ export function InstallSteps() {
         </Reveal>
 
         {/* Vertical drawn timeline */}
-        <div className="relative mt-16 border-l border-steel-700 pl-8 sm:pl-10">
+        <div className="relative mt-12 border-l border-steel-700 pl-8 sm:pl-10">
           <div
             className="absolute left-0 top-0 h-full w-px"
             style={{ background: 'linear-gradient(180deg, #D12A2A, #A11212 50%, transparent)' }}
@@ -30,7 +30,7 @@ export function InstallSteps() {
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             return (
-              <Reveal key={s.k} delay={i * 90} className="relative pb-12 last:pb-0">
+              <Reveal key={s.k} delay={i * 90} className="relative pb-9 last:pb-0">
                 <span className="absolute -left-[46px] flex h-8 w-8 items-center justify-center rounded-full border border-forge/40 bg-ink text-forge sm:-left-[54px]">
                   <Icon size={15} />
                 </span>
@@ -45,7 +45,7 @@ export function InstallSteps() {
         </div>
 
         <Reveal delay={120}>
-          <p className="mt-14 text-center text-sm text-steel-400">
+          <p className="mt-10 text-center text-sm text-steel-400">
             The backend is <span className="text-bone">bundled</span>, no Python, no Node.js, no
             terminal. A local runtime (<span className="text-bone">Ollama</span>, LM Studio,
             llama.cpp, or vLLM) is only needed to run models, and RedForge helps you install one.

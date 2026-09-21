@@ -42,7 +42,7 @@ export function Download() {
   const others = otherDownloads(release, primary);
 
   return (
-    <section id="download" className="relative border-t border-steel-800 py-24 sm:py-32 lg:py-40">
+    <section id="download" className="relative border-t border-steel-800 py-16 sm:py-20 lg:py-24">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           {/* Primary download */}

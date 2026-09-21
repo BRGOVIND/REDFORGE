@@ -93,7 +93,7 @@ export function QuickInstall() {
     <section
       id="quickstart"
       aria-labelledby="quickstart-heading"
-      className="relative overflow-hidden border-t border-steel-800 py-24 sm:py-32 lg:py-40"
+      className="relative overflow-hidden border-t border-steel-800 py-16 sm:py-20 lg:py-24"
     >
       <div className="blueprint-grid-fine pointer-events-none absolute inset-0 opacity-30" />
       <div className="relative mx-auto max-w-editorial px-6 sm:px-10">
@@ -131,13 +131,13 @@ export function QuickInstall() {
         </Reveal>
 
         <Reveal delay={240} y={40}>
-          <div className="mt-12">
+          <div className="mt-8 sm:mt-10">
             <CliPreview />
           </div>
         </Reveal>
 
         <Reveal delay={120}>
-          <div className="mt-14 rounded-lg border border-steel-800 bg-char/30 p-6">
+          <div className="mt-10 rounded-lg border border-steel-800 bg-char/30 p-6">
             <h3 className="text-sm font-medium text-bone">CLI compatibility</h3>
             <dl className="mt-4 grid gap-2.5 sm:grid-cols-2 sm:gap-x-10">
               {COMPAT.map((r) => (
