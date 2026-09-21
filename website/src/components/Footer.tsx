@@ -61,7 +61,7 @@ const COLUMNS: Column[] = [
 export function Footer() {
   return (
     <footer className="border-t border-steel-800 bg-char/40">
-      <div className="mx-auto max-w-editorial px-6 py-16 sm:px-10">
+      <div className="mx-auto max-w-editorial px-6 py-12 sm:px-10">
         <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-3 lg:grid-cols-7">
           <div className="col-span-2">
             <Wordmark />
@@ -91,7 +91,7 @@ export function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-start justify-between gap-3 border-t border-steel-800 pt-8 sm:flex-row sm:items-center">
+        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-steel-800 pt-6 sm:flex-row sm:items-center">
           <span className="text-[13px] text-steel-500">© 2026 RedForge</span>
           <span className="text-[12px] text-steel-600">Built in the open.</span>
         </div>
