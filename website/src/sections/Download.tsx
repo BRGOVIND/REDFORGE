@@ -42,7 +42,7 @@ export function Download() {
   const others = otherDownloads(release, primary);
 
   return (
-    <section id="download" className="relative border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section id="download" className="relative border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           {/* Primary download */}
@@ -163,7 +163,7 @@ export function Download() {
           </div>
 
           {/* Requirements + secondary actions */}
-          <div className="lg:col-span-6 lg:pt-16">
+          <div className="lg:col-span-6 lg:pt-8">
             <Reveal delay={160}>
               <div className="rounded-xl border border-steel-800 bg-char/40 p-6">
                 <p className="label mb-4 flex items-center gap-2 text-steel-400">
