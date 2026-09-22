@@ -17,7 +17,7 @@ const PRINCIPLES = [
 
 export function About() {
   return (
-    <section id="about" className="relative border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section id="about" className="relative border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
           <Reveal delay={120}>
@@ -41,7 +41,7 @@ export function About() {
           </Reveal>
         </div>
 
-        <div className="lg:col-span-7 lg:pt-16">
+          <div className="lg:col-span-7 lg:pt-8">
           <ul className="principle-list">
             {PRINCIPLES.map((p, i) => (
               <li key={p.k} className="principle-item">

@@ -79,6 +79,11 @@
   .forge-entry-caption { position: absolute; top: calc(44% + 76px); left: 0; width: 100%; padding: 0 24px; text-align: center; font-size: clamp(8px, 1vw, 11px); }
   .forge-entry-skip { position: absolute; bottom: 32px; right: 32px; pointer-events: auto; padding: 12px; }
   .forge-mesh { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; contain: strict; }
+  .is-mesh-interacting,
+  .is-mesh-interacting * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
 
   .forge-hero {
     overflow: hidden;
@@ -97,7 +102,7 @@
     gap: 2rem;
     max-width: 1320px;
     margin: 0 auto;
-    padding: 156px 40px 96px;
+    padding: 124px 40px 64px;
   }
   .forge-hero-content::before {
     content: '';
@@ -148,7 +153,7 @@
   .forge-hero-artifact-face { display: grid; place-items: center; border: 1px solid #bdb4a8; background: #fcfbf8; box-shadow: 0 7px 0 #e2d9cc, 0 12px 25px rgba(64, 42, 29, 0.1); transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1); }
   .forge-hero-artifact:hover .forge-hero-artifact-face { transform: rotate(-7deg) skew(-3deg, 2deg) translateY(-7px); }
   .forge-hero-artifact-face svg { width: 38%; height: 38%; }
-  .forge-hero-preview-wrap { max-width: 1320px; margin: 0 auto; padding: 0 40px 80px; }
+  .forge-hero-preview-wrap { max-width: 1320px; margin: 0 auto; padding: 0 40px 56px; }
   .workbench-preview { overflow: hidden; border: 1px solid #cfc8bd; border-radius: 11px; background: #fff; box-shadow: 0 25px 65px rgba(70, 51, 37, 0.11); color: #242321; }
   .workbench-preview-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 22px; border-bottom: 1px solid #e6e1d9; font-size: 12px; }
   .workbench-preview-divider { display: block; width: 1px; height: 16px; margin: 0 4px; background: #d6d0c7; }
@@ -172,13 +177,13 @@
   .workbench-preview-foot strong { color: #4c4540; font-weight: 600; }
 
   @media (max-width: 767px) {
-    .forge-hero-content { display: block; padding: 196px 24px 72px; }
+    .forge-hero-content { display: block; padding: 196px 24px 56px; }
     .forge-hero-copy h1 { font-size: clamp(3.15rem, 13vw, 4.25rem); letter-spacing: -0.07em; }
     .forge-hero-intro { margin-top: 25px; font-size: 15px; }
     .forge-hero-actions { align-items: flex-start; flex-direction: column; gap: 12px; margin-top: 26px; }
     .forge-hero-meta { margin-top: 21px; }
     .forge-hero-artifact { position: absolute; top: 78px; right: 28px; width: 120px; }
-    .forge-hero-preview-wrap { padding: 0 16px 56px; }
+    .forge-hero-preview-wrap { padding: 0 16px 40px; }
     .workbench-preview-topbar { padding: 0 16px; }
     .workbench-preview-body { display: block; }
     .workbench-preview-nav { flex-direction: row; gap: 4px; overflow-x: auto; padding: 10px; border-right: 0; border-bottom: 1px solid #e6e1d9; }
@@ -193,7 +198,7 @@
   }
 
   .workbench-features {
-    padding: 80px 0 96px;
+    padding: 64px 0;
     border-top: 1px solid #d8d1c7;
     background: #f2efe8;
     color: #272321;
@@ -217,7 +222,7 @@
     display: grid;
     grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.65fr);
     gap: clamp(40px, 7vw, 120px);
-    margin-top: 56px;
+    margin-top: 40px;
     border-top: 1px solid #cfc7bd;
   }
   .workbench-features-groups { padding-top: 26px; }
@@ -245,10 +250,10 @@
   .workbench-features-detail h3 span { padding: 3px 6px; border: 1px solid #c7a9a5; border-radius: 3px; color: #8e2b25; font-size: 10px; font-weight: 600; letter-spacing: 0; }
   .workbench-features-detail li p { max-width: 570px; margin-top: 5px; color: #706960; font-size: 14px; line-height: 1.55; }
   @media (max-width: 767px) {
-    .workbench-features { padding: 64px 0 72px; }
+    .workbench-features { padding: 52px 0 56px; }
     .workbench-features h2 { font-size: clamp(2.8rem, 11vw, 4rem); }
     .workbench-features-intro { font-size: 15px; }
-    .workbench-features-layout { display: block; margin-top: 48px; }
+    .workbench-features-layout { display: block; margin-top: 36px; }
     .workbench-features-groups { display: flex; gap: 22px; overflow-x: auto; padding: 12px 0 4px; }
     .workbench-features-groups { scrollbar-width: none; -ms-overflow-style: none; }
     .workbench-features-groups::-webkit-scrollbar { display: none; }

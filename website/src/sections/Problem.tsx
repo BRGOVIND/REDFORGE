@@ -29,7 +29,7 @@ export function Problem() {
   const [active, setActive] = useState<number | null>(null);
 
   return (
-    <section id="security" className="relative border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section id="security" className="relative border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-4">
           <Reveal delay={120}>

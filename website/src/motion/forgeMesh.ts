@@ -261,17 +261,27 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     schedule(true);
   }
   function leave() {
+    hero.classList.remove('is-mesh-interacting');
     if (!pointer.active) return;
     pointer.active = false;
     schedule(true);
   }
   function down(event: PointerEvent) {
-    if (reduced.matches || event.button !== 0 || (event.target instanceof Element && event.target.closest('a, button, input'))) return;
+    if (reduced.matches || event.button !== 0 || (event.target instanceof Element && event.target.closest('a, button, input, textarea, select, [contenteditable="true"]'))) return;
+    if (event.pointerType === 'mouse' || event.pointerType === 'pen') {
+      event.preventDefault();
+      hero.classList.add('is-mesh-interacting');
+      hero.setPointerCapture?.(event.pointerId);
+    }
     position(event);
     scan.x = pointer.x; scan.y = pointer.y; scan.age = 0;
     schedule(true);
   }
-  function up(event: PointerEvent) { if (event.pointerType !== 'mouse') leave(); }
+  function up(event: PointerEvent) {
+    hero.classList.remove('is-mesh-interacting');
+    if (hero.hasPointerCapture?.(event.pointerId)) hero.releasePointerCapture(event.pointerId);
+    if (event.pointerType !== 'mouse') leave();
+  }
   function queueMeasure() { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(measure, 80); }
   function revealed(event: TransitionEvent) {
     if (event.propertyName === 'transform' && event.target instanceof Element && event.target.matches('[data-mesh-quiet]')) queueMeasure();
@@ -285,7 +295,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   resizer.observe(hero);
   hero.addEventListener('pointermove', position, { passive: true });
   hero.addEventListener('pointerleave', leave);
-  hero.addEventListener('pointerdown', down, { passive: true });
+  hero.addEventListener('pointerdown', down);
   hero.addEventListener('pointerup', up);
   hero.addEventListener('pointercancel', leave);
   hero.addEventListener('transitionend', revealed);
@@ -303,6 +313,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     clearTimeout(timer);
     clearTimeout(resizeTimer);
     observer.disconnect(); resizer.disconnect();
+    hero.classList.remove('is-mesh-interacting');
     hero.removeEventListener('pointermove', position);
     hero.removeEventListener('pointerleave', leave);
     hero.removeEventListener('pointerdown', down);
