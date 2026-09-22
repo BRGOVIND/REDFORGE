@@ -6,7 +6,7 @@ const CLOUD = ['OpenAI', 'Anthropic', 'Gemini', 'Groq', 'OpenRouter'];
 /** Supported technologies, RedForge as the orchestration layer connecting them all. */
 export function Stack() {
   return (
-    <section id="stack" className="relative border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section id="stack" className="relative border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
           <h2 className="display max-w-2xl text-4xl leading-[1.05] text-bone sm:text-5xl">
@@ -18,7 +18,7 @@ export function Stack() {
           </p>
         </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-2">
+        <div className="mt-8 grid grid-cols-1 gap-8 sm:mt-10 lg:grid-cols-2">
           <Reveal>
             <h3 className="mb-4 text-sm font-medium text-bone">Local runtimes</h3>
             <div className="flex flex-wrap gap-2.5">
