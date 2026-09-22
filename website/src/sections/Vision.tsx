@@ -8,7 +8,7 @@ const PRINCIPLES = [
 
 export function Vision() {
   return (
-    <section className="relative overflow-hidden border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section className="relative overflow-hidden border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div
         className="pointer-events-none absolute right-[-10%] top-0 h-[500px] w-[500px] rounded-full blur-[140px]"
         style={{ background: 'radial-gradient(circle, rgba(90,0,0,0.14), transparent 65%)' }}

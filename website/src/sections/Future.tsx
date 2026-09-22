@@ -10,7 +10,7 @@ const HORIZON = [
 
 export function Future() {
   return (
-    <section id="future" className="relative border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section id="future" className="relative border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal delay={120}>
           <h2 className="display max-w-2xl text-5xl text-bone sm:text-6xl">
@@ -18,7 +18,7 @@ export function Future() {
           </h2>
         </Reveal>
 
-        <div className="relative mt-12 sm:mt-14">
+        <div className="relative mt-8 sm:mt-10">
           <div className="absolute left-0 right-0 top-[7px] hidden h-px bg-steel-700 lg:block" />
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {HORIZON.map((h, i) => (
