@@ -32,7 +32,7 @@ const CAPABILITIES = [
 
 export function Benchmark() {
   return (
-    <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-16 sm:py-20 lg:py-24">
+    <section id="benchmark" className="relative overflow-hidden border-t border-steel-800 py-12 sm:py-14 lg:py-16">
       <div className="mx-auto grid max-w-editorial grid-cols-1 gap-12 px-6 sm:px-10 lg:grid-cols-12 lg:gap-16">
         <div className="lg:col-span-5">
           <Reveal delay={120}>
@@ -50,7 +50,7 @@ export function Benchmark() {
           </Reveal>
         </div>
 
-        <div className="lg:col-span-7 lg:pt-16">
+          <div className="lg:col-span-7 lg:pt-8">
           <div className="flex flex-col">
             {CAPABILITIES.map((c, i) => (
               <Reveal key={c.k} delay={i * 120}>
