@@ -37,9 +37,9 @@ export default function App() {
         <Stack />
         <BuiltFor />
         <Local />
-        <QuickInstall />
         <Download />
         <InstallSteps />
+        <QuickInstall />
         <Vision />
         <Future />
         <About />
