@@ -16,26 +16,40 @@ The destination is measured from the rendered navbar. Resizing or a font-driven 
 
 `ForgeMesh.tsx` mounts a decorative Canvas 2D element. `motion/forgeMesh.ts` owns its mutable state and lifecycle, independently of React rendering.
 
-- Desktop uses 50–72 nodes; narrow or coarse-pointer layouts use 24–32.
+- Desktop uses 72 to 96 nodes; narrow or coarse-pointer layouts use 28 to 38.
 - Nodes have seeded, asymmetric placement, slow ambient drift, damped spring displacement, and localized red highlights.
 - A pointer press sends one temporary scan through nearby nodes. It replaces the previous scan instead of accumulating particles.
-- Only a few nodes have labels: model, runtime, and guard.
-- Text, button rows, and the scroll hint have quiet zones that suppress mesh contrast. Labels turn inward near the right edge.
+- Nodes have different depth weights. Scrolling shifts their positions slightly, while pointer proximity lights connected signal hops.
+- Text and the logo artifact have quiet zones that suppress mesh contrast. The mesh has no text labels.
 - The existing blueprint grid stays in CSS. The obsolete silhouette component was removed and remains recoverable from Git.
 
 ## Performance
 
 - One requestAnimationFrame loop; pointer handlers only update mutable coordinates.
-- Drawing targets 60 Hz, with deadline-based pacing for high-refresh displays. Idle mobile drawing targets 30 Hz.
-- DPR is capped at 1.5 on desktop and 1.25 on mobile/coarse-pointer layouts.
+- Interaction uses requestAnimationFrame. Idle drawing waits 38 ms on desktop and 70 ms on mobile between frame requests.
+- DPR is capped at 1.25 on desktop and 1 on mobile/coarse-pointer layouts.
 - A cached glow sprite replaces per-frame gradient creation.
-- Reused typed-array spatial buckets restrict connection searches to nearby cells, with at most three links per node.
+- Nearest-anchor connections are computed only during layout measurement, with at most three links per node. There is no per-frame pair search.
 - The frame loop performs no DOM measurements. Geometry is measured on layout changes, font readiness, and completion of the hero's transform transitions.
 - IntersectionObserver and document visibility stop the loop when the hero is offscreen or the tab is hidden. Cleanup cancels frames, timers, observers, and listeners.
 
 ## Accessibility
 
 Reduced motion bypasses the intro and renders a static mesh. Changes to that preference are handled live. The canvas is hidden from assistive technology and never receives pointer events. Text remains HTML; existing links remain functional. Keyboard input finishes the intro, and the navbar retains its visible focus ring.
+
+## Scroll scenes and product examples
+
+`useScrollScene` writes bounded CSS custom properties through a passive, animation-frame-throttled scroll listener. It does not update React state per frame. IntersectionObserver limits work to visible scenes; ResizeObserver refreshes geometry. All listeners and observers are disposed on unmount.
+
+The hero logo has a small scroll-dependent lift and rotation. The workspace preview settles from a shallow perspective tilt into a flat, readable interface as it enters view. Pipeline connectors draw continuously between nodes while the existing stage hook changes the explanatory copy. These effects add no extra scroll distance. Reduced motion removes the new spatial transforms.
+
+The three preview buttons show model details, a prompt comparison, and a security response with its verdict. All examples are explicitly labeled illustrative; they are not connected to the user's runtime or presented as measured results.
+
+## October 17, 2026 verification
+
+Production build and TypeScript pass. Browser checks covered 1440 by 1000 desktop and 390 by 844 mobile layouts, all three preview buttons, partial pipeline connector progress, reduced-motion transforms, mesh animation, and mouse dragging without text selection. No browser errors or horizontal overflow were observed in those checks.
+
+A 1.5-second desktop sample observed 81 nodes, with 0.2 ms median and 0.4 ms 95th-percentile JavaScript drawing work. This measures canvas submission work on this machine, not GPU presentation or a performance guarantee for other devices.
 
 ## Files
 
@@ -46,6 +60,8 @@ Reduced motion bypasses the intro and renders a static mesh. Changes to that pre
 - `src/sections/Hero.tsx`: mesh integration, quiet zones, faster reveal, and responsive spacing.
 - `src/sections/ForgeMesh.tsx`: canvas mount and lifecycle bridge.
 - `src/motion/forgeMesh.ts`: simulation, rendering, and visibility handling.
+- `src/motion/useScrollScene.ts`: scroll progress without per-frame React rendering.
+- `src/sections/WorkbenchPreview.tsx`: interactive, clearly labeled product examples.
 - `src/index.css`: intro layering, compositing, reduced motion, and short-screen spacing.
 - `src/sections/HeroSilhouette.tsx`: removed.
 - `qa/animation.html` and `qa/animation.js`: development-only browser checks.
@@ -75,7 +91,7 @@ Open `http://127.0.0.1:5174/qa/animation.html` and click **Run animation checks*
 
 Checks cover logo identity and docking, horizontal overflow, DPR, decorative canvas behavior, real pointer-induced spring displacement, offscreen pause/resume, live motion preferences, and visibility pause/resume. Media preferences and the hidden-tab event path are simulated inside the test iframe. Real keyboard navigation was also checked in the browser: Tab finishes the intro and focuses RedForge home.
 
-All six cases passed in the final run. The 1920×1080 case used 72 nodes and reached 60 draws per second, with 0.2 ms median and 0.4 ms 95th-percentile JavaScript frame work. The 1366×768 case used 50 nodes and reached 60 draws per second, with 0.6 ms median and 1.3 ms 95th-percentile work. Mobile used 24 nodes and reached 30 idle draws per second. Reduced motion recorded zero animation-frame draws.
+The older six-case harness predates the current mesh renderer. Its exact-radius node instrumentation and event host assumptions need updating before its results can be used for this version. The targeted browser checks above are the checks performed for this change.
 
 These numbers measure drawing submissions, not GPU presentation or a guarantee for every device. The QA instrumentation itself adds overhead, and timings vary with system load.
 

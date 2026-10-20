@@ -1,7 +1,7 @@
 interface MeshNode {
   u: number; v: number; x: number; y: number;
   ox: number; oy: number; vx: number; vy: number;
-  phase: number; heat: number; quiet: number; accent: boolean;
+  phase: number; heat: number; quiet: number; accent: boolean; depth: number;
 }
 interface QuietZone { left: number; top: number; right: number; bottom: number }
 interface MeshEdge { a: number; b: number }
@@ -35,6 +35,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   let mobile = false, visible = false, disposed = false;
   let raf = 0, timer = 0, last = 0, time = 0, lastPointerTime = 0;
   let resizeTimer = 0;
+  let scrollOffset = 0;
   const pointer = { x: -10000, y: -10000, active: false };
   const scan = { x: 0, y: 0, age: 10 };
 
@@ -64,10 +65,10 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
       return { left: box.left - rect.left - 10, right: box.right - rect.left + 10,
         top: box.top - rect.top - 18, bottom: box.bottom - rect.top + 20 };
     });
-    const count = mobile ? Math.min(28, Math.max(20, Math.round(width * height / 18000)))
-      : Math.min(58, Math.max(44, Math.round(width * height / 22000)));
+    const count = mobile ? Math.min(38, Math.max(28, Math.round(width * height / 12000)))
+      : Math.min(96, Math.max(72, Math.round(width * height / 12500)));
     if (nodes.length !== count) {
-      // Stratified, seeded placement keeps the mesh sparse and resize-stable.
+      // Stratified, seeded placement keeps the denser mesh resize-stable.
       let seed = 7419;
       const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
       const across = Math.ceil(Math.sqrt(count * width / height));
@@ -77,7 +78,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
         v: (Math.floor(i / across) + 0.15 + random() * 0.7) / down,
         x: 0, y: 0, ox: 0, oy: 0, vx: 0, vy: 0,
         phase: random() * TAU, heat: 0, quiet: 1,
-        accent: i % 11 === 3,
+        accent: i % 11 === 3, depth: 0.45 + random() * 0.55,
       }));
     }
     link = Math.min(mobile ? 160 : 270, Math.sqrt(width * height / count) * 1.45);
@@ -111,8 +112,8 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     const damping = Math.exp(-9 * dt);
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-      const baseX = node.u * width + (reduced.matches ? 0 : Math.sin(time * 0.17 + node.phase) * 9);
-      const baseY = node.v * height + (reduced.matches ? 0 : Math.cos(time * 0.13 + node.phase) * 7);
+      const baseX = node.u * width + (reduced.matches ? 0 : Math.sin(time * 0.17 + node.phase) * 9 * node.depth);
+      const baseY = node.v * height + (reduced.matches ? 0 : Math.cos(time * 0.13 + node.phase) * 7 + scrollOffset * node.depth);
       const dx = baseX + node.ox - pointer.x, dy = baseY + node.oy - pointer.y;
       const distance2 = dx * dx + dy * dy;
       let heat = 0, forceX = 0, forceY = 0;
@@ -160,8 +161,9 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
       context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke();
       // A few short signal hops, never a growing list of particles.
       const phase = (time * 0.16 + a.phase) % 1;
-      if (!reduced.matches && i % 13 === 0 && phase < 0.22 && quiet > 0.4) {
-        const progress = phase / 0.22;
+      const signalWindow = heat > 0.15 ? 0.65 : 0.28;
+      if (!reduced.matches && (i % 9 === 0 || heat > 0.15) && phase < signalWindow && quiet > 0.4) {
+        const progress = phase / signalWindow;
         const px = a.x + (b.x - a.x) * progress, py = a.y + (b.y - a.y) * progress;
         context.globalAlpha = Math.sin(progress * Math.PI) * entrance * 0.5;
         context.fillStyle = '#A11212';
@@ -176,9 +178,9 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
         context.globalAlpha = intensity * node.quiet * entrance * 0.7;
         context.drawImage(sprite, node.x - 18, node.y - 18, 36, 36);
       }
-      context.globalAlpha = node.quiet * entrance * (node.accent ? 0.76 : 0.56 + node.heat * 0.35);
+      context.globalAlpha = node.quiet * entrance * (node.accent ? 0.76 : 0.38 + node.depth * 0.22 + node.heat * 0.35);
       context.fillStyle = intensity > 0.15 ? '#A11212' : '#6E6258';
-      context.beginPath(); context.arc(node.x, node.y, node.accent ? 2.2 : 1.4, 0, TAU); context.fill();
+      context.beginPath(); context.arc(node.x, node.y, (node.accent ? 2.4 : 1.2 + node.depth * 0.6) + node.heat * 0.6, 0, TAU); context.fill();
     }
     if (pointer.active && !reduced.matches) {
       const quiet = quietAt(pointer.x, pointer.y);
@@ -283,6 +285,13 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     if (event.pointerType !== 'mouse') leave();
   }
   function queueMeasure() { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(measure, 80); }
+  function scroll() {
+    leave();
+    if (!visible || reduced.matches) return;
+    scrollOffset = Math.max(-35, Math.min(35, -hero.getBoundingClientRect().top * 0.055));
+    lastPointerTime = performance.now();
+    schedule(true);
+  }
   function revealed(event: TransitionEvent) {
     if (event.propertyName === 'transform' && event.target instanceof Element && event.target.matches('[data-mesh-quiet]')) queueMeasure();
   }
@@ -299,7 +308,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
   hero.addEventListener('pointerup', up);
   hero.addEventListener('pointercancel', leave);
   hero.addEventListener('transitionend', revealed);
-  window.addEventListener('scroll', leave, { passive: true });
+  window.addEventListener('scroll', scroll, { passive: true });
   window.addEventListener('resize', queueMeasure);
   document.addEventListener('visibilitychange', sync);
   reduced.addEventListener('change', sync);
@@ -320,7 +329,7 @@ export function createForgeMesh(canvas: HTMLCanvasElement, hero: HTMLElement): (
     hero.removeEventListener('pointerup', up);
     hero.removeEventListener('pointercancel', leave);
     hero.removeEventListener('transitionend', revealed);
-    window.removeEventListener('scroll', leave);
+    window.removeEventListener('scroll', scroll);
     window.removeEventListener('resize', queueMeasure);
     document.removeEventListener('visibilitychange', sync);
     reduced.removeEventListener('change', sync);
