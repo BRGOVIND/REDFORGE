@@ -1,13 +1,17 @@
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { useRef } from 'react';
+import { useScrollScene } from '../motion/useScrollScene';
 import { ForgeMark } from '../components/marks';
 import { WorkbenchPreview } from './WorkbenchPreview';
 import { ForgeMesh } from './ForgeMesh';
 
 export function Hero({ started }: { started: boolean }) {
+  const sceneRef = useRef<HTMLDivElement>(null);
+  useScrollScene(sceneRef);
   return (
     <section id="top" className="forge-hero">
       <div className="forge-hero-paper">
-        <div className="forge-hero-content">
+        <div className="forge-hero-content" ref={sceneRef}>
           <ForgeMesh active={started} />
           <div className="forge-hero-copy" data-mesh-quiet>
             <h1 className={started ? 'forge-hero-entered' : ''}>
@@ -36,6 +40,7 @@ export function Hero({ started }: { started: boolean }) {
             <div className="forge-hero-artifact-face">
               <ForgeMark size={90} />
             </div>
+            <span className="forge-artifact-caption">Your machine. Your workspace.</span>
           </div>
         </div>
 

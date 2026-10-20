@@ -2,6 +2,8 @@ import { Package, Database, Dumbbell, Gauge, ShieldCheck, FileText } from 'lucid
 import { usePinStage } from '../motion';
 import { cn } from '../lib/cn';
 import { ForgeMesh } from './ForgeMesh';
+import { useScrollScene } from '../motion/useScrollScene';
+import type { CSSProperties } from 'react';
 
 // One connected engineering workflow, not isolated tools. Everything below runs
 // locally and flows into the next stage, with full lineage.
@@ -16,6 +18,7 @@ const STAGES = [
 
 export function Pipeline() {
   const [ref, active] = usePinStage<HTMLDivElement>(STAGES.length);
+  useScrollScene(ref, 'pin');
 
   return (
     <section id="how" ref={ref} className="relative" style={{ height: '220vh' }}>
@@ -25,16 +28,16 @@ export function Pipeline() {
         <div className="relative mx-auto grid w-full max-w-editorial grid-cols-1 items-center gap-10 px-6 sm:px-10 lg:grid-cols-2 lg:gap-16">
           {/* Left, the active stage, cross-fading */}
           <div>
-            <div className="pipeline-stage relative h-[220px] sm:h-[280px]" data-mesh-quiet>
+            <div className="pipeline-stage grid" data-mesh-quiet>
               {STAGES.map((s, i) => (
                 <div
                   key={s.k}
-                  className="absolute inset-0"
+                  className="pipeline-stage-panel"
+                  aria-hidden={i !== active}
                   style={{
                     opacity: i === active ? 1 : 0,
                     transform: i === active ? 'translateY(0)' : 'translateY(18px)',
-                    filter: i === active ? 'blur(0)' : 'blur(6px)',
-                    transition: 'opacity 600ms ease, transform 600ms cubic-bezier(0.16,1,0.3,1), filter 600ms ease',
+                    transition: 'opacity 400ms ease, transform 500ms cubic-bezier(0.16,1,0.3,1)',
                     pointerEvents: i === active ? 'auto' : 'none',
                   }}
                 >
@@ -52,22 +55,23 @@ export function Pipeline() {
                 const lit = i <= active;
                 const Icon = s.icon;
                 return (
-                  <div key={s.k} className={cn('pipeline-step relative flex items-center gap-5', i < active && 'is-complete')}>
+                  <div key={s.k} className={cn('pipeline-step relative flex items-center gap-5', i < active && 'is-complete', i === active && 'is-active')} style={{ '--segment': i } as CSSProperties}>
+                    {i < STAGES.length - 1 && <span className="pipeline-connection" aria-hidden="true" />}
                     <span
                       className={cn(
-                        'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all duration-500 ease-forge',
+                        'pipeline-node relative z-10 flex shrink-0 items-center justify-center rounded-full border transition-all duration-500 ease-forge',
                         lit
                           ? 'border-forge bg-[#f8f6f2] text-forge'
                           : 'border-steel-700 bg-char text-steel-500'
                       )}
                       style={lit ? { boxShadow: '0 3px 12px rgba(122,0,0,0.1)' } : undefined}
                     >
-                      <Icon size={16} />
+                      <Icon size={19} />
                     </span>
                     <div className="flex-1">
                       <span
                         className={cn(
-                          'display text-lg transition-colors duration-500',
+                          'display text-xl transition-colors duration-500',
                           lit ? 'text-bone' : 'text-steel-500'
                         )}
                       >
