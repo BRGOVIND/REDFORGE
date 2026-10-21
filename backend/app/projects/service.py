@@ -10,10 +10,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import select, text
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Project
+from app.db.models import Project, TraceEvent, TraceToken, TracePrivacyPolicy
+from app.observability_privacy import audit
 
 # Windows' system clock granularity is ~15.6 ms, so two projects created (or
 # opened) in quick succession get byte-identical timestamps — measured at 7/12
@@ -117,6 +118,12 @@ class ProjectService:
         p = await db.get(Project, project_id)
         if p is None:
             return False
+        # SQLite installations may not enforce foreign keys. Remove project
+        # telemetry explicitly so deleted credentials and traces cannot linger.
+        await db.execute(delete(TraceEvent).where(TraceEvent.project_id == project_id))
+        await db.execute(delete(TraceToken).where(TraceToken.project_id == project_id))
+        await db.execute(delete(TracePrivacyPolicy).where(TracePrivacyPolicy.project_id == project_id))
+        audit(db, project_id, "project.deleted", project_id)
         await db.delete(p)
         await db.commit()
         return True

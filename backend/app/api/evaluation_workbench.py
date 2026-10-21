@@ -26,8 +26,9 @@ from app.evaluation import (
     list_similarity,
 )
 from app.runtime_registry import runtime_registry
+from app.api.traces import _local
 
-router = APIRouter(prefix="/api/evaluation-workbench", tags=["evaluation-workbench"])
+router = APIRouter(prefix="/api/evaluation-workbench", tags=["evaluation-workbench"], dependencies=[Depends(_local)])
 
 
 # ---------------------------------------------------------------------------
@@ -335,9 +336,12 @@ async def create_session(req: SessionCreate, db: AsyncSession = Depends(get_db))
     targets = await _resolve_targets(db, req.models, req.registry_ids, req.project_id)
     if not targets:
         raise HTTPException(status_code=400, detail="no models resolved")
-    return await evaluation_sessions.schedule(
-        models=targets, prompt_set_ids=req.prompt_set_ids, project_id=req.project_id,
-        run_id=req.run_id, name=req.name, similarity=req.similarity, config=req.config)
+    try:
+        return await evaluation_sessions.schedule(
+            models=targets, prompt_set_ids=req.prompt_set_ids, project_id=req.project_id,
+            run_id=req.run_id, name=req.name, similarity=req.similarity, config=req.config)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
 
 
 @router.get("/sessions/{sid}")

@@ -19,6 +19,7 @@ import asyncio
 import time
 from collections import deque
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Awaitable, Callable, Optional
 from uuid import uuid4
 
@@ -30,9 +31,27 @@ from app.db.models import (
 from app.evaluation.regression import regression_analyzer
 from app.evaluation.similarity import get_similarity
 from app.evaluation.versioning import prompt_version_service, snapshot_of
+from app.observability_privacy import audit
 from app.logging_config import get_logger
 
 logger = get_logger("evaluation-workbench")
+
+
+def _render_for_evaluation(prompt, config: dict) -> dict[str, str]:
+    """Render only declared simple variables; never evaluate expressions."""
+    if not (prompt.variables_schema or "{{" in prompt.prompt or "{{" in (prompt.system_prompt or "")):
+        return {"prompt": prompt.prompt, "system_prompt": prompt.system_prompt or "", "context": prompt.context or ""}
+    from fastapi import HTTPException
+    from app.api.prompt_registry import Definition, render
+    data = snapshot_of(prompt)
+    data["title"] = data.get("title") or "Untitled prompt"
+    data["variables_schema"] = data.get("variables_schema") or []
+    definition = Definition.model_validate(data)
+    values = (config.get("prompt_variables") or {}).get(prompt.id, {})
+    try:
+        return render(definition, values)
+    except HTTPException as exc:
+        raise ValueError(f"Prompt {prompt.id}: {exc.detail}") from None
 
 
 def _utcnow() -> datetime:
@@ -78,6 +97,9 @@ def prompt_dict(p: Prompt) -> dict:
         "golden_response": p.golden_response or "", "acceptance_criteria": p.acceptance_criteria or {},
         "tags": p.tags or [], "priority": p.priority, "difficulty": p.difficulty,
         "notes": p.notes or "", "enabled": bool(p.enabled), "current_version": p.current_version,
+        "active_version": p.active_version or p.current_version, "description": p.description or "",
+        "variables_schema": p.variables_schema or [], "draft": p.draft, "author": p.author or "",
+        "archived_at": _iso(p.archived_at),
         "created_at": _iso(p.created_at), "updated_at": _iso(p.updated_at),
     }
 
@@ -176,6 +198,8 @@ class EvaluationWorkbenchService:
             c = await db.get(EvaluationCollection, cid)
             if c is None:
                 return False
+            if c.project_id:
+                audit(db, c.project_id, "prompt_collection.deleted", cid)
             await db.delete(c)
             await db.commit()
             return True
@@ -242,6 +266,8 @@ class EvaluationWorkbenchService:
             s = await db.get(PromptSet, sid)
             if s is None:
                 return False
+            if s.project_id:
+                audit(db, s.project_id, "prompt_set.deleted", sid)
             await db.delete(s)
             await db.commit()
             return True
@@ -295,6 +321,7 @@ class EvaluationWorkbenchService:
             content_changed = any(before.get(k) != getattr(p, k) for k in content_fields)
             if content_changed:
                 p.current_version += 1
+                p.active_version = p.current_version
                 await prompt_version_service.snapshot(db, p, note=version_note or "edited")
             await db.commit()
             await db.refresh(p)
@@ -305,6 +332,9 @@ class EvaluationWorkbenchService:
             p = await db.get(Prompt, pid)
             if p is None:
                 return False
+            ps = await db.get(PromptSet, p.prompt_set_id)
+            if ps and ps.project_id:
+                audit(db, ps.project_id, "prompt.deleted", pid)
             await db.delete(p)
             await db.commit()
             return True
@@ -486,15 +516,24 @@ class EvaluationSessionService:
                        config=None) -> dict:
         """Create a pending session and enqueue it. Non-blocking."""
         async with self._factory()() as db:
+            if project_id is not None and prompt_set_ids:
+                scoped_sets = (await db.execute(select(PromptSet.id).where(
+                    PromptSet.id.in_(prompt_set_ids), PromptSet.project_id == project_id))).scalars().all()
+                if set(scoped_sets) != set(prompt_set_ids):
+                    raise ValueError("Prompt sets must belong to the selected project")
             prompts = (await db.execute(
                 select(Prompt).where(
                     Prompt.prompt_set_id.in_(prompt_set_ids), Prompt.enabled == 1)
             )).scalars().all() if prompt_set_ids else []
+            for prompt in prompts:
+                _render_for_evaluation(prompt, config or {})
+            frozen_versions = {p.id: p.active_version or p.current_version for p in prompts}
+            stored_config = {**(config or {}), "prompt_versions": frozen_versions}
             total = len(models) * len(prompts)
             s = WorkbenchSession(
                 id=str(uuid4()), project_id=project_id, run_id=run_id, name=name,
                 models=models, prompt_set_ids=prompt_set_ids, similarity=similarity,
-                status="pending", config=config or {}, summary={}, total_tasks=total,
+                status="pending", config=stored_config, summary={}, total_tasks=total,
                 completed_tasks=0,
             )
             db.add(s)
@@ -561,7 +600,25 @@ class EvaluationSessionService:
                 config = dict(s.config or {})
                 sim_key = s.similarity
                 prompt_set_ids = list(s.prompt_set_ids or [])
-                prompts = await self._load_prompts(db, prompt_set_ids)
+                frozen = config.get("prompt_versions") or {}
+                if "prompt_versions" in config:
+                    rows = (await db.execute(select(Prompt).where(Prompt.id.in_(frozen)))).scalars().all()
+                    by_id = {row.id: row for row in rows}
+                    fixed = []
+                    for prompt_id, version in frozen.items():
+                        p = by_id.get(prompt_id)
+                        snapshot = await prompt_version_service.get_version(db, prompt_id, version) if version else None
+                        if p is None:
+                            raise ValueError(f"Scheduled prompt missing: {prompt_id}")
+                        if snapshot is None:
+                            raise ValueError(f"Published prompt version missing: {prompt_id} v{version}")
+                        snapshot = {"description": "", "variables_schema": [], "enabled": True, **snapshot}
+                        fixed.append(SimpleNamespace(id=p.id, prompt_set_id=p.prompt_set_id,
+                            current_version=version, active_version=version,
+                            **snapshot))
+                    prompts = fixed
+                else:
+                    prompts = await self._load_prompts(db, prompt_set_ids)
 
             if self._run_fn is not None:
                 # Full override (tests): produce raw result dicts.
@@ -617,7 +674,7 @@ class EvaluationSessionService:
                 acceptance = p.acceptance_criteria or {}
                 rr = {
                     "prompt_id": p.id, "prompt_set_id": p.prompt_set_id,
-                    "prompt_version": p.current_version, "prompt_title": p.title or "",
+                    "prompt_version": p.active_version or p.current_version, "prompt_title": p.title or "",
                     "target_model": target, "registry_id": m.get("registry_id"),
                     "provider": m.get("provider"), "runtime": m.get("runtime"),
                     "label": m.get("label") or target,
@@ -626,8 +683,9 @@ class EvaluationSessionService:
                     "regressions": [], "warnings": [], "error": None,
                 }
                 try:
+                    rendered = _render_for_evaluation(p, config)
                     gen = await self._generate_fn(
-                        target, p.prompt, system=p.system_prompt or None, options=options)
+                        target, rendered["prompt"], system=rendered["system_prompt"] or None, options=options)
                     if isinstance(gen, str):
                         gen = {"response": gen}
                     response = gen.get("response", "") or ""
@@ -651,7 +709,7 @@ class EvaluationSessionService:
                             db, session_id, p.id, m.get("registry_id") or target, target)
                     prev_resp = prev.response if prev else None
                     prev_lat = (prev.metrics or {}).get("latency_ms") if prev else None
-                    prompt_changed = bool(prev and (prev.prompt_version != p.current_version))
+                    prompt_changed = bool(prev and (prev.prompt_version != (p.active_version or p.current_version)))
 
                     regressions = regression_analyzer.analyze(
                         response, baseline, acceptance=acceptance,
