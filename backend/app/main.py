@@ -44,7 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding, projects, playground, assistant, datasets, training, recommendations, registry, benchmark_center, evaluation_workbench, foundation_models, artifacts, jobs, dataset_platform, training_platform, export, experiments, runtime_models, hardware, tasks, model_hub, settings as settings_api, training_runtime as training_runtime_api
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding, projects, playground, assistant, datasets, training, recommendations, registry, benchmark_center, evaluation_workbench, foundation_models, artifacts, jobs, dataset_platform, training_platform, export, experiments, runtime_models, hardware, tasks, model_hub, traces, prompt_registry, anomalies, feedback, settings as settings_api, training_runtime as training_runtime_api
 from app.config import settings
 from app.errors import register_error_handlers
 from app.logging_config import configure_logging, get_logger
@@ -247,6 +247,24 @@ def _log_reload_diagnostics() -> None:
     log.info("────────────────────────────────────────────────────")
 
 
+async def _anomaly_monitor_loop() -> None:
+    """One bounded lifecycle task; failures cannot affect serving or queue jobs."""
+    from app.anomaly_monitor import scan_due
+    from app.feedback_retention import cleanup_expired_feedback
+    log = get_logger("anomalies")
+    while True:
+        await asyncio.sleep(60)
+        try:
+            async with asyncio.timeout(25):
+                async with AsyncSessionLocal() as db:
+                    await scan_due(db, limit=20)
+                    await cleanup_expired_feedback(db, batch_size=100)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log.warning("local anomaly scan skipped: %s", type(exc).__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging()
@@ -255,6 +273,12 @@ async def lifespan(app: FastAPI):
     _log_reload_diagnostics()
     set_scoring_engine(WeightedScoringEngine())
     await init_db()
+    from app.observability_privacy import cleanup_expired
+    try:
+        async with AsyncSessionLocal() as db:
+            await cleanup_expired(db, batch_size=200)
+    except Exception as exc:
+        get_logger("startup").warning("bounded trace retention cleanup skipped: %s", exc)
     async with AsyncSessionLocal() as db:
         await seed_attacks(db)
     # Warm the settings snapshot so sync consumers (providers, Job handlers running
@@ -264,6 +288,8 @@ async def lifespan(app: FastAPI):
     # Register V3 Job handlers (dataset processing, training, export) so the
     # Execution Platform can dispatch them. Additive; never raises.
     _register_v3_job_handlers()
+    from app.feedback_replay import register_feedback_handlers
+    register_feedback_handlers()
     # Reconcile jobs left 'running' by a previous crash/restart — never leave a
     # job permanently active.
     await _recover_orphaned_jobs()
@@ -273,7 +299,13 @@ async def lifespan(app: FastAPI):
     app.state.startup_health_task = asyncio.create_task(_log_startup_health())
     # Automatic Foundation Model discovery (Epic 4.5) — background, non-blocking.
     app.state.startup_discovery_task = asyncio.create_task(_startup_model_discovery())
+    app.state.anomaly_monitor_task = asyncio.create_task(_anomaly_monitor_loop())
     yield
+    app.state.anomaly_monitor_task.cancel()
+    try:
+        await app.state.anomaly_monitor_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(
@@ -291,7 +323,7 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With", "X-RedForge-Sensitive-Access", "X-RedForge-Confirm-Action"],
 )
 
 app.include_router(models.router)
@@ -319,6 +351,10 @@ app.include_router(health.router)
 app.include_router(onboarding.router)
 # --- RedForge V2 (AI Studio) — additive; nothing in v1.2 depends on these ---
 app.include_router(projects.router)
+app.include_router(traces.router)
+app.include_router(prompt_registry.router)
+app.include_router(anomalies.router)
+app.include_router(feedback.router)
 app.include_router(playground.router)
 app.include_router(assistant.router)
 app.include_router(datasets.router)

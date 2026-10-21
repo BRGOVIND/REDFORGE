@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -11,6 +12,12 @@ from app.db.database import Base
 from app.db.models import ModelRecord, Attack, TestRun, Report, BenchmarkRun, ModelScore, AgentRun, AgentFinding, DatasetEntry, EvaluationSession, EvaluationEvent  # noqa: F401
 
 config = context.config
+
+# Keep CLI migrations on the same explicitly selected database as the backend.
+# Without this, REDFORGE_DATABASE_URL is silently ignored in favor of the
+# alembic.ini literal, which can migrate an unrelated local database.
+if os.environ.get("REDFORGE_DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.environ["REDFORGE_DATABASE_URL"])
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

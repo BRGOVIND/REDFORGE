@@ -7,8 +7,8 @@ development the frontend still runs under Vite with hot reload and proxies
 
 Static directory resolution (first hit wins):
   1. ``REDFORGE_STATIC_DIR`` env var
-  2. ``backend/app/static``            (bundled into a packaged release)
-  3. ``<repo>/frontend/dist``          (running from source after `npm run build`)
+  2. ``<repo>/frontend/dist``          (running from source after `npm run build`)
+  3. ``backend/app/static``            (bundled into a packaged release)
 
 Caching — why this matters more than it looks
 ---------------------------------------------
@@ -81,8 +81,10 @@ def resolve_static_dir() -> Optional[Path]:
     env = os.environ.get("REDFORGE_STATIC_DIR")
     if env:
         candidates.append(Path(env))
-    candidates.append(_HERE / "static")                      # bundled release
-    candidates.append(_HERE.parent.parent / "frontend" / "dist")  # from source
+    source_frontend = _HERE.parent.parent / "frontend"
+    if (source_frontend / "package.json").is_file():
+        candidates.append(source_frontend / "dist")           # active source build
+    candidates.append(_HERE / "static")                       # bundled release
     for c in candidates:
         if (c / "index.html").is_file():
             return c

@@ -10,7 +10,7 @@ leak internals to the client; they return a safe generic message.
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
@@ -41,7 +41,8 @@ def _code_for(status: int) -> str:
 
 
 def error_response(
-    status: int, code: str, message: str, details: Optional[Any] = None
+    status: int, code: str, message: str, details: Optional[Any] = None,
+    headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
     # jsonable_encoder makes arbitrary detail payloads (e.g. validation error
     # contexts holding exception objects) safely serializable.
@@ -50,6 +51,7 @@ def error_response(
         content=jsonable_encoder(
             {"success": False, "error": {"code": code, "message": message, "details": details}}
         ),
+        headers=headers,
     )
 
 
@@ -58,7 +60,7 @@ async def _http_exception_handler(_: Request, exc: StarletteHTTPException) -> JS
     # String details are safe user-facing messages; dict/other go into `details`.
     message = detail if isinstance(detail, str) else "Request failed"
     details = None if isinstance(detail, str) else detail
-    return error_response(exc.status_code, _code_for(exc.status_code), message, details)
+    return error_response(exc.status_code, _code_for(exc.status_code), message, details, exc.headers)
 
 
 async def _validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:

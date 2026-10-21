@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, ForeignKey, JSON, Boolean, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -75,6 +75,177 @@ class Project(Base):
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
     opened_at = Column(DateTime, default=_utcnow)  # bumped on open → drives "Recent Projects"
+
+
+class TraceToken(Base):
+    """Revocable, project-scoped ingestion credential. Raw tokens are never stored."""
+
+    __tablename__ = "trace_tokens"
+
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    tenant_id = Column(String(128))
+    token_hash = Column(String(64), nullable=False, unique=True)
+    prefix = Column(String(16), nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    revoked_at = Column(DateTime)
+
+
+class TraceEvent(Base):
+    """One observed LLM operation. Server timestamp and client timestamp stay distinct."""
+
+    __tablename__ = "trace_events"
+    __table_args__ = (
+        UniqueConstraint("project_id", "event_id", name="uq_trace_event_project_event"),
+        Index("ix_trace_events_project_time", "project_id", "received_at", "id"),
+        Index("ix_trace_events_project_trace", "project_id", "trace_id", "id"),
+        Index("ix_trace_events_project_conversation", "project_id", "conversation_id", "id"),
+        Index("ix_trace_events_project_provider", "project_id", "provider", "id"),
+        Index("ix_trace_events_project_model", "project_id", "model", "id"),
+        Index("ix_trace_events_project_status", "project_id", "status", "id"),
+        Index("ix_trace_events_project_service", "project_id", "service", "id"),
+        Index("ix_trace_events_project_environment", "project_id", "environment", "id"),
+        Index("ix_trace_events_project_route", "project_id", "route", "id"),
+        Index("ix_trace_events_project_tenant", "project_id", "tenant_id", "id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    event_id = Column(String(128), nullable=False)
+    received_at = Column(DateTime, default=_utcnow, nullable=False)
+    started_at = Column(DateTime)
+    duration_ms = Column(Float)
+    provider = Column(String(80))
+    model = Column(String(200))
+    operation = Column(String(80))
+    route = Column(String(240))
+    status = Column(String(20), nullable=False)
+    timed_out = Column(Boolean, nullable=False, default=False)
+    input_tokens = Column(Integer)
+    output_tokens = Column(Integer)
+    usage_source = Column(String(20))
+    finish_reason = Column(String(100))
+    cost_usd = Column(Float)
+    cost_source = Column(String(20))
+    error_category = Column(String(100))
+    error_detail = Column(String(500))
+    service = Column(String(120))
+    environment = Column(String(80))
+    application_version = Column(String(80))
+    git_revision = Column(String(80))
+    request_id = Column(String(128))
+    trace_id = Column(String(128))
+    span_id = Column(String(128))
+    parent_span_id = Column(String(128))
+    conversation_id = Column(String(128))
+    tenant_id = Column(String(128))
+    user_id = Column(String(128))
+    prompt_template_id = Column(String(128))
+    prompt_version_id = Column(String(128))
+    input_text = Column(Text)
+    output_text = Column(Text)
+    attributes = Column(JSON, default=dict)
+
+
+class TracePrivacyPolicy(Base):
+    """Per-project capture consent. Missing row means conservative defaults."""
+
+    __tablename__ = "trace_privacy_policies"
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
+    settings = Column(JSON, nullable=False, default=dict)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class GovernanceAuditEvent(Base):
+    """Small, append-only record of sensitive governance actions."""
+
+    __tablename__ = "governance_audit_events"
+    __table_args__ = (Index("ix_governance_audit_project_time", "project_id", "created_at"),)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(String(36), nullable=False)
+    action = Column(String(80), nullable=False)
+    resource_id = Column(String(128))
+    actor = Column(String(120), nullable=False, default="local-operator")
+    details = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class AnomalyRule(Base):
+    __tablename__ = "anomaly_rules"
+    __table_args__ = (Index("ix_anomaly_rules_due", "enabled", "next_check_at"),)
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    metric = Column(String(40), nullable=False)
+    provider = Column(String(80))
+    model = Column(String(200))
+    service = Column(String(120))
+    environment = Column(String(80))
+    threshold = Column(Float, nullable=False)
+    baseline_multiplier = Column(Float)
+    observed_minutes = Column(Integer, nullable=False, default=15)
+    baseline_minutes = Column(Integer, nullable=False, default=60)
+    min_samples = Column(Integer, nullable=False, default=20)
+    interval_seconds = Column(Integer, nullable=False, default=300)
+    cooldown_seconds = Column(Integer, nullable=False, default=1800)
+    severity = Column(String(20), nullable=False, default="warning")
+    enabled = Column(Boolean, nullable=False, default=True)
+    next_check_at = Column(DateTime)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class AnomalyAlert(Base):
+    __tablename__ = "anomaly_alerts"
+    __table_args__ = (Index("ix_anomaly_alert_project_time", "project_id", "created_at"),
+                      Index("ix_anomaly_alert_rule_state", "rule_id", "state"))
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    rule_id = Column(String(36), ForeignKey("anomaly_rules.id", ondelete="CASCADE"), nullable=False)
+    state = Column(String(20), nullable=False, default="open")
+    classification = Column(String(20), nullable=False, default="observed")
+    severity = Column(String(20), nullable=False)
+    metric = Column(String(40), nullable=False)
+    baseline = Column(Float)
+    observed = Column(Float, nullable=False)
+    sample_count = Column(Integer, nullable=False)
+    window_start = Column(DateTime, nullable=False)
+    window_end = Column(DateTime, nullable=False)
+    evidence = Column(JSON, nullable=False, default=dict)
+    occurrences = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    last_seen_at = Column(DateTime, default=_utcnow, nullable=False)
+    resolved_at = Column(DateTime)
+
+
+class FeedbackCase(Base):
+    __tablename__ = "feedback_cases"
+    __table_args__ = (UniqueConstraint("project_id", "fingerprint", name="uq_feedback_project_fingerprint"),
+                      Index("ix_feedback_project_state", "project_id", "state", "created_at"))
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    trace_event_id = Column(Integer, nullable=False)
+    source_event_id = Column(String(128))
+    trace_id = Column(String(128))
+    fingerprint = Column(String(64), nullable=False)
+    category = Column(String(40), nullable=False)
+    state = Column(String(20), nullable=False, default="draft")
+    labels = Column(JSON, nullable=False, default=list)
+    title = Column(String(200), nullable=False)
+    notes = Column(Text, default="")
+    prompt_text = Column(Text)
+    expected_output = Column(Text)
+    acceptance_criteria = Column(JSON, nullable=False, default=dict)
+    provider = Column(String(80))
+    model = Column(String(200))
+    prompt_template_id = Column(String(128))
+    prompt_version_id = Column(String(128))
+    dataset_id = Column(String(36))
+    dataset_version = Column(Integer)
+    evaluation_prompt_id = Column(String(36))
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
 class Dataset(Base):
@@ -516,6 +687,12 @@ class Prompt(Base):
     notes = Column(Text, default="")
     enabled = Column(Integer, default=1)                  # 0/1
     current_version = Column(Integer, default=1)
+    active_version = Column(Integer, default=1)
+    description = Column(Text, default="")
+    variables_schema = Column(JSON, default=list)
+    draft = Column(JSON)
+    author = Column(String(120), default="")
+    archived_at = Column(DateTime)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
@@ -531,12 +708,15 @@ class PromptVersion(Base):
     the prompt changed or the model changed."""
 
     __tablename__ = "eval_prompt_versions"
+    __table_args__ = (UniqueConstraint("prompt_id", "version", name="uq_eval_prompt_version"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     prompt_id = Column(String(36), ForeignKey("eval_prompts.id"), nullable=False, index=True)
     version = Column(Integer, nullable=False)
     snapshot = Column(JSON, nullable=False)               # full prompt field dict at this version
     note = Column(String(300), default="")
+    author = Column(String(120), default="")
+    content_hash = Column(String(64))
     created_at = Column(DateTime, default=_utcnow)
 
     prompt = relationship("Prompt", back_populates="versions")
