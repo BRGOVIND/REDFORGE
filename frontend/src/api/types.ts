@@ -984,6 +984,10 @@ export interface Prompt {
   notes: string;
   enabled: boolean;
   current_version: number;
+    active_version?: number;
+    description?: string;
+    variables_schema?: Array<{ name: string; type: 'string' | 'integer' | 'number' | 'boolean'; required?: boolean; default?: string | number | boolean | null }>;
+    draft?: Record<string, unknown> | null;
   created_at: string | null;
   updated_at: string | null;
 }

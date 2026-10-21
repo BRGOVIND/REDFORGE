@@ -13,6 +13,8 @@ const Reports = React.lazy(() => import('./pages/ReportsPage'));
 const ReportDetail = React.lazy(() => import('./pages/ReportDetailPage'));
 const Leaderboard = React.lazy(() => import('./pages/LeaderboardPage'));
 const History = React.lazy(() => import('./pages/HistoryPage'));
+const TraceExplorer = React.lazy(() => import('./pages/TraceExplorerPage'));
+const Observability = React.lazy(() => import('./pages/ObservabilityPage'));
 const RuntimeManager = React.lazy(() => import('./pages/RuntimeManagerPage'));
 const ModelManager = React.lazy(() => import('./pages/ModelManagerPage'));
 const ModelHub = React.lazy(() => import('./pages/ModelHubPage'));
@@ -44,6 +46,8 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/live')) return 'RedForge • Live Evaluation';
   if (pathname.startsWith('/reports')) return 'RedForge • Reports';
   if (pathname.startsWith('/history')) return 'RedForge • History';
+  if (pathname.startsWith('/traces')) return 'RedForge • Trace Explorer';
+  if (pathname.startsWith('/signals')) return 'RedForge • Signals & Feedback';
   if (pathname.startsWith('/leaderboard')) return 'RedForge • Leaderboard';
   if (pathname.startsWith('/runtime')) return 'RedForge • Runtime Manager';
   if (pathname.startsWith('/settings')) return 'RedForge • Settings';
@@ -113,6 +117,8 @@ export default function App() {
           <Route path="/reports/:id" element={<ReportDetail />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/history" element={<History />} />
+          <Route path="/traces" element={<TraceExplorer />} />
+          <Route path="/signals" element={<Observability />} />
           <Route path="/runtime" element={<RuntimeManager />} />
           <Route path="/models" element={<ModelManager />} />
           <Route path="/model-hub" element={<ModelHub />} />

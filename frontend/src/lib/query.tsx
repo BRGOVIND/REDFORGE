@@ -36,9 +36,14 @@ function keyToString(key: QueryKey): string {
 class QueryClient {
   private cache = new Map<string, CacheEntry>();
   private listeners = new Map<string, Set<() => void>>();
+  private invalidations = new Map<string, number>();
 
   getEntry<T>(key: string): CacheEntry<T> | undefined {
     return this.cache.get(key) as CacheEntry<T> | undefined;
+  }
+
+  getInvalidationVersion(key: string): number {
+    return this.invalidations.get(key) ?? 0;
   }
 
   private setEntry(key: string, entry: CacheEntry): void {
@@ -89,7 +94,10 @@ class QueryClient {
     for (const key of this.cache.keys()) {
       if (!prefix || key.startsWith(p)) {
         const entry = this.cache.get(key);
-        if (entry) this.setEntry(key, { ...entry, updatedAt: 0, promise: undefined });
+        if (entry) {
+          this.invalidations.set(key, this.getInvalidationVersion(key) + 1);
+          this.setEntry(key, { ...entry, updatedAt: 0, promise: undefined });
+        }
       }
     }
   }
@@ -147,9 +155,10 @@ export function useQuery<T>({
 
   useEffect(() => client.subscribe(key, rerender), [client, key, rerender]);
 
+  const invalidationVersion = client.getInvalidationVersion(key);
   useEffect(() => {
     run();
-  }, [run]);
+  }, [run, invalidationVersion]);
 
   useEffect(() => {
     if (!enabled || !refetchInterval) return;

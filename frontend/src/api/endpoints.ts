@@ -495,6 +495,32 @@ export const comparePromptVersions = (id: string, a: number, b: number) =>
       `${WB}/prompts/${id}/versions/compare`, { params: { a, b } })
     .then((r) => r.data);
 
+const PR = (projectId: string) => `/v1/projects/${projectId}/prompt-registry`;
+export const savePromptDraft = (projectId: string, id: string, definition: Record<string, unknown>) =>
+  http.put(`${PR(projectId)}/${id}/draft`, { definition }).then((r) => r.data);
+export const publishPromptDraft = (projectId: string, id: string) =>
+  http.post(`${PR(projectId)}/${id}/publish`, { note: 'Published from Workbench' }).then((r) => r.data);
+export const activatePromptVersion = (projectId: string, id: string, version: number) =>
+  http.post(`${PR(projectId)}/${id}/activate/${version}`).then((r) => r.data);
+export const compareRegistryVersions = (projectId: string, id: string, a: number, b: number) =>
+  http.get<{ changed_fields: string[]; diff: Record<string, { a: unknown; b: unknown }> }>(
+    `${PR(projectId)}/${id}/compare`, { params: { a, b } }).then((r) => r.data);
+export const exportPromptDefinition = (projectId: string, id: string) =>
+  http.get(`${PR(projectId)}/${id}/export`).then((r) => r.data);
+export const importPromptDefinition = (projectId: string, promptSetId: string, definition: unknown, confirmExisting = false) =>
+  http.post(`${PR(projectId)}/import`, { prompt_set_id: promptSetId, definition, confirm_existing: confirmExisting }).then((r) => r.data);
+
+export interface TracePrivacySettings {
+  telemetry_enabled: boolean; capture_input: boolean; capture_output: boolean;
+  capture_metadata: boolean; capture_errors: boolean; metadata_allowlist: string[];
+  metadata_denylist: string[]; redact_keys: string[]; max_payload_bytes: number;
+  sample_rate: number; retention_days: number;
+}
+export const getTracePrivacy = (projectId: string) =>
+  http.get<TracePrivacySettings>(`/projects/${projectId}/trace-privacy`).then((r) => r.data);
+export const putTracePrivacy = (projectId: string, settings: TracePrivacySettings) =>
+  http.put<TracePrivacySettings>(`/projects/${projectId}/trace-privacy`, settings).then((r) => r.data);
+
 // Sessions
 export const listWorkbenchSessions = (params?: { project_id?: string; run_id?: string }) =>
   http.get<WorkbenchSession[]>(`${WB}/sessions`, { params }).then((r) => r.data);

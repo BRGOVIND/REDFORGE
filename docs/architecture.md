@@ -12,6 +12,9 @@ For deep dives, see the focused docs:
 [first-run-experience](first-run-experience.md) ·
 [frontend-architecture](frontend-architecture.md).
 
+Phase 2 prompt publishing, evaluation correlation, and trace capture policy:
+[prompt-governance](prompt-governance.md) · [observability](observability.md).
+
 Shipping RedForge:
 [developer-guide](developer-guide.md) ·
 [packaging-guide](packaging-guide.md) ·

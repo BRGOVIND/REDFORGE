@@ -10,6 +10,7 @@ import {
   Dumbbell,
   FlaskConical,
   Activity,
+  Bell,
   LayoutDashboard,
   Layers,
   Microscope,
@@ -85,6 +86,8 @@ const NAV: NavGroup[] = [
       { to: '/reports', label: 'Reports', icon: <ScrollText size={16} />, match: '/reports' },
       { to: '/leaderboard', label: 'Leaderboard', icon: <Trophy size={16} /> },
       { to: '/history', label: 'History', icon: <Clock size={16} /> },
+      { to: '/traces', label: 'Traces', icon: <Activity size={16} /> },
+      { to: '/signals', label: 'Signals', icon: <Bell size={16} /> },
     ],
   },
   {
