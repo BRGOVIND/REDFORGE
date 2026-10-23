@@ -1,0 +1,31 @@
+# Phase 3: comparisons, opt-in routing, and cost accounting
+
+Phase 3 adds three local-operator tools to the existing Workbench and trace store. It does not alter normal model calls, select a provider silently, fetch prices from the internet, or add a cloud service. The desktop **Model decisions** page exposes comparisons, routing policies, prices, budgets, and usage. API clients can use the same project-scoped endpoints.
+
+## Reproducible comparisons
+
+`POST /api/projects/{project_id}/comparisons` freezes a plan from 1–16 enabled prompts in an existing Workbench prompt set and 2–4 distinct provider/model candidates. Each prompt must have a published version. The plan records prompt version and content hash, scorer, generation settings, candidate order, configured price IDs and estimated remote cost. A plan is immutable; another run needs another plan. Starting it is a separate action. It runs through Workbench with at most 48 calls, four concurrent tasks, 60 seconds per call, and 2,048 output tokens per call. Cancellation is available. Results are per candidate and prompt, with errors and missing measurements shown rather than invented. JSON and spreadsheet-safe CSV exports are available. Quality scores are comparable only for the same frozen prompts and scorer; an expected answer is not a universal quality ground truth.
+
+Remote candidates need an operator-created price, plan-time approval and cost estimate limit, then another explicit confirmation at start. The estimate is **not a hard billing cap**: tokenization, hidden provider work, retries and provider-side billing can differ. If a project hard budget is configured, billable comparisons fail closed because provider spend cannot be reserved reliably. Do not configure a hard budget if you intend to run remote comparisons through this version.
+
+## Routing
+
+`POST /api/projects/{project_id}/routing/policies` saves an immutable version. The operator activates one version with `PUT .../active/{policy_id}` or disables routing with `DELETE .../active`. Policies affect only explicit `POST .../execute` calls. They do not intercept Playground, SDK, or other production calls. Supported modes are fixed, ordered fallback, and measured threshold. Threshold mode uses recent successful trace averages and a minimum sample count; sparse or missing evidence yields no eligible route, not an optimistic guess. Each request has at most three candidates and a bounded total timeout. A failed first candidate remains in the attempt history if fallback succeeds.
+
+Remote routing requires policy opt-in, per-call consent to send the prompt, a current configured price, and a per-call estimate below the policy limit. A configured hard budget blocks remote execution. Local providers must point to loopback to count as local; otherwise they are treated as remote. Traces of attempts go through the existing server-side privacy filter. Prompt and output bodies are not persisted by the routing endpoint. Exceptions are sanitized, and failed attempts cannot crash the model-serving path of unrelated calls.
+
+## Prices and budgets
+
+`POST /api/projects/{project_id}/costs/prices` creates a new version for an exact provider/model with an effective time, source note and USD-per-million-token rates. Old prices remain for historical lookup. There is no automatic price feed. `PUT .../budget` saves daily or monthly soft and optional hard limits. The soft limit creates or updates a local anomaly rule. The hard limit conservatively blocks new billable RedForge routing/comparison calls; **it cannot stop SDK or external-provider calls or guarantee a provider invoice cap**.
+
+Ingested trace events retain input, output, cached-input and reasoning counts separately when supplied. Server pricing uses the recorded provider counts and price effective at call time; missing counts/rates remain unpriced. Reported provider costs are not overwritten. `GET .../usage` supports 93-day maximum windows, seven groupings, filters, pagination and CSV. SQL computes aggregates after selecting one successful event per logical request and provider/model; `request_id` is hashed into an internal deduplication key before persistence under the privacy policy. Unpriced calls are shown separately and excluded from USD totals. Local runtime resource use is not assigned a fictional dollar price. Cost figures are estimates unless an authoritative provider charge was captured, and do not replace a provider bill.
+
+The service is local-operator scoped. It uses the existing loopback/project boundary and audit records, not enterprise multi-user RBAC. Exported usage is metadata-only. Operators must still protect the local database and backups.
+
+## Migration and verification
+
+Alembic revision `c6b7a81d402e` follows the Phase 5 revision and adds comparison, policy, price and budget tables plus additive trace cost fields/indexes. It does not rewrite existing records. A fresh isolated upgrade reached the head revision. Back up real user data before applying it; a representative backup/restore rehearsal has not been done. Destructive downgrade is intentionally unsupported.
+
+Focused Phase 3 tests: **6 passed**. They cover versioned prices, privacy-filtered trace pricing, deduplicated usage, budget alerts, frozen/project-scoped comparisons, disabled/local/remote routing, fallback, sparse threshold evidence, and token-category arithmetic. The final full backend suite passed **654 tests** on Python 3.12. Ruff, frontend build, source-served chunk smoke, and isolated browser smoke passed. Browser smoke exercised policy creation/activation and budget saving without a configured provider call. The automated WCAG 2A/2AA audit found zero confirmed violations and seven contrast checks requiring manual review.
+
+No dependency manifest changed. The final frontend build is **1,376,159 B** raw / **556,833 B** per-file gzip across 72 files, versus the Phase 5 snapshot of 1,352,249 B / 552,481 B across 71 files: **+23,910 B raw / +4,352 B gzip**. The lazy Model decisions chunk is **22,833 B** raw / approximately **6.19 kB** gzip. The isolated release ZIP is approximately 39,326 KiB. These are build measurements, not runtime latency guarantees. No independent production-scale cost-query benchmark has been performed.
