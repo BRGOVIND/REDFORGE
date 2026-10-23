@@ -16,12 +16,12 @@ import socket
 import subprocess
 import sys
 import time
-import urllib.request
 import webbrowser
 from pathlib import Path
 
 from . import paths
 from .colors import bold, cyan, dim, green, red, yellow
+from .local_http import open_local_url
 
 
 def npm_cmd(args: list[str]) -> list[str]:
@@ -35,7 +35,7 @@ def npm_cmd(args: list[str]) -> list[str]:
 
 
 def _http_json(url: str, timeout: float = 2.0):
-    with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - localhost
+    with open_local_url(url, timeout=timeout) as resp:
         return json.loads(resp.read().decode())
 
 

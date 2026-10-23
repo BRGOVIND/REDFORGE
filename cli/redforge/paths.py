@@ -117,4 +117,4 @@ def state_file() -> Path:
 
 
 def requirements_file() -> Path:
-    return backend_dir() / "requirements.txt"
+    return backend_dir() / "requirements.lock"

@@ -18,7 +18,6 @@ import re
 import socket
 import subprocess
 import sys
-import urllib.request
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +25,7 @@ from pathlib import Path
 from . import installer, paths
 from ._version import __version__
 from .colors import bold, cyan, dim, green, red, yellow
+from .local_http import open_local_url
 
 # Redact env values whose NAME matches these (defense in depth on top of the
 # REDFORGE_* allowlist).
@@ -51,7 +51,7 @@ def _server_up(port: int) -> bool:
 
 def _get_json(url: str, timeout: float = 8.0):
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - localhost
+        with open_local_url(url, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
     except Exception as exc:  # noqa: BLE001
         return {"error": str(exc)}

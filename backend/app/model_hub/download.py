@@ -20,6 +20,7 @@ import threading
 from app.jobs.domain import JobResult
 from app.logging_config import get_logger
 from app.model_hub import catalog
+from app.network_policy import NetworkPolicyError, require_network_action
 
 logger = get_logger("model-hub")
 
@@ -30,6 +31,10 @@ def register_model_hub_handlers() -> None:
 
 
 async def _handle_model_download(job, ctx) -> JobResult:
+    try:
+        require_network_action("Model download")
+    except NetworkPolicyError as exc:
+        return JobResult(success=False, message=str(exc))
     p = job.params or {}
     entry = catalog.get(p.get("model_id"))
     if entry is None:

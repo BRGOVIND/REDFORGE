@@ -22,6 +22,8 @@ from app.db.models import Attack
 from app.dataset import benchmark_loader
 from app.environment import environment_service
 from app.health import health_service
+from app.network_policy import NetworkPolicyError, effective_profile, is_strict
+from app.config import settings
 from app.resources.resource_monitor import detect_gpu
 from app.runtime.manager import get_runtime
 from app.version import __version__
@@ -42,7 +44,22 @@ async def _active_runtime() -> dict:
     Returns provider metadata + live reachability + model list. All values come
     from the Runtime Manager / provider abstraction.
     """
-    runtime = get_runtime()
+    try:
+        runtime = get_runtime()
+    except NetworkPolicyError as exc:
+        return {
+            "name": settings.RUNTIME_PROVIDER,
+            "label": settings.RUNTIME_PROVIDER,
+            "base_url": None,
+            "requires_api_key": False,
+            "api_key_present": False,
+            "supports_pull": False,
+            "docs_url": None,
+            "setup_hint": str(exc),
+            "reachable": False,
+            "models": [],
+            "blocked_reason": str(exc),
+        }
     provider = runtime.provider
     online = False
     models: list[str] = []
@@ -61,7 +78,7 @@ async def _active_runtime() -> dict:
         "base_url": getattr(provider, "base_url", None),
         "requires_api_key": bool(getattr(provider, "requires_api_key", False)),
         "api_key_present": bool(getattr(provider, "api_key", None)),
-        "supports_pull": bool(provider.capabilities().get("supports_pull", False)),
+        "supports_pull": not is_strict() and bool(provider.capabilities().get("supports_pull", False)),
         "docs_url": getattr(provider, "docs_url", "") or None,
         "setup_hint": getattr(provider, "setup_hint", "") or None,
         "reachable": online,
@@ -79,7 +96,10 @@ async def system_checks(
 
     # --- Runtime provider (active provider, via the Runtime Manager) -------
     label = rt["label"]
-    if rt["reachable"]:
+    if rt.get("blocked_reason"):
+        checks.append(_check("runtime_running", "Runtime Provider", "failed",
+                             detail=rt["blocked_reason"], hint="Choose a local runtime."))
+    elif rt["reachable"]:
         checks.append(_check(
             "runtime_running", "Runtime Provider", "ok",
             detail=f"{label} reachable" + (f" · {rt['base_url']}" if rt["base_url"] else ""),
@@ -150,6 +170,7 @@ async def system_checks(
             health = None
 
     return {
+        "network_profile": effective_profile(),
         "ready": ready,
         "version": __version__,
         "platform": platform.system(),

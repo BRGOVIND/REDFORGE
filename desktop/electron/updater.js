@@ -24,6 +24,7 @@
  */
 const { app, dialog, shell } = require('electron');
 const store = require('./store');
+const config = require('./config');
 
 const REPO = 'https://github.com/BRGOVIND/REDFORGE';
 const CHANNELS = ['stable', 'beta', 'nightly'];
@@ -55,7 +56,7 @@ class UpdateManager {
   }
 
   autoCheckEnabled() {
-    return store.get('autoCheckUpdates', true) !== false;
+    return config.networkProfile() === 'connected' && store.get('autoCheckUpdates', true) !== false;
   }
 
   setAutoCheck(on) {
@@ -108,6 +109,15 @@ class UpdateManager {
   async offerRollback() {
     const previous = store.get('previousVersion', null);
     if (!previous) return false;
+    if (config.networkProfile() === 'strict') {
+      dialog.showMessageBoxSync({
+        type: 'warning', title: 'Offline recovery required',
+        message: 'Automatic recovery downloads are disabled in strict local mode.',
+        detail: `Install a verified offline copy of RedForge ${previous}. Your workspace is stored separately.`,
+        buttons: ['OK'],
+      });
+      return false;
+    }
     const choice = dialog.showMessageBoxSync({
       type: 'warning',
       title: 'RedForge is not starting correctly',
@@ -146,6 +156,10 @@ class UpdateManager {
   // -- electron-updater -----------------------------------------------------
 
   start() {
+    if (config.networkProfile() === 'strict') {
+      this.log('auto-update disabled by strict no-egress policy');
+      return;
+    }
     if (this.isDev) {
       this.log('auto-update disabled in development');
       return;
@@ -230,6 +244,14 @@ class UpdateManager {
   }
 
   async check({ notifyWhenUpToDate = false } = {}) {
+    if (config.networkProfile() === 'strict') {
+      if (notifyWhenUpToDate) dialog.showMessageBoxSync({
+        type: 'info', title: 'Updates disabled',
+        message: 'Update checks are disabled in strict local mode.',
+        detail: 'Install a verified offline release manually.', buttons: ['OK'],
+      });
+      return null;
+    }
     if (!this.updater) {
       if (notifyWhenUpToDate) {
         dialog.showMessageBoxSync({
@@ -283,6 +305,7 @@ class UpdateManager {
       info: this.info,
       error: this.error,
       supported: Boolean(this.updater),
+      networkProfile: config.networkProfile(),
     };
   }
 }

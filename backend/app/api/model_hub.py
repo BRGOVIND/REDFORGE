@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.model_hub import model_hub_service
+from app.network_policy import require_network_action
 
 router = APIRouter(prefix="/api/model-hub", tags=["model-hub"])
 
@@ -34,6 +35,7 @@ async def get_model(model_id: str) -> dict:
 @router.post("/{model_id}/download")
 async def download(model_id: str, req: DownloadRequest) -> dict:
     """Start a one-click download as a Job. Track it in the Task Panel."""
+    require_network_action("Model download")
     job = await model_hub_service.download(model_id, source=req.source, project_id=req.project_id)
     if job is None:
         raise HTTPException(status_code=404, detail="model not found in catalog")

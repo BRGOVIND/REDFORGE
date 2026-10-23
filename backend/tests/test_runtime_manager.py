@@ -50,8 +50,9 @@ class FakeMgmtProvider(Provider):
 
 
 @pytest.fixture(autouse=True)
-def _clean_runtime_state():
+def _clean_runtime_state(monkeypatch):
     """Register the fake provider; always restore the default + caches afterward."""
+    monkeypatch.setattr(settings, "NETWORK_PROFILE", "connected")
     original = settings.RUNTIME_PROVIDER
     manager.register_provider("faketest", FakeMgmtProvider)
     provider_manager._cache.clear()

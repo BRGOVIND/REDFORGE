@@ -18,7 +18,8 @@ from app.observability_privacy import audit
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["anomalies"])
 Metric = Literal["latency_p50", "latency_p95", "latency_p99", "error_rate", "timeout_rate",
-                 "tokens_per_call", "cost_per_call_usd", "provider_availability", "eval_pass_rate"]
+                 "tokens_per_call", "cost_per_call_usd", "project_spend_usd",
+                 "provider_availability", "eval_pass_rate"]
 
 
 class RuleIn(BaseModel):

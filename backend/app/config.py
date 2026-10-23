@@ -77,6 +77,10 @@ def _resolve_database_url() -> str:
 
 
 class Settings:
+    # strict is the consumer release profile. connected preserves existing
+    # optional network integrations for explicitly configured deployments.
+    NETWORK_PROFILE: str = _str("REDFORGE_NETWORK_PROFILE", "strict").strip().lower()
+
     # --- Ollama -----------------------------------------------------------
     OLLAMA_BASE_URL: str = _str("REDFORGE_OLLAMA_URL", "http://localhost:11434")
     # Long timeout for generation/inference calls.
@@ -148,3 +152,11 @@ class Settings:
 
 
 settings = Settings()
+
+# Hugging Face/Transformers can otherwise download weights during training even
+# when RedForge itself did not issue a download request. These controls are
+# inherited by worker processes. Connected deployments keep their own settings.
+if settings.NETWORK_PROFILE != "connected":
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    os.environ["HF_DATASETS_OFFLINE"] = "1"

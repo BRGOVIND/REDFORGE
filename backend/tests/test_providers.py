@@ -34,6 +34,14 @@ from app.runtime.providers import (
 from app.runtime.responses import StreamEventKind
 
 
+@pytest.fixture(autouse=True)
+def connected_profile(monkeypatch):
+    """Legacy wire-format cases explicitly exercise the connected deployment."""
+    monkeypatch.setattr(settings, "NETWORK_PROFILE", "connected")
+    yield
+    manager.reset_runtime()
+
+
 def _install(monkeypatch, handler):
     """Route every httpx.AsyncClient through a MockTransport with ``handler``."""
     real = httpx.AsyncClient

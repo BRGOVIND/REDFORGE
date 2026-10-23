@@ -5,11 +5,12 @@ global objects, or contacts the server during construction.
 """
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import contextvars
+import inspect
 from itertools import islice
 import json
+import os
 import queue
 import random
 import re
@@ -20,6 +21,8 @@ import urllib.request
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable
+
+from .local_http import open_local_url
 
 _context: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar("redforge_trace_context", default={})
 _secret = re.compile(r"(?i)(bearer\s+|sk-[a-z0-9_-]{8,}|api[_-]?key\s*[:=]\s*)[^\s,;]+")
@@ -191,6 +194,18 @@ class Tracer:
                  redact_keys: set[str] | None = None):
         if not 0 <= sample_rate <= 1 or queue_size < 1 or max_payload < 1 or timeout <= 0 or retries < 0:
             raise ValueError("Invalid tracer limits")
+        if enabled and os.environ.get("REDFORGE_NETWORK_PROFILE", "strict").strip().lower() != "connected":
+            from urllib.parse import urlsplit
+            import ipaddress
+
+            parsed = urlsplit(endpoint)
+            host = parsed.hostname or ""
+            try:
+                local = host == "localhost" or ipaddress.ip_address(host).is_loopback
+            except ValueError:
+                local = host == "localhost"
+            if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password or not local:
+                raise ValueError("Remote trace ingestion is disabled in strict no-egress mode")
         self.endpoint = endpoint.rstrip("/") + "/api/v1/traces/events"
         self.token = token
         self.enabled = enabled
@@ -248,7 +263,7 @@ class Tracer:
             try:
                 for attempt in range(self.retries + 1):
                     try:
-                        with urllib.request.urlopen(req, timeout=self.timeout):
+                        with open_local_url(req, timeout=self.timeout):
                             break
                     except (urllib.error.URLError, TimeoutError, OSError):
                         if attempt < self.retries:
@@ -324,7 +339,9 @@ class Tracer:
         except BaseException as error:
             finish(None, "error", error)
             raise
-        if asyncio.iscoroutine(result):
+        # asyncio.iscoroutine treats plain generators as coroutines on Python 3.11.
+        # Provider streams must remain directly iterable.
+        if inspect.isawaitable(result):
             return await_result(result)
         if streaming or hasattr(result, "__aiter__"):
             return _Stream(result, finish)

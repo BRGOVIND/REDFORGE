@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db.models import Project, TraceEvent, TraceToken, TracePrivacyPolicy, GovernanceAuditEvent
 from app.observability_privacy import PrivacySettings, audit, cleanup_expired, filter_event, get_policy
+from app.network_policy import is_strict
 
 router = APIRouter(tags=["observability"])
 MAX_BODY = 128 * 1024
@@ -52,9 +53,11 @@ class EventIn(BaseModel):
     timed_out: bool = False
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
+    cached_input_tokens: int | None = Field(default=None, ge=0)
+    reasoning_tokens: int | None = Field(default=None, ge=0)
     usage_source: Literal["provider", "estimated"] | None = None
     finish_reason: str | None = Field(default=None, max_length=100)
-    cost_usd: float | None = Field(default=None, ge=0)
+    cost_usd: float | None = Field(default=None, ge=0, le=1_000_000)
     cost_source: Literal["provider", "estimated"] | None = None
     error_category: str | None = Field(default=None, max_length=100)
     error_detail: str | None = Field(default=None, max_length=500)
@@ -144,6 +147,8 @@ async def revoke_token(project_id: str, token_id: str, request: Request, db: Asy
 
 @router.post("/api/v1/traces/events", status_code=202)
 async def ingest(request: Request, authorization: str | None = Header(default=None), db: AsyncSession = Depends(get_db)):
+    if is_strict():
+        _local(request)
     # Authenticate before parsing the body; no validation oracle for anonymous clients.
     token = await _project_token(authorization, db)
     _check_rate(token.id)
@@ -179,10 +184,15 @@ async def ingest(request: Request, authorization: str | None = Header(default=No
                 if values is None:
                     dropped += 1
                     continue
+                if event.request_id:
+                    values["logical_call_key"] = hashlib.sha256(
+                        f"{token.project_id}\0{event.request_id}".encode()).hexdigest()
                 # Stable sampling preserves idempotency on retried batches.
                 if int(hashlib.sha256(event.event_id.encode()).hexdigest()[:8], 16) / 0xffffffff >= policy.sample_rate:
                     dropped += 1
                     continue
+                from app.cost_control import apply_price
+                await apply_price(db, values)
                 result = await db.execute(insert(TraceEvent).values(**values).prefix_with("OR IGNORE"))
                 accepted += result.rowcount or 0
                 duplicates += 0 if result.rowcount else 1
@@ -255,7 +265,9 @@ async def list_audit(project_id: str, request: Request, limit: int = Query(50, g
 def _summary(row: TraceEvent) -> dict[str, Any]:
     return {k: getattr(row, k) for k in (
         "event_id", "received_at", "started_at", "duration_ms", "provider", "model", "operation", "route", "status", "timed_out",
-        "input_tokens", "output_tokens", "usage_source", "finish_reason", "cost_usd", "cost_source", "error_category",
+        "input_tokens", "output_tokens", "cached_input_tokens", "reasoning_tokens",
+        "usage_source", "finish_reason", "cost_usd", "cost_source", "pricing_record_id",
+        "cost_calculated_at", "error_category",
         "service", "environment", "request_id", "trace_id", "span_id", "parent_span_id", "conversation_id", "tenant_id",
     )}
 

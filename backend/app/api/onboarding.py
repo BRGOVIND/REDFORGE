@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.logging_config import get_logger
+from app.network_policy import require_network_action
 from app.onboarding import build_recommendations
 from app.runtime.errors import RuntimeLLMError
 from app.runtime.manager import get_runtime
@@ -97,6 +98,7 @@ _pull_tracker = _PullTracker()
 @router.post("/models/pull")
 async def start_pull(req: PullRequest) -> dict:
     """Begin downloading a model with the active provider (if it supports pull)."""
+    require_network_action("Model download")
     provider = get_runtime().provider
     if not getattr(provider, "supports_pull", False):
         raise HTTPException(

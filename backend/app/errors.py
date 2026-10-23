@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.logging_config import get_logger
+from app.network_policy import NetworkPolicyError
 
 logger = get_logger("api")
 
@@ -76,7 +77,12 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
     return error_response(500, "internal_error", "An internal error occurred")
 
 
+async def _network_policy_handler(_: Request, exc: NetworkPolicyError) -> JSONResponse:
+    return error_response(403, "network_policy_blocked", str(exc))
+
+
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(StarletteHTTPException, _http_exception_handler)
     app.add_exception_handler(RequestValidationError, _validation_exception_handler)
+    app.add_exception_handler(NetworkPolicyError, _network_policy_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)

@@ -19,7 +19,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
+    existing = sa.inspect(op.get_bind())
+    if not existing.has_table("evaluation_sessions"):
+        op.create_table(
         "evaluation_sessions",
         sa.Column("id", sa.String(length=36), nullable=False),
         sa.Column("session_type", sa.String(length=50), nullable=False),
@@ -36,8 +38,9 @@ def upgrade() -> None:
         sa.Column("actual_seconds", sa.Float(), nullable=True),
         sa.Column("metadata", sa.JSON(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_table(
+        )
+    if not existing.has_table("evaluation_events"):
+        op.create_table(
         "evaluation_events",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("session_id", sa.String(length=36), nullable=False),
@@ -52,12 +55,13 @@ def upgrade() -> None:
         sa.Column("metadata", sa.JSON(), nullable=True),
         sa.ForeignKeyConstraint(["session_id"], ["evaluation_sessions.id"]),
         sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_evaluation_events_session_id",
-        "evaluation_events",
-        ["session_id"],
-    )
+        )
+    if "ix_evaluation_events_session_id" not in {item["name"] for item in sa.inspect(op.get_bind()).get_indexes("evaluation_events")}:
+        op.create_index(
+            "ix_evaluation_events_session_id",
+            "evaluation_events",
+            ["session_id"],
+        )
 
 
 def downgrade() -> None:

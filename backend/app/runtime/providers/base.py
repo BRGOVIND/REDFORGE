@@ -18,6 +18,7 @@ from typing import Optional
 import httpx
 
 from app.config import settings
+from app.network_policy import is_strict, require_provider
 from app.runtime.client import Provider
 from app.runtime.errors import ProviderUnavailable, RuntimeLLMError
 from app.runtime.transport import map_transport_error
@@ -48,6 +49,7 @@ class HttpProvider(Provider):
 
     def _ensure_ready(self) -> None:
         """Raise a clear error before any network call if a required key is absent."""
+        require_provider(self.name, base_url=self.base_url)
         if self.requires_api_key and not self.api_key:
             raise ProviderUnavailable(f"{self.label} API key not set (set ${self.api_key_env})")
 
@@ -66,9 +68,11 @@ class HttpProvider(Provider):
         )
 
     def _client(self, read_timeout: float) -> httpx.AsyncClient:
+        require_provider(self.name, base_url=self.base_url)
         return httpx.AsyncClient(
             timeout=httpx.Timeout(read_timeout, connect=settings.RUNTIME_CONNECT_TIMEOUT),
             headers=self._headers(),
+            trust_env=not is_strict(),
         )
 
     # -- health (API-key gated; subclasses supply the probe) -----------------

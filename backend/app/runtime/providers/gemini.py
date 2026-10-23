@@ -77,9 +77,13 @@ class GeminiProvider(HttpProvider):
             raise self._map_error(exc, model) from exc
         latency_ms = int((time.monotonic() - start) * 1000)
         parsed = _parse_gemini_chunk(data)
+        reported = data.get("usageMetadata") or {}
         return GenerationResult(
             model=model, text=parsed["response"], latency_ms=latency_ms,
             eval_count=parsed.get("eval_count"), done_reason=parsed.get("done_reason"),
+            prompt_eval_count=reported.get("promptTokenCount"),
+            cached_input_tokens=reported.get("cachedContentTokenCount"),
+            reasoning_tokens=reported.get("thoughtsTokenCount"),
         )
 
     async def stream_generate(self, model: str, prompt: str) -> AsyncIterator[dict]:

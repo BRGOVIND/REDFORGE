@@ -258,7 +258,8 @@ async def benchmark_answer(question: str, project_id: Optional[str]) -> Optional
             if "deploy" in q:
                 answer += (" It leads on the measured suites, so it's the strongest deploy "
                            "candidate — confirm the security suite meets your bar first. "
-                           "Everything stays local; nothing is uploaded.")
+                           "The benchmark result is stored locally. Deploying or testing with "
+                           "a hosted provider may send request data to that provider.")
             return answer
     return None
 

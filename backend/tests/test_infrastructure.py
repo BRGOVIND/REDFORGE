@@ -27,8 +27,8 @@ EXPECTED_ROUTE_PREFIXES = [
 
 
 def test_all_expected_routers_registered():
-    """Every expected route prefix appears in the app's route list."""
-    all_paths = [route.path for route in app.routes]  # type: ignore[union-attr]
+    """Every expected public route prefix appears in the OpenAPI contract."""
+    all_paths = list(app.openapi()["paths"])
     for prefix in EXPECTED_ROUTE_PREFIXES:
         matching = [p for p in all_paths if p.startswith(prefix)]
         assert matching, f"No route found with prefix {prefix!r}. Registered: {all_paths[:20]}"

@@ -74,9 +74,10 @@ _KB: list[dict] = [
         "id": "local-first",
         "title": "Is my data private?",
         "keywords": ["privacy", "local", "cloud", "data", "telemetry", "account", "offline"],
-        "body": "Yes. RedForge is local-first: no accounts, no telemetry, no required API keys, "
-                "and it works fully offline. Nothing — models, datasets, prompts, or results — "
-                "leaves your machine unless you explicitly configure a cloud provider.",
+        "body": "RedForge is local-first and needs no RedForge account or API key for local "
+                "workflows. Local inference can run offline. Optional project traces are stored "
+                "on your device, with prompt and response capture off by default. Hosted-provider "
+                "calls, model downloads, and update checks contact their respective services.",
     },
     {
         "id": "dataset-lab",

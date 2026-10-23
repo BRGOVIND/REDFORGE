@@ -12,6 +12,9 @@ class GenerationResult:
     latency_ms: int
     eval_count: Optional[int] = None       # tokens generated, if the provider reports it
     done_reason: Optional[str] = None
+    prompt_eval_count: Optional[int] = None  # reported input tokens, never inferred
+    cached_input_tokens: Optional[int] = None
+    reasoning_tokens: Optional[int] = None
 
     @property
     def tokens_per_sec(self) -> Optional[float]:

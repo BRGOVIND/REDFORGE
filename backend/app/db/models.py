@@ -99,6 +99,7 @@ class TraceEvent(Base):
     __table_args__ = (
         UniqueConstraint("project_id", "event_id", name="uq_trace_event_project_event"),
         Index("ix_trace_events_project_time", "project_id", "received_at", "id"),
+        Index("ix_trace_events_release_metrics", "project_id", "application_version", "model", "provider", "received_at", "id"),
         Index("ix_trace_events_project_trace", "project_id", "trace_id", "id"),
         Index("ix_trace_events_project_conversation", "project_id", "conversation_id", "id"),
         Index("ix_trace_events_project_provider", "project_id", "provider", "id"),
@@ -108,6 +109,7 @@ class TraceEvent(Base):
         Index("ix_trace_events_project_environment", "project_id", "environment", "id"),
         Index("ix_trace_events_project_route", "project_id", "route", "id"),
         Index("ix_trace_events_project_tenant", "project_id", "tenant_id", "id"),
+        Index("ix_trace_events_project_call", "project_id", "logical_call_key", "id"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -124,10 +126,14 @@ class TraceEvent(Base):
     timed_out = Column(Boolean, nullable=False, default=False)
     input_tokens = Column(Integer)
     output_tokens = Column(Integer)
+    cached_input_tokens = Column(Integer)
+    reasoning_tokens = Column(Integer)
     usage_source = Column(String(20))
     finish_reason = Column(String(100))
     cost_usd = Column(Float)
     cost_source = Column(String(20))
+    pricing_record_id = Column(String(36))
+    cost_calculated_at = Column(DateTime)
     error_category = Column(String(100))
     error_detail = Column(String(500))
     service = Column(String(120))
@@ -135,6 +141,7 @@ class TraceEvent(Base):
     application_version = Column(String(80))
     git_revision = Column(String(80))
     request_id = Column(String(128))
+    logical_call_key = Column(String(64))  # internal digest; raw request_id may be private
     trace_id = Column(String(128))
     span_id = Column(String(128))
     parent_span_id = Column(String(128))
@@ -155,6 +162,64 @@ class TracePrivacyPolicy(Base):
     project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
     settings = Column(JSON, nullable=False, default=dict)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class ComparisonPlan(Base):
+    """Frozen input for one Workbench-backed multi-provider comparison."""
+
+    __tablename__ = "comparison_plans"
+    __table_args__ = (Index("ix_comparison_project_created", "project_id", "created_at"),)
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    snapshot = Column(JSON, nullable=False)
+    session_id = Column(String(36), ForeignKey("workbench_sessions.id"), unique=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class RoutingPolicy(Base):
+    __tablename__ = "routing_policies"
+    __table_args__ = (UniqueConstraint("project_id", "name", "version", name="uq_route_policy_version"),)
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    version = Column(Integer, nullable=False)
+    definition = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class RoutingState(Base):
+    __tablename__ = "routing_states"
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
+    active_policy_id = Column(String(36), ForeignKey("routing_policies.id"))
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class ModelPrice(Base):
+    """Operator-entered, versioned USD rate; never fetched automatically."""
+
+    __tablename__ = "model_prices"
+    __table_args__ = (
+        UniqueConstraint("project_id", "provider", "model", "version", name="uq_project_model_price_version"),
+        Index("ix_model_price_effective", "project_id", "provider", "model", "effective_at"),
+    )
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String(80), nullable=False)
+    model = Column(String(200), nullable=False)
+    version = Column(Integer, nullable=False)
+    effective_at = Column(DateTime, nullable=False)
+    source = Column(String(300), nullable=False)
+    rates = Column(JSON, nullable=False)  # USD per million tokens by supported category
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class ProjectBudget(Base):
+    __tablename__ = "project_budgets"
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
+    period = Column(String(20), nullable=False)
+    soft_limit_usd = Column(Float, nullable=False)
+    hard_limit_usd = Column(Float)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
 class GovernanceAuditEvent(Base):
@@ -246,6 +311,110 @@ class FeedbackCase(Base):
     evaluation_prompt_id = Column(String(36))
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class SecurityCandidate(Base):
+    """Project-scoped, reviewed trace-derived security case."""
+
+    __tablename__ = "security_candidates"
+    __table_args__ = (
+        UniqueConstraint("project_id", "fingerprint", name="uq_security_candidate_source"),
+        Index("ix_security_candidates_project_state", "project_id", "state", "created_at"),
+    )
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    fingerprint = Column(String(64), nullable=False)
+    trace_event_id = Column(Integer)
+    feedback_case_id = Column(String(36))
+    source_event_id = Column(String(128))
+    trace_id = Column(String(128))
+    source_received_at = Column(DateTime)
+    provider = Column(String(80))
+    model = Column(String(200))
+    prompt_template_id = Column(String(128))
+    prompt_version_id = Column(String(128))
+    category = Column(String(40), nullable=False)
+    title = Column(String(200), nullable=False)
+    prompt_text = Column(Text)
+    state = Column(String(20), nullable=False, default="draft")
+    approved_version = Column(Integer)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class SecurityCandidateVersion(Base):
+    """Immutable approved snapshot; runs always reference this row."""
+
+    __tablename__ = "security_candidate_versions"
+    __table_args__ = (UniqueConstraint("candidate_id", "version", name="uq_security_candidate_version"),)
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    candidate_id = Column(String(36), ForeignKey("security_candidates.id", ondelete="CASCADE"), nullable=False)
+    version = Column(Integer, nullable=False)
+    snapshot = Column(JSON, nullable=False)
+    content_hash = Column(String(64), nullable=False)
+    approved_by = Column(String(120), nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class SecurityCandidateRun(Base):
+    """Immutable local evaluation result, separate from production traces."""
+
+    __tablename__ = "security_candidate_runs"
+    __table_args__ = (Index("ix_security_runs_project_time", "project_id", "created_at"),)
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    candidate_version_id = Column(String(36), ForeignKey("security_candidate_versions.id"), nullable=False)
+    job_id = Column(String(36))
+    environment = Column(String(40), nullable=False)
+    model = Column(String(200), nullable=False)
+    provider = Column(String(80), nullable=False)
+    prompt_version_id = Column(String(128))
+    config = Column(JSON, nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    outcome = Column(String(20))
+    classification = Column(String(20), nullable=False, default="observed")
+    severity = Column(String(20))
+    evidence = Column(JSON, nullable=False, default=dict)
+    remediation_status = Column(String(20), nullable=False, default="unreviewed")
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    completed_at = Column(DateTime)
+
+
+class ReleaseGatePolicy(Base):
+    """Immutable policy version for one project/environment."""
+
+    __tablename__ = "release_gate_policies"
+    __table_args__ = (UniqueConstraint("project_id", "name", "environment", "version", name="uq_release_policy_version"),
+                      Index("ix_release_policy_scope", "project_id", "environment", "name"))
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(120), nullable=False)
+    environment = Column(String(80), nullable=False)
+    version = Column(Integer, nullable=False)
+    rules = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class ReleaseGateDecision(Base):
+    """Append-only evidence-backed gate decision; never deploys an artifact."""
+
+    __tablename__ = "release_gate_decisions"
+    __table_args__ = (Index("ix_release_decision_project_time", "project_id", "created_at"),)
+    id = Column(String(36), primary_key=True)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    policy_id = Column(String(36), ForeignKey("release_gate_policies.id"), nullable=False)
+    policy_version = Column(Integer, nullable=False)
+    candidate = Column(JSON, nullable=False)
+    baseline = Column(JSON)
+    evidence_ids = Column(JSON, nullable=False)
+    checks = Column(JSON, nullable=False)
+    outcome = Column(String(20), nullable=False)
+    dry_run = Column(Boolean, nullable=False)
+    override_actor = Column(String(120))
+    override_justification = Column(String(1000))
+    override_at = Column(DateTime)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
 
 
 class Dataset(Base):

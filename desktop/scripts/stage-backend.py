@@ -188,6 +188,9 @@ def main() -> int:
     ap.add_argument("--require-frozen", action="store_true",
                     help="fail if the frozen backend or bundled UI is missing (use in CI)")
     a = ap.parse_args()
+    if a.require_frozen and a.skip_frontend:
+        print("ERROR: release staging must rebuild the frontend; --skip-frontend can package stale UI", file=sys.stderr)
+        return 2
     if not a.skip_frontend:
         build_frontend()
     if not a.skip_freeze:

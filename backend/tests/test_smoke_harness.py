@@ -22,6 +22,8 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -122,6 +124,9 @@ def test_child_environment_paths_are_absolute(monkeypatch, staged_bundle: Path, 
     for key in ("REDFORGE_STATIC_DIR", "REDFORGE_HOME"):
         assert Path(env[key]).is_absolute(), f"{key} must be absolute, got {env[key]!r}"
     assert Path(env["REDFORGE_STATIC_DIR"]).is_dir()
+    assert env["REDFORGE_DATABASE_URL"] == (
+        f"sqlite+aiosqlite:///{(tmp_path / 'redforge.db').as_posix()}"
+    )
 
 
 def test_relative_inputs_are_rejected_rather_than_silently_wrong(staged_bundle: Path, tmp_path: Path):
@@ -147,3 +152,40 @@ def test_missing_frozen_backend_fails_instead_of_using_the_source_backend(
     assert "no frozen backend" in out.err
     # It must not announce the source-backend fallback (the phrase launch() prints).
     assert "launching backend from source" not in (out.out + out.err).lower()
+
+
+@pytest.mark.parametrize("no_proxy", ["", "127.0.0.1"])
+def test_smoke_probe_ignores_proxy_and_does_not_follow_redirect(monkeypatch, no_proxy):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/redirect":
+                self.send_response(302)
+                self.send_header("Location", "https://example.com/")
+            else:
+                self.send_response(200)
+            self.end_headers()
+
+        def do_POST(self):
+            self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *_args):
+            pass
+
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        monkeypatch.setenv(key, "http://127.0.0.1:1")
+    monkeypatch.setenv("NO_PROXY", no_proxy)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base = f"http://127.0.0.1:{server.server_port}"
+        assert smoke.get(base + "/healthz", retries=0)[0] == 200
+        assert smoke.get(base + "/redirect", retries=0)[0] == 302
+        request = smoke.urllib.request.Request(base + "/chat", data=b"{}", method="POST")
+        assert smoke.get(request, retries=0)[0] == 200
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)

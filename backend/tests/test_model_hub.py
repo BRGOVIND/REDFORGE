@@ -3,8 +3,15 @@ from __future__ import annotations
 
 import pytest
 
+from app.config import settings
 from app.model_hub import catalog, model_hub_service
 from app.model_hub.download import _handle_model_download
+
+
+@pytest.fixture(autouse=True)
+def connected_download_workflow(monkeypatch):
+    # These legacy tests validate download routing, not the strict release gate.
+    monkeypatch.setattr(settings, "NETWORK_PROFILE", "connected")
 
 
 def test_catalog_grouped_has_all_categories_with_models():

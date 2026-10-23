@@ -117,7 +117,8 @@ async def test_running_but_no_models_is_warning(db_session, monkeypatch):
     body = await _call(db_session)
     assert _status(body, "models") == "warning"
     assert body["ready"] is False
-    assert body["recommended_models"]  # pull-capable provider suggests models
+    assert body["recommended_models"] == []  # strict mode must not suggest a blocked pull
+    assert body["provider"]["supports_pull"] is False
 
 
 @pytest.mark.asyncio

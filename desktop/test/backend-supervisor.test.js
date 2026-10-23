@@ -143,6 +143,23 @@ test('recordLaunch reports an upgrade exactly once', () => {
   assert.equal(settled.changed, false, 'the cache is cleared once per upgrade, not every launch');
 });
 
+test('strict local profile never checks update feed', async () => {
+  const previous = process.env.REDFORGE_NETWORK_PROFILE;
+  process.env.REDFORGE_NETWORK_PROFILE = 'strict';
+  try {
+    const updates = new UpdateManager({ isDev: false, getWindow: () => null, log: () => {} });
+    assert.equal(updates.autoCheckEnabled(), false);
+    updates.start();
+    assert.equal(updates.updater, null, 'updater module must not initialize');
+    updates.updater = { checkForUpdates: () => { throw new Error('network attempted'); } };
+    assert.equal(await updates.check(), null);
+    assert.equal(updates.status().networkProfile, 'strict');
+  } finally {
+    if (previous === undefined) delete process.env.REDFORGE_NETWORK_PROFILE;
+    else process.env.REDFORGE_NETWORK_PROFILE = previous;
+  }
+});
+
 test.after(() => {
   Module._load = realLoad;
   fs.rmSync(HOME, { recursive: true, force: true });

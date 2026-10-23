@@ -285,9 +285,11 @@ async def activate(project_id: str, prompt_id: str, version: int, request: Reque
     snapshot = await prompt_version_service.get_version(db, prompt_id, version)
     if snapshot is None:
         raise HTTPException(404, "Version not found")
+    previous_version = row.active_version
     _apply(row, _published_definition(snapshot))
     row.active_version = version
-    audit(db, project_id, "prompt.activated", prompt_id, details={"version": version})
+    audit(db, project_id, "prompt.activated", prompt_id,
+          details={"previous_version": previous_version, "version": version})
     await db.commit()
     return _view(row)
 

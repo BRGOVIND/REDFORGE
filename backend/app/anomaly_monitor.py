@@ -45,6 +45,11 @@ def _value(metric: str, rows: list[tuple]) -> tuple[float | None, int]:
 
 
 async def _window(db, rule: AnomalyRule, start: datetime, end: datetime) -> tuple[float | None, int, bool]:
+    if rule.metric == "project_spend_usd":
+        from app.cost_control import usage_totals
+        rows = await usage_totals(db, rule.project_id, start, end, group_by="provider", limit=100)
+        calls = sum(row["calls"] for row in rows)
+        return (sum(row["cost_usd"] or 0 for row in rows), calls, False)
     if rule.metric == "eval_pass_rate":
         stmt = (select(EvaluationResult.id, EvaluationResult.verdict)
                 .join(WorkbenchSession, WorkbenchSession.id == EvaluationResult.session_id)
@@ -78,6 +83,13 @@ async def evaluate_rule(db, rule: AnomalyRule, *, at: datetime | None = None,
                         allow_health_probe: bool = True) -> dict:
     at = at or now_utc()
     start = at - timedelta(minutes=rule.observed_minutes)
+    if rule.metric == "project_spend_usd":
+        from app.cost_control import period_start
+        from app.db.models import ProjectBudget
+        budget = await db.get(ProjectBudget, rule.project_id)
+        if budget is None:
+            return {"status": "insufficient_data", "reason": "budget missing"}
+        start = period_start(budget.period, at)
     base_start = base_end = None
     if rule.metric == "provider_availability":
         if not allow_health_probe:

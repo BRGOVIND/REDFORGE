@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from app.runtime.management import provider_manager
+from app.network_policy import effective_profile
 
 router = APIRouter(prefix="/api/providers", tags=["providers"])
 
@@ -48,6 +49,7 @@ class ProviderInfo(BaseModel):
 class ProvidersResponse(BaseModel):
     default: str
     providers: list[ProviderInfo]
+    network_profile: str
 
 
 class SetDefaultRequest(BaseModel):
@@ -68,6 +70,7 @@ async def list_providers() -> ProvidersResponse:
     return ProvidersResponse(
         default=provider_manager.default_name(),
         providers=provider_manager.list_infos(),
+        network_profile=effective_profile(),
     )
 
 
@@ -75,7 +78,8 @@ async def list_providers() -> ProvidersResponse:
 async def refresh_providers() -> ProvidersResponse:
     """Live-probe every provider (health/version/models) and return fresh status."""
     infos = await provider_manager.refresh_all()
-    return ProvidersResponse(default=provider_manager.default_name(), providers=infos)
+    return ProvidersResponse(default=provider_manager.default_name(), providers=infos,
+                             network_profile=effective_profile())
 
 
 @router.post("/default", response_model=SetDefaultResponse)

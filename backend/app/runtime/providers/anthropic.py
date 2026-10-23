@@ -74,9 +74,12 @@ class AnthropicProvider(HttpProvider):
         blocks = data.get("content") or []
         text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
         usage = (data.get("usage") or {}).get("output_tokens")
+        reported = data.get("usage") or {}
         return GenerationResult(
             model=model, text=text, latency_ms=latency_ms,
             eval_count=usage, done_reason=data.get("stop_reason"),
+            prompt_eval_count=reported.get("input_tokens"),
+            cached_input_tokens=reported.get("cache_read_input_tokens"),
         )
 
     async def stream_generate(self, model: str, prompt: str) -> AsyncIterator[dict]:

@@ -12,6 +12,7 @@ from typing import AsyncIterator, Optional
 import httpx
 
 from app.config import settings
+from app.network_policy import is_strict, require_local_url, require_network_action
 from app.runtime.client import Provider
 from app.runtime.errors import OllamaUnavailable, RuntimeLLMError
 from app.runtime.responses import GenerationResult
@@ -47,6 +48,7 @@ class OllamaProvider(Provider):
 
     def __init__(self, base_url: Optional[str] = None) -> None:
         self.base_url = (base_url or settings.OLLAMA_BASE_URL).rstrip("/")
+        require_local_url(self.base_url, action="Ollama runtime")
 
     def _timeout(self, read: float) -> httpx.Timeout:
         return httpx.Timeout(read, connect=settings.RUNTIME_CONNECT_TIMEOUT)
@@ -65,7 +67,7 @@ class OllamaProvider(Provider):
             if "system" in options and options["system"]:
                 body["system"] = options["system"]
         try:
-            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT)) as client:
+            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT), trust_env=not is_strict()) as client:
                 resp = await client.post(f"{self.base_url}/api/generate", json=body)
                 resp.raise_for_status()
                 data = resp.json()
@@ -78,11 +80,12 @@ class OllamaProvider(Provider):
             latency_ms=latency_ms,
             eval_count=data.get("eval_count"),
             done_reason=data.get("done_reason"),
+            prompt_eval_count=data.get("prompt_eval_count"),
         )
 
     async def stream_generate(self, model: str, prompt: str) -> AsyncIterator[dict]:
         try:
-            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT)) as client:
+            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_TIMEOUT), trust_env=not is_strict()) as client:
                 async with client.stream(
                     "POST",
                     f"{self.base_url}/api/generate",
@@ -98,7 +101,7 @@ class OllamaProvider(Provider):
 
     async def health(self) -> bool:
         try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_HEALTH_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=settings.OLLAMA_HEALTH_TIMEOUT, trust_env=not is_strict()) as client:
                 resp = await client.get(f"{self.base_url}/api/version")
                 return resp.status_code == 200
         except Exception:  # noqa: BLE001
@@ -107,7 +110,7 @@ class OllamaProvider(Provider):
     async def version(self) -> Optional[str]:
         """Ollama server version (optional capability, best-effort)."""
         try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_HEALTH_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=settings.OLLAMA_HEALTH_TIMEOUT, trust_env=not is_strict()) as client:
                 resp = await client.get(f"{self.base_url}/api/version")
                 resp.raise_for_status()
                 return resp.json().get("version")
@@ -116,7 +119,7 @@ class OllamaProvider(Provider):
 
     async def list_models_raw(self) -> list[dict]:
         try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_TAGS_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=settings.OLLAMA_TAGS_TIMEOUT, trust_env=not is_strict()) as client:
                 resp = await client.get(f"{self.base_url}/api/tags")
                 resp.raise_for_status()
                 data = resp.json()
@@ -126,7 +129,7 @@ class OllamaProvider(Provider):
 
     async def show_model(self, model: str) -> Optional[dict]:
         try:
-            async with httpx.AsyncClient(timeout=settings.OLLAMA_SHOW_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=settings.OLLAMA_SHOW_TIMEOUT, trust_env=not is_strict()) as client:
                 resp = await client.post(f"{self.base_url}/api/show", json={"name": model})
                 resp.raise_for_status()
                 return resp.json()
@@ -138,8 +141,9 @@ class OllamaProvider(Provider):
 
         Pulls can take minutes; a long read timeout is used and each JSON line is
         yielded as it arrives so callers can report progress live."""
+        require_network_action("Model download")
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(None, connect=settings.RUNTIME_CONNECT_TIMEOUT)) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(None, connect=settings.RUNTIME_CONNECT_TIMEOUT), trust_env=not is_strict()) as client:
                 async with client.stream(
                     "POST", f"{self.base_url}/api/pull",
                     json={"name": model, "stream": True},
@@ -154,7 +158,7 @@ class OllamaProvider(Provider):
     async def delete_model(self, model: str) -> bool:
         """Delete an installed model via Ollama's /api/delete. Raises on failure."""
         try:
-            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_SHOW_TIMEOUT)) as client:
+            async with httpx.AsyncClient(timeout=self._timeout(settings.OLLAMA_SHOW_TIMEOUT), trust_env=not is_strict()) as client:
                 resp = await client.request(
                     "DELETE", f"{self.base_url}/api/delete", json={"name": model}
                 )

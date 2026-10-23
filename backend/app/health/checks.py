@@ -298,6 +298,10 @@ async def check_permissions(ctx: HealthContext) -> Outcome:
 
 async def check_network(ctx: HealthContext) -> Outcome:
     # Optional — only run when explicitly requested.
+    from app.network_policy import is_strict
+
+    if is_strict():
+        return warning("Internet check disabled by strict no-egress policy")
     import httpx
 
     try:

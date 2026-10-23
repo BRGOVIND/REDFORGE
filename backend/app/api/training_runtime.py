@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from app.jobs import job_service
 from app.logging_config import get_logger
+from app.network_policy import require_network_action
 from app.training_runtime import runtime_service, uninstall as uninstall_runtime
 
 router = APIRouter(prefix="/api/training-runtime", tags=["training-runtime"])
@@ -39,6 +40,7 @@ async def install(req: InstallRequest) -> dict:
     installation is already running — two concurrent pip installs into the same
     virtual environment would corrupt it.
     """
+    require_network_action("Training runtime installation")
     report = await runtime_service.report(refresh=True)
     if report.ready and not req.force:
         raise HTTPException(

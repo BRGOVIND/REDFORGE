@@ -76,7 +76,9 @@ class FakeCatalogProvider(Provider):
 
 
 @pytest.fixture(autouse=True)
-def _fake_default():
+def _fake_default(monkeypatch):
+    # FakeCat is an intentionally non-loopback test provider.
+    monkeypatch.setattr(settings, "NETWORK_PROFILE", "connected")
     original = settings.RUNTIME_PROVIDER
     FakeCatalogProvider.deleted = []
     manager.register_provider("fakecat", FakeCatalogProvider)

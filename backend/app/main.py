@@ -44,7 +44,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding, projects, playground, assistant, datasets, training, recommendations, registry, benchmark_center, evaluation_workbench, foundation_models, artifacts, jobs, dataset_platform, training_platform, export, experiments, runtime_models, hardware, tasks, model_hub, traces, prompt_registry, anomalies, feedback, settings as settings_api, training_runtime as training_runtime_api
+from app.api import models, attacks, runs, evaluate, dashboard, reports, benchmarks, analytics, mutations, agent, leaderboard, history, dataset, benchmark_dataset, sessions, evaluation_engine, pipeline, system, runtime_status, providers, model_manager, health, onboarding, projects, playground, assistant, datasets, training, recommendations, registry, benchmark_center, evaluation_workbench, foundation_models, artifacts, jobs, dataset_platform, training_platform, export, experiments, runtime_models, hardware, tasks, model_hub, traces, prompt_registry, anomalies, feedback, security_candidates, release_gates, comparisons, costs, routing, settings as settings_api, training_runtime as training_runtime_api
 from app.config import settings
 from app.errors import register_error_handlers
 from app.logging_config import configure_logging, get_logger
@@ -111,7 +111,7 @@ async def _recover_orphaned_jobs() -> None:
 
     from app.db.models import (
         AgentRun, BenchmarkResult, BenchmarkRun, EvaluationSession, JobRecord, TrainingRun,
-        V3TrainingRunRecord, WorkbenchSession,
+        V3TrainingRunRecord, WorkbenchSession, SecurityCandidateRun,
     )
 
     ACTIVE = ("running", "pending", "paused")
@@ -126,6 +126,7 @@ async def _recover_orphaned_jobs() -> None:
                 (BenchmarkRun, "failed"),      # legacy benchmark schema has no 'interrupted'
                 (BenchmarkResult, "failed"),   # Benchmark Center jobs don't survive a restart
                 (WorkbenchSession, "failed"),  # Evaluation Workbench sessions don't survive a restart
+                (SecurityCandidateRun, "failed"),  # local security tests do not survive restart
                 (JobRecord, "interrupted"),    # V3 Execution Platform jobs don't survive a restart
                 (V3TrainingRunRecord, "failed"),  # V3 training runs don't survive a restart
                 (AgentRun, "failed"),
@@ -147,6 +148,9 @@ async def _recover_orphaned_jobs() -> None:
                     if hasattr(row, "metrics") and isinstance(getattr(row, "metrics"), dict) \
                             and "error" not in row.metrics:
                         row.metrics = {**row.metrics, "error": REASON}
+                    if isinstance(row, SecurityCandidateRun):
+                        row.outcome = "inconclusive"
+                        row.evidence = {"error": REASON, "response_body_stored": False}
                     total += 1
             await db.commit()
         if total:
@@ -251,6 +255,7 @@ async def _anomaly_monitor_loop() -> None:
     """One bounded lifecycle task; failures cannot affect serving or queue jobs."""
     from app.anomaly_monitor import scan_due
     from app.feedback_retention import cleanup_expired_feedback
+    from app.security_retention import cleanup_expired_security_candidates
     log = get_logger("anomalies")
     while True:
         await asyncio.sleep(60)
@@ -259,6 +264,7 @@ async def _anomaly_monitor_loop() -> None:
                 async with AsyncSessionLocal() as db:
                     await scan_due(db, limit=20)
                     await cleanup_expired_feedback(db, batch_size=100)
+                    await cleanup_expired_security_candidates(db, batch_size=100)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -290,6 +296,8 @@ async def lifespan(app: FastAPI):
     _register_v3_job_handlers()
     from app.feedback_replay import register_feedback_handlers
     register_feedback_handlers()
+    from app.security_candidate_run import register_security_candidate_handlers
+    register_security_candidate_handlers()
     # Reconcile jobs left 'running' by a previous crash/restart — never leave a
     # job permanently active.
     await _recover_orphaned_jobs()
@@ -355,6 +363,11 @@ app.include_router(traces.router)
 app.include_router(prompt_registry.router)
 app.include_router(anomalies.router)
 app.include_router(feedback.router)
+app.include_router(security_candidates.router)
+app.include_router(release_gates.router)
+app.include_router(comparisons.router)
+app.include_router(costs.router)
+app.include_router(routing.router)
 app.include_router(playground.router)
 app.include_router(assistant.router)
 app.include_router(datasets.router)

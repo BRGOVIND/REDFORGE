@@ -92,7 +92,7 @@ async def test_export_pipeline_end_to_end(SessionLocal, registry, tmp_path):
 # -- API --------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_api_export_providers_and_submit(SessionLocal, registry, monkeypatch):
+async def test_api_export_providers_and_submit(SessionLocal, registry, monkeypatch, tmp_path):
     from app.jobs.repository import SqlJobRepository
     from app.jobs.service import JobService
     from app.export.handlers import register_export_handlers
@@ -109,8 +109,10 @@ async def test_api_export_providers_and_submit(SessionLocal, registry, monkeypat
         assert any(p["target"] == "gguf" for p in provs)
 
         # seed a checkpoint artifact through the registry the job service shares
+        checkpoint_file = tmp_path / "checkpoint.json"
+        checkpoint_file.write_text('{"step": 1}', encoding="utf-8")
         ckpt = await registry["registry"].register(type="checkpoint", name="c",
-                                                   file_path=__file__, producer="test")
+                                                   file_path=str(checkpoint_file), producer="test")
         submitted = await c.post("/api/export", json={
             "source_artifact_id": ckpt["id"], "target": "gguf", "base_model": "m"})
         assert submitted.status_code == 202

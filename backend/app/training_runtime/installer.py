@@ -313,6 +313,12 @@ async def _handle_install(job, ctx):
     Doing the install inline would freeze the entire single-process backend.
     """
     from app.jobs.domain import JobResult
+    from app.network_policy import NetworkPolicyError, require_network_action
+
+    try:
+        require_network_action("Training runtime installation")
+    except NetworkPolicyError as exc:
+        return JobResult(success=False, message=str(exc))
 
     params = job.params or {}
     force = bool(params.get("force"))

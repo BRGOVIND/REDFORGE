@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import urllib.request
@@ -16,6 +17,7 @@ from . import paths, process
 from ._version import __version__
 from .colors import bold, cyan, dim, green, red, status_mark, yellow
 from .diagnostics import RECOMMENDED_MODELS, as_plaintext, collect, is_ready
+from .local_http import open_local_url
 
 
 def _version() -> str:
@@ -31,13 +33,37 @@ def _version() -> str:
 def _post_json(url: str, payload: dict, timeout: float = 10.0):
     data = json.dumps(payload).encode()
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - localhost
+    with open_local_url(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode())
 
 
 def _get_json(url: str, timeout: float = 3.0):
-    with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - localhost
+    with open_local_url(url, timeout=timeout) as resp:
         return json.loads(resp.read().decode())
+
+
+def cmd_gate_check(args) -> int:
+    """Evaluate a local release gate. Exit 0/1/2/3/4 for pass/fail/warning/inconclusive/error."""
+    try:
+        path = Path(args.input)
+        if path.stat().st_size > 64 * 1024:
+            raise ValueError("Gate input exceeds 64 KiB")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("Gate input must be a JSON object")
+        payload["dry_run"] = not args.enforce
+        result = _post_json(
+            f"http://127.0.0.1:{args.port}/api/projects/{args.project_id}/release-gates/policies/{args.policy_id}/evaluate",
+            payload, timeout=30)
+        outcome = result.get("effective_outcome", result.get("outcome"))
+        if outcome not in {"pass", "fail", "warning", "inconclusive"}:
+            raise ValueError("Server returned unknown gate outcome")
+        print(json.dumps({"decision_id": result.get("id"), "outcome": outcome,
+                          "dry_run": result.get("dry_run")}, sort_keys=True))
+        return {"pass": 0, "fail": 1, "warning": 2, "inconclusive": 3}[outcome]
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Release gate error: {exc}", file=sys.stderr)
+        return 4
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +139,10 @@ def _confirm_network_exposure(host: str, assume_yes: bool) -> bool:
 
 
 def cmd_start(args) -> int:
+    if os.environ.get("REDFORGE_NETWORK_PROFILE", "strict").strip().lower() != "connected" and not _is_loopback(args.host):
+        print(red("Strict no-egress mode requires a loopback bind address."))
+        print(dim("Start without --host, or use an explicitly configured connected deployment."))
+        return 1
     if not _is_loopback(args.host) and not _confirm_network_exposure(args.host, args.yes):
         print(dim("Cancelled. RedForge was not started."))
         return 1
@@ -337,6 +367,12 @@ def build_parser() -> argparse.ArgumentParser:
     dg = sub.add_parser("diagnose", help="write a diagnostics.zip support bundle")
     dg.add_argument("--port", type=int, default=8000)
     dg.add_argument("-o", "--output", default=None, help="output path (default: ./diagnostics.zip)")
+    gate = sub.add_parser("gate", help="evaluate local release gate for CI")
+    gate.add_argument("project_id")
+    gate.add_argument("policy_id")
+    gate.add_argument("input", help="JSON file with candidate and evidence IDs")
+    gate.add_argument("--port", type=int, default=8000)
+    gate.add_argument("--enforce", action="store_true", help="record enforceable decision, not dry run")
     return p
 
 
@@ -345,6 +381,7 @@ _DISPATCH = {
     "status": cmd_status, "logs": cmd_logs, "models": cmd_models, "evaluate": cmd_evaluate,
     "benchmark": cmd_benchmark, "install": cmd_install, "uninstall": cmd_uninstall,
     "repair": cmd_repair, "update": cmd_update, "diagnose": cmd_diagnose,
+    "gate": cmd_gate_check,
 }
 
 

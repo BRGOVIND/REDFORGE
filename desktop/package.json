@@ -1,7 +1,7 @@
 {
   "name": "redforge-desktop",
   "productName": "RedForge",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "description": "RedForge — the local AI engineering platform, as a native desktop app.",
   "author": "RedForge <hello@redforge.site>",
   "license": "SEE LICENSE IN ../LICENSE",
@@ -56,8 +56,8 @@
     "pack": "electron-builder --dir"
   },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron": "^44.5.0",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
     "electron-updater": "^6.2.1"
@@ -73,6 +73,12 @@
     "files": [
       "electron/**/*",
       "!**/*.map"
+    ],
+    "extraFiles": [
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE.txt"
+      }
     ],
     "extraResources": [
       {
@@ -149,11 +155,6 @@
       "vendor": "RedForge",
       "synopsis": "Local AI engineering platform",
       "description": "Build, evaluate and manage local AI models — training, benchmarking, security evaluation and reporting, all on your own hardware.",
-      "desktop": {
-        "Name": "RedForge",
-        "Comment": "Local AI engineering platform",
-        "Categories": "Development;Science;"
-      },
       "target": [
         { "target": "AppImage", "arch": ["x64"] },
         { "target": "deb", "arch": ["x64"] }

@@ -14,7 +14,7 @@
  * live in the web app + backend — the desktop shell boots them, it does not
  * reimplement them.
  */
-const { app, BrowserWindow, dialog, shell, ipcMain, Menu, clipboard } = require('electron');
+const { app, BrowserWindow, dialog, shell, ipcMain, Menu, clipboard, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const config = require('./config');
@@ -22,6 +22,9 @@ const store = require('./store');
 const { BackendSupervisor } = require('./backend');
 const { UpdateManager, CHANNELS } = require('./updater');
 const uiCache = require('./ui-cache');
+const networkPolicy = require('./network-policy');
+
+networkPolicy.configureEarly(app, config.networkProfile());
 
 const isDev = !app.isPackaged;
 const appRoot = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..');
@@ -112,8 +115,17 @@ function createMainWindow(url) {
   });
   // Open external links in the system browser, never inside the app window.
   win.webContents.setWindowOpenHandler(({ url: target }) => {
-    if (/^https?:\/\//.test(target) && !target.startsWith(url)) { shell.openExternal(target); return { action: 'deny' }; }
+    if (/^https?:\/\//.test(target) && !networkPolicy.sameOrigin(target, url)) {
+      openExternalLink(target);
+      return { action: 'deny' };
+    }
     return { action: 'allow' };
+  });
+  win.webContents.on('will-navigate', (event, target) => {
+    if (!networkPolicy.sameOrigin(target, url)) {
+      event.preventDefault();
+      if (/^https?:\/\//.test(target)) openExternalLink(target);
+    }
   });
   // A renderer crash should be recoverable, not a dead window.
   win.webContents.on('render-process-gone', (_e, details) => {
@@ -144,6 +156,7 @@ function iconPath() {
 }
 
 async function main() {
+  networkPolicy.guardSession(session.defaultSession, config.networkProfile(), log);
   config.ensureDirs();
 
   updates = new UpdateManager({ isDev, getWindow: () => win, log });
@@ -316,15 +329,32 @@ function buildMenu() {
         { label: 'Check for updates…', click: () => updates && updates.check({ notifyWhenUpToDate: true }) },
         { label: 'Update channel', submenu: channelItems },
         { type: 'separator' },
-        { label: 'Documentation', click: () => shell.openExternal('https://redforge.site/docs') },
-        { label: 'Report an issue', click: () => shell.openExternal('https://github.com/BRGOVIND/REDFORGE/issues/new/choose') },
-        { label: 'RedForge website', click: () => shell.openExternal('https://redforge.site') },
+        { label: 'Documentation', click: () => openExternalLink('https://redforge.site/docs') },
+        { label: 'Report an issue', click: () => openExternalLink('https://github.com/BRGOVIND/REDFORGE/issues/new/choose') },
+        { label: 'RedForge website', click: () => openExternalLink('https://redforge.site') },
         { type: 'separator' },
         { label: 'About RedForge', click: showAbout },
       ],
     },
   ];
   return Menu.buildFromTemplate(template);
+}
+
+function openExternalLink(target) {
+  if (config.networkProfile() === 'strict') {
+    const choice = dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'External link unavailable',
+      message: 'Strict local mode does not open external websites.',
+      detail: 'Copy the address if you want to open it separately in a browser.',
+      buttons: ['Copy address', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (choice === 0) clipboard.writeText(target);
+    return;
+  }
+  void shell.openExternal(target);
 }
 
 function fatal(err) {

@@ -1,13 +1,13 @@
 # RedForge backend — runtime dependencies (direct).
 #
-# Pinned to the versions the V1.2 test suite runs against, so `redforge install`
+# Pinned to the versions the 2.1 test suite runs against, so `redforge install`
 # is reproducible. Test-only tools live in requirements-dev.txt; the full pinned
 # dependency closure (direct + transitive) lives in requirements.lock.
 #
 # To move a pin: bump it here, reinstall, run the suite, then regenerate the lock
 # (see requirements.lock header). Do not bump casually.
 
-fastapi==0.115.6
+fastapi==0.156.8
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.51
 aiosqlite==0.22.1

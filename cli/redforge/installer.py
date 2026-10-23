@@ -163,14 +163,24 @@ def install_requirements(venv: Path) -> None:
             "If you installed via pip, download a release with: redforge update",
         )
     vpy = str(paths.venv_python(venv))
+    strict = os.environ.get("REDFORGE_NETWORK_PROFILE", "strict").strip().lower() != "connected"
     try:
-        subprocess.run([vpy, "-m", "pip", "install", "--upgrade", "pip"],
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        subprocess.run([vpy, "-m", "pip", "install", "-r", str(req)], check=True)
+        if not strict:
+            subprocess.run([vpy, "-m", "pip", "install", "--upgrade", "pip"],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        args = [vpy, "-m", "pip", "install"]
+        if strict:
+            args.append("--no-index")
+            wheelhouse = os.environ.get("REDFORGE_WHEELHOUSE")
+            if wheelhouse:
+                args.extend(["--find-links", wheelhouse])
+        subprocess.run([*args, "-r", str(req)], check=True)
     except subprocess.CalledProcessError as exc:
         raise InstallError(
             "Failed to install backend dependencies.",
-            fix=f"Check network access and re-run: redforge repair  (pip exit {exc.returncode})",
+            fix=("Strict local mode uses no package index. Supply a local REDFORGE_WHEELHOUSE "
+                 "or use the bundled desktop installer." if strict else
+                 f"Check network access and re-run: redforge repair  (pip exit {exc.returncode})"),
         ) from exc
 
 

@@ -240,6 +240,12 @@ def _ok(msg: str) -> None:
 
 
 def update(*, check_only: bool = False, repo: str = DEFAULT_REPO) -> int:
+    import os
+
+    if os.environ.get("REDFORGE_NETWORK_PROFILE", "strict").strip().lower() != "connected":
+        print(red("✕") + " Updates are disabled in strict no-egress mode.")
+        print(dim("   Install a verified offline release manually, or use a separately configured connected deployment."))
+        return 1
     print(bold("\nRedForge update\n"))
     current = __version__
 

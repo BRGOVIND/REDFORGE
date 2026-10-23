@@ -145,8 +145,14 @@ class OpenAICompatibleProvider(HttpProvider):
             raise self._map_error(exc, model) from exc
         latency_ms = int((time.monotonic() - start) * 1000)
         text, finish, usage = _parse_chat_completion(data)
+        reported = data.get("usage") or {}
+        prompt_detail = reported.get("prompt_tokens_details") or {}
+        completion_detail = reported.get("completion_tokens_details") or {}
         return GenerationResult(
-            model=model, text=text, latency_ms=latency_ms, eval_count=usage, done_reason=finish
+            model=model, text=text, latency_ms=latency_ms, eval_count=usage, done_reason=finish,
+            prompt_eval_count=reported.get("prompt_tokens"),
+            cached_input_tokens=prompt_detail.get("cached_tokens"),
+            reasoning_tokens=completion_detail.get("reasoning_tokens"),
         )
 
     async def stream_generate(self, model: str, prompt: str) -> AsyncIterator[dict]:

@@ -361,15 +361,20 @@ GenerateFn = Callable[..., Awaitable[dict]]
 
 
 async def _runtime_generate_rich(model: str, prompt: str, *, system: Optional[str] = None,
-                                 options: Optional[dict] = None) -> dict:
+                                 options: Optional[dict] = None, provider: str | None = None,
+                                 timeout: float | None = None) -> dict:
     """Reuse the Runtime Manager (the single execution path) and surface metrics."""
-    from app.runtime.manager import get_runtime
+    from app.runtime.manager import get_runtime, get_runtime_for
 
     opts = dict(options or {})
     if system:
         opts.setdefault("system", system)
     started = time.monotonic()
-    res = await get_runtime().generate(model, prompt, options=opts)
+    runtime = get_runtime_for(provider) if provider else get_runtime()
+    if provider:
+        res = await runtime.generate(model, prompt, options=opts, timeout=timeout, retries=0)
+    else:
+        res = await runtime.generate(model, prompt, options=opts)
     latency = getattr(res, "latency_ms", None)
     if latency is None:
         latency = round((time.monotonic() - started) * 1000, 2)
@@ -385,6 +390,8 @@ async def _runtime_generate_rich(model: str, prompt: str, *, system: Optional[st
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "total_tokens": total,
+        "cached_input_tokens": getattr(res, "cached_input_tokens", None),
+        "reasoning_tokens": getattr(res, "reasoning_tokens", None),
     }
 
 
@@ -525,9 +532,16 @@ class EvaluationSessionService:
                 select(Prompt).where(
                     Prompt.prompt_set_id.in_(prompt_set_ids), Prompt.enabled == 1)
             )).scalars().all() if prompt_set_ids else []
+            requested_versions = (config or {}).get("prompt_versions")
+            if requested_versions is not None and set(requested_versions) != {p.id for p in prompts}:
+                raise ValueError("Frozen prompt versions must match the enabled dataset")
             for prompt in prompts:
                 _render_for_evaluation(prompt, config or {})
-            frozen_versions = {p.id: p.active_version or p.current_version for p in prompts}
+            frozen_versions = requested_versions or {p.id: p.active_version or p.current_version for p in prompts}
+            if requested_versions is not None:
+                for prompt in prompts:
+                    if await prompt_version_service.get_version(db, prompt.id, frozen_versions[prompt.id]) is None:
+                        raise ValueError(f"Published prompt version missing: {prompt.id}")
             stored_config = {**(config or {}), "prompt_versions": frozen_versions}
             total = len(models) * len(prompts)
             s = WorkbenchSession(
@@ -630,8 +644,9 @@ class EvaluationSessionService:
                 s = await db.get(WorkbenchSession, session_id)
                 if s is None:
                     return
-                for rr in raw_results:
-                    db.add(EvaluationResult(id=str(uuid4()), session_id=session_id, **rr))
+                if not config.get("comparison_plan_id"):
+                    for rr in raw_results:
+                        db.add(EvaluationResult(id=str(uuid4()), session_id=session_id, **rr))
                 s.summary = compose_summary([_result_view(r) for r in raw_results], models)
                 s.completed_tasks = len(raw_results)
                 s.total_tasks = max(s.total_tasks, len(raw_results))
@@ -662,72 +677,124 @@ class EvaluationSessionService:
         """Run every (model × prompt), scoring similarity/verdict/regressions."""
         provider = get_similarity(sim_key)
         options = config.get("options") or {}
-        out: list[dict] = []
-        for m in models:
+        async def run_one(m: dict, p: Prompt) -> dict | None:
+            if session_id in self._cancelled:
+                return None
             target = m.get("target_model")
             if not target:
-                continue
-            for p in prompts:
-                baseline = p.golden_response or p.expected_output or ""
-                baseline_type = ("golden" if p.golden_response
-                                 else "expected" if p.expected_output else None)
-                acceptance = p.acceptance_criteria or {}
-                rr = {
-                    "prompt_id": p.id, "prompt_set_id": p.prompt_set_id,
-                    "prompt_version": p.active_version or p.current_version, "prompt_title": p.title or "",
-                    "target_model": target, "registry_id": m.get("registry_id"),
-                    "provider": m.get("provider"), "runtime": m.get("runtime"),
-                    "label": m.get("label") or target,
-                    "response": "", "metrics": {}, "similarity_score": None,
-                    "baseline_type": baseline_type or "none", "verdict": "none",
-                    "regressions": [], "warnings": [], "error": None,
-                }
-                try:
-                    rendered = _render_for_evaluation(p, config)
+                return None
+            baseline = p.golden_response or p.expected_output or ""
+            baseline_type = ("golden" if p.golden_response
+                             else "expected" if p.expected_output else None)
+            acceptance = p.acceptance_criteria or {}
+            rr = {
+                "prompt_id": p.id, "prompt_set_id": p.prompt_set_id,
+                "prompt_version": p.active_version or p.current_version, "prompt_title": p.title or "",
+                "target_model": target, "registry_id": m.get("registry_id"),
+                "provider": m.get("provider"), "runtime": m.get("runtime"),
+                "label": m.get("label") or target,
+                "response": "", "metrics": {}, "similarity_score": None,
+                "baseline_type": baseline_type or "none", "verdict": "none",
+                "regressions": [], "warnings": [], "error": None,
+            }
+            try:
+                rendered = _render_for_evaluation(p, config)
+                if config.get("comparison_plan_id") and self._generate_fn is _runtime_generate_rich:
+                    gen = await self._generate_fn(target, rendered["prompt"],
+                        system=rendered["system_prompt"] or None, options=options,
+                        provider=m.get("provider"), timeout=config.get("timeout_seconds"))
+                else:
                     gen = await self._generate_fn(
                         target, rendered["prompt"], system=rendered["system_prompt"] or None, options=options)
-                    if isinstance(gen, str):
-                        gen = {"response": gen}
-                    response = gen.get("response", "") or ""
-                    rr["response"] = response
-                    rr["metrics"] = {
-                        "latency_ms": gen.get("latency_ms"),
-                        "ttft_ms": gen.get("ttft_ms"),
-                        "completion_ms": gen.get("completion_ms") or gen.get("latency_ms"),
-                        "prompt_tokens": gen.get("prompt_tokens"),
-                        "completion_tokens": gen.get("completion_tokens"),
-                        "total_tokens": gen.get("total_tokens"),
-                    }
-                    similarity = None
-                    if baseline:
-                        similarity = provider.score(response, baseline).score
-                        rr["similarity_score"] = similarity
+                if isinstance(gen, str):
+                    gen = {"response": gen}
+                response = gen.get("response", "") or ""
+                rr["response"] = response
+                rr["metrics"] = {
+                    "latency_ms": gen.get("latency_ms"),
+                    "ttft_ms": gen.get("ttft_ms"),
+                    "completion_ms": gen.get("completion_ms") or gen.get("latency_ms"),
+                    "prompt_tokens": gen.get("prompt_tokens"),
+                    "completion_tokens": gen.get("completion_tokens"),
+                    "total_tokens": gen.get("total_tokens"),
+                    "cached_input_tokens": gen.get("cached_input_tokens"),
+                    "reasoning_tokens": gen.get("reasoning_tokens"),
+                }
+                if config.get("comparison_plan_id") and m.get("provider"):
+                    from app.cost_control import calculated_cost, price_for
+                    from app.optimization import is_remote
+                    if is_remote(m["provider"]):
+                        async with self._factory()() as db:
+                            price = await price_for(db, config["project_id"], m["provider"], target, _utcnow())
+                        if price:
+                            rr["metrics"]["cost_usd"] = calculated_cost({
+                                "input_tokens": gen.get("prompt_tokens"),
+                                "output_tokens": gen.get("completion_tokens"),
+                                "cached_input_tokens": gen.get("cached_input_tokens"),
+                                "reasoning_tokens": gen.get("reasoning_tokens")}, price)
+                            rr["metrics"]["pricing_record_id"] = price.id
+                similarity = None
+                if baseline:
+                    similarity = provider.score(response, baseline).score
+                    rr["similarity_score"] = similarity
+                async with self._factory()() as db:
+                    prev = await self._prev_result(
+                        db, session_id, p.id, m.get("registry_id") or target, target)
+                if prev and config.get("comparison_plan_id") and prev.provider != m.get("provider"):
+                    prev = None
+                prev_resp = prev.response if prev else None
+                prev_lat = (prev.metrics or {}).get("latency_ms") if prev else None
+                prompt_changed = bool(prev and (prev.prompt_version != (p.active_version or p.current_version)))
+                regressions = regression_analyzer.analyze(
+                    response, baseline, acceptance=acceptance,
+                    expected_behavior=p.expected_behavior or "", similarity=similarity,
+                    prev_response=prev_resp, prompt_changed=prompt_changed,
+                    prev_latency_ms=prev_lat, curr_latency_ms=rr["metrics"].get("latency_ms"),
+                    category=p.acceptance_criteria.get("category", "") if isinstance(p.acceptance_criteria, dict) else "",
+                )
+                rr["regressions"] = regressions
+                rr["verdict"] = _verdict(
+                    baseline_type=baseline_type, similarity=similarity,
+                    regressions=regressions, acceptance=acceptance, config=config, error=False)
+                if not baseline and not acceptance:
+                    rr["warnings"].append("No baseline or acceptance criteria — informational only.")
+            except Exception as exc:  # noqa: BLE001
+                rr["error"] = str(exc)[:500]
+                rr["verdict"] = "error"
+            return rr
 
-                    # Previous run of this prompt+model (drift detection).
-                    async with self._factory()() as db:
-                        prev = await self._prev_result(
-                            db, session_id, p.id, m.get("registry_id") or target, target)
-                    prev_resp = prev.response if prev else None
-                    prev_lat = (prev.metrics or {}).get("latency_ms") if prev else None
-                    prompt_changed = bool(prev and (prev.prompt_version != (p.active_version or p.current_version)))
+        if not config.get("comparison_plan_id"):
+            out = []
+            for m in models:
+                for p in prompts:
+                    if session_id in self._cancelled:
+                        return out
+                    rr = await run_one(m, p)
+                    if rr is not None:
+                        out.append(rr)
+            return out
 
-                    regressions = regression_analyzer.analyze(
-                        response, baseline, acceptance=acceptance,
-                        expected_behavior=p.expected_behavior or "", similarity=similarity,
-                        prev_response=prev_resp, prompt_changed=prompt_changed,
-                        prev_latency_ms=prev_lat, curr_latency_ms=rr["metrics"].get("latency_ms"),
-                        category=p.acceptance_criteria.get("category", "") if isinstance(p.acceptance_criteria, dict) else "",
-                    )
-                    rr["regressions"] = regressions
-                    rr["verdict"] = _verdict(
-                        baseline_type=baseline_type, similarity=similarity,
-                        regressions=regressions, acceptance=acceptance, config=config, error=False)
-                    if not baseline and not acceptance:
-                        rr["warnings"].append("No baseline or acceptance criteria — informational only.")
-                except Exception as exc:  # noqa: BLE001 - one prompt failing never aborts the run
-                    rr["error"] = str(exc)[:500]
-                    rr["verdict"] = "error"
-                out.append(rr)
+        # Comparison is opt-in and bounded. Each finished result is durable so
+        # cancellation or a partial provider failure still leaves useful evidence.
+        semaphore = asyncio.Semaphore(min(max(int(config.get("concurrency_limit", 1)), 1), 4))
+
+        async def bounded(m, p):
+            async with semaphore:
+                return await run_one(m, p)
+
+        tasks = [asyncio.create_task(bounded(m, p)) for m in models for p in prompts]
+        out = []
+        for task in asyncio.as_completed(tasks):
+            rr = await task
+            if rr is None:
+                continue
+            out.append(rr)
+            async with self._factory()() as db:
+                db.add(EvaluationResult(id=str(uuid4()), session_id=session_id, **rr))
+                row = await db.get(WorkbenchSession, session_id)
+                if row:
+                    row.completed_tasks = len(out)
+                await db.commit()
         return out
 
     async def cancel(self, session_id: str) -> bool:

@@ -70,6 +70,10 @@ function ensureDirs(loc = locations()) {
 module.exports = {
   HOST,
   DEFAULT_PORT,
+  networkProfile() {
+    return (process.env.REDFORGE_NETWORK_PROFILE || 'strict').trim().toLowerCase() === 'connected'
+      ? 'connected' : 'strict';
+  },
   port() {
     const p = parseInt(process.env.REDFORGE_PORT || '', 10);
     return Number.isFinite(p) && p > 0 ? p : DEFAULT_PORT;

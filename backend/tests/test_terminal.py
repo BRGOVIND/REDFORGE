@@ -176,12 +176,23 @@ async def test_heartbeat_emitted_on_slow_generate(factory, monkeypatch):
 
     monkeypatch.setattr(mod, "HEARTBEAT_INTERVAL", 0.05)
 
+    sid = await _seed_session(factory)
+    heartbeat_written = asyncio.Event()
+    original_add = EventRepository.add
+
+    async def add_with_signal(self, **kwargs):
+        event = await original_add(self, **kwargs)
+        if kwargs["event_type"] == EventType.HEARTBEAT:
+            heartbeat_written.set()
+        return event
+
+    monkeypatch.setattr(EventRepository, "add", add_with_signal)
+
     async def slow_gen(model, prompt):
-        await asyncio.sleep(0.16)
+        await asyncio.wait_for(heartbeat_written.wait(), timeout=2)
         return ("ok", 5)
 
     ex = mod.AdaptiveExecutor(factory, generate_fn=slow_gen)
-    sid = await _seed_session(factory)
 
     text, _ = await ex._generate_with_heartbeat(sid, "m", "prompt")
     assert text == "ok"
