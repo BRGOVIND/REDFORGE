@@ -1,9 +1,10 @@
 # Runtime Providers
 
 RedForge talks to language models through **runtime providers**. Ollama is the
-default and needs no configuration. Other providers are available by setting a
-couple of environment variables before you start RedForge — no code changes, no
-rebuild.
+default and needs no configuration. The default strict profile permits only
+loopback local providers. Hosted adapters remain in the code but require an
+explicit, separately configured connected deployment. See
+[network profiles](network-profile.md).
 
 ## Choosing a provider
 
@@ -14,15 +15,16 @@ Set `REDFORGE_RUNTIME_PROVIDER` to one of the built-in provider keys:
 | `ollama` | Ollama (default) | Local | none |
 | `lmstudio` | LM Studio | Local | none |
 | `llamacpp` | llama.cpp server | Local | none |
-| `vllm` | vLLM | Local / self-hosted | none |
+| `vllm` | vLLM | Loopback in strict mode | none |
 | `openai` | OpenAI | Cloud | `OPENAI_API_KEY` |
 | `anthropic` | Anthropic (Claude) | Cloud | `ANTHROPIC_API_KEY` |
 | `gemini` | Google Gemini | Cloud | `GEMINI_API_KEY` |
 | `groq` | Groq | Cloud | `GROQ_API_KEY` |
 | `openrouter` | OpenRouter | Cloud | `OPENROUTER_API_KEY` |
 
-You can also switch the active provider at runtime from the **Runtime** page in
-the app, or with `POST /api/providers/default`.
+In strict mode the five hosted adapters in the table are unavailable and local
+provider URLs must resolve to loopback. You can switch between permitted
+providers from the **Runtime** page or with `POST /api/providers/default`.
 
 ## Configuration conventions
 
@@ -46,17 +48,19 @@ Local LM Studio (default port):
 REDFORGE_RUNTIME_PROVIDER=lmstudio redforge start
 ```
 
-OpenAI:
+OpenAI, in a separate connected deployment only:
 
 ```bash
 export OPENAI_API_KEY=sk-...
+export REDFORGE_NETWORK_PROFILE=connected
 REDFORGE_RUNTIME_PROVIDER=openai redforge start
 ```
 
-Custom Ollama host:
+Custom Ollama host, in a connected deployment only:
 
 ```bash
 export REDFORGE_OLLAMA_URL=http://192.168.1.50:11434
+export REDFORGE_NETWORK_PROFILE=connected
 redforge start
 ```
 
@@ -77,5 +81,6 @@ capabilities differ:
 - `redforge doctor` runs the same System Health Engine and reports provider
   status from the command line.
 - A provider marked *offline* usually means the local server isn't running
-  (start Ollama / LM Studio) or a cloud API key is missing. See
+  (start Ollama / LM Studio). In connected mode it can also mean a missing
+  hosted API key. See
   [troubleshooting.md](troubleshooting.md).

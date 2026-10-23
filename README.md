@@ -13,7 +13,7 @@ The Local AI Engineering Platform
 Build • Fine-tune • Benchmark • Secure • Evaluate • Deploy
 </p>
 
-<p align="center">fef
+<p align="center">
 A desktop-first IDE for Local AI development.
 </p>
 
@@ -31,17 +31,21 @@ Think of it as:
 >
 > **for Local AI.**
 
-Everything runs **locally by default**.
+The 2.1.0 release candidate defaults to **strict local mode**. RedForge-managed
+hosted inference, remote trace ingestion, model downloads, training-runtime
+installation, and update checks are blocked before requests start. Bring an
+already installed local runtime and model. See [network profiles](docs/network-profile.md).
 
 No accounts.
 
 No subscriptions.
 
-No telemetry.
+No RedForge-hosted telemetry. Optional project traces stay in your local database.
 
 No vendor lock-in.
 
-No data leaves your computer unless **you explicitly connect a cloud provider**.
+The separate marketing website may request Google Fonts and GitHub release
+metadata in your browser; that is not part of the desktop app's network policy.
 
 ---
 
@@ -71,7 +75,8 @@ Track experiments in spreadsheets.
 
 RedForge brings the **entire Local AI workflow into one application**.
 
-From downloading a model to training, benchmarking, evaluating, securing, and exporting it—everything happens inside one professional workspace.
+After you install a local model, RedForge brings training, benchmarking,
+evaluation, security testing, and export into one workspace.
 
 ---
 
@@ -97,7 +102,9 @@ Organize everything related to an AI project in one place.
 
 # 🤖 Model Hub
 
-Browse, download and manage AI models directly inside RedForge.
+Browse model requirements and manage already installed models inside RedForge.
+In strict mode, in-app downloads are disabled. The existing download workflow
+is preserved for explicitly configured connected deployments.
 
 No terminal required.
 
@@ -142,7 +149,7 @@ Supported providers include:
 - llama.cpp
 - vLLM
 
-### Cloud
+### Connected deployment only
 
 - OpenAI
 - Anthropic
@@ -150,7 +157,9 @@ Supported providers include:
 - Groq
 - OpenRouter
 
-Switch between providers without changing your workflow.
+Strict mode exposes only supported loopback runtimes. Remote adapters remain in
+the source, but require an explicit connected deployment and are not part of the
+no-egress release behavior.
 
 ---
 
@@ -341,7 +350,7 @@ Every long-running operation is managed centrally.
 
 Examples:
 
-- Model Downloads
+- Model Downloads (connected deployments only)
 - Training
 - Benchmarks
 - Evaluations
@@ -361,7 +370,7 @@ Quickly access every feature using your keyboard.
 Examples:
 
 ```
-> Download Model
+> Browse Model Hub
 
 > Train Model
 
@@ -388,7 +397,7 @@ RedForge is built around one principle:
 
 By default:
 
-- No telemetry
+- No RedForge-hosted telemetry; optional local trace capture is configurable
 - No analytics
 - No cloud dependency
 - No accounts

@@ -18,7 +18,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   # See release.yml — Windows runners use a legacy console codepage; UTF-8 mode
   # stops any script's output from failing the job on encoding.
   PYTHONUTF8: "1"
@@ -81,7 +81,15 @@ jobs:
       # generate_fn / judge_fn seams (see tests/conftest.py).
       - name: pytest
         working-directory: backend
+        env:
+          REDFORGE_NETWORK_PROFILE: strict
         run: python -m pytest -q
+
+      - name: Strict boundary and connected-adapter regressions
+        working-directory: backend
+        env:
+          REDFORGE_NETWORK_PROFILE: strict
+        run: python -m pytest -q tests/test_network_policy.py tests/test_providers.py tests/test_phase3_optimization.py
 
   desktop:
     name: Desktop main process (node:test)
@@ -131,3 +139,20 @@ jobs:
       # error rather than a build error. Check the whole reference graph instead.
       - name: Every lazy-loaded chunk resolves
         run: python scripts/verify_frontend_assets.py frontend/dist
+
+  website:
+    name: Marketing website (tsc + vite build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install
+        working-directory: website
+        run: npm ci
+      - name: Typecheck and build
+        working-directory: website
+        run: npm run build

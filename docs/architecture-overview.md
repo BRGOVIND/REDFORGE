@@ -56,8 +56,8 @@ scored security report you can export.
 
 RedForge uses a local SQLite database for sessions, events, and history.
 Settings, logs, and the runtime environment live under `~/.redforge` (or the
-install directory). Nothing leaves your machine unless you configure a cloud
-provider.
+install directory). Hosted-provider calls, model downloads, and update checks
+contact their respective services when used. Optional traces are stored locally.
 
 ## Design principles
 

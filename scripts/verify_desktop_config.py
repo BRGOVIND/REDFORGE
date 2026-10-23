@@ -17,6 +17,7 @@ What it checks:
   4. **artifactName patterns agree with the release gate.** `package.json` and
      `verify_release_assets.py` encode the same filenames in two places; drift
      means a green build that publishes nothing the website can link to.
+  5. **The project's MIT license ships beside the desktop executable.**
 
 Usage:
     python scripts/verify_desktop_config.py
@@ -260,6 +261,15 @@ def check_publish(build: dict, problems: list[str]) -> None:
             problems.append(f"build.publish[{i}] github provider needs owner + repo")
 
 
+def check_license(build: dict, problems: list[str]) -> None:
+    files = build.get("extraFiles") or []
+    if not any(isinstance(item, dict) and item.get("from") == "../LICENSE"
+               and item.get("to") == "LICENSE.txt" for item in files):
+        problems.append("build.extraFiles must ship ../LICENSE as LICENSE.txt")
+    if not (ROOT / "LICENSE").is_file():
+        problems.append("repository LICENSE is missing")
+
+
 def main() -> int:
     if not PKG.is_file():
         print(f"missing {PKG}", file=sys.stderr)
@@ -273,6 +283,7 @@ def main() -> int:
     check_dmg_volume_name(build, problems)
     check_workflow_globs(build, problems)
     check_publish(build, problems)
+    check_license(build, problems)
 
     # extraResources is only populated after staging; don't fail a plain lint run.
     staged = (DESKTOP / "resources" / "backend").exists()

@@ -1,32 +1,39 @@
-# RedForge v2.0.0 — Release Notes
+# RedForge v2.1.0 — Release Notes
 
-**RedForge is now a local AI engineering platform.** Manage models, chat, curate
-datasets, fine-tune with LoRA/QLoRA, and red-team any model — all on your own
-machine. Local-first, localhost-only, no accounts, no telemetry.
+> Draft candidate only. Do not publish until the remaining release gates in
+> [the audit](docs/release-readiness-audit.md) are complete.
 
-Everything from v1.2 keeps working; this release is additive.
+**RedForge is a local-first AI engineering platform.** Version 2.1.0 adds
+optional LLM tracing, prompt versioning and privacy controls, model comparisons
+and routing, cost estimates and budgets, anomaly alerts and trace feedback,
+plus reviewed security cases and evidence-only release gates.
 
-## New in v2.0.0
-- **AI Studio** — local projects that group models, datasets, evaluations,
-  reports, and training runs.
-- **Playground** — chat with any provider, tune parameters, and run a security
-  evaluation in one click. All generation flows through the Runtime Manager.
-- **Dataset Lab** — import CSV/JSON/JSONL/TXT/MD/PDF/DOCX, preview, analyze
-  quality, clean, split train/val/test, and version every save.
-- **Training Lab** — local **LoRA/QLoRA** fine-tuning via a swappable backend
-  (Unsloth when a GPU + ML stack are present; a simulation otherwise), with a live
-  dashboard (loss chart, checkpoints, logs, ETA) and history.
-- **Assistant + ⌘K command palette** and an IDE-style workspace shell.
+Existing local projects and desktop workflows remain supported. New migrations
+are additive; back up the local database before upgrading.
 
-## Install in three steps
-1. **Get the release** for your OS (or `git clone` for developers).
-2. **Install:** `install.cmd` (Windows) or `./install.sh` (Linux/macOS).
-   Requires Python 3.11+ and a local runtime — [Ollama](https://ollama.com/download)
-   is the recommended default (LM Studio, llama.cpp, and vLLM also work).
-3. **Start:** `start.cmd` / `./start.sh` — your browser opens automatically.
+## New in v2.1.0
+- **Traces** — project ingestion tokens, SDK wrappers, a local explorer, and
+  separate capture controls. Prompt and response bodies are off by default.
+- **Prompt registry** — drafts, immutable published versions, diffs, activation
+  of older versions, and version links to evaluations and traces.
+- **Model decisions** — comparison records, explicit routing policies, operator
+  prices, cost reports, and soft or hard estimated budgets. Estimates are not
+  provider invoices or guaranteed spend caps.
+- **Health and feedback** — bounded local anomaly alerts and a reviewed path
+  from sanitized production traces to evaluation cases.
+- **Security and release review** — trace-derived candidates require review;
+  release gates assess evidence but do not deploy or roll back code.
 
-Follow the on-screen setup; install or download a model with your runtime, or let
-onboarding recommend one. Then explore the sidebar (or press **⌘K / Ctrl-K**).
+## Install
+Download the installer for your operating system from the GitHub release page.
+Source-archive users can run `install.cmd` (Windows) or `./install.sh`
+(Linux/macOS), then `start.cmd` or `./start.sh`. This path requires Python
+3.11+ and, in strict mode, preinstalled dependencies or an offline wheelhouse.
+For local inference, configure a compatible runtime such as Ollama.
+
+Follow the on-screen setup. Bring an already installed local runtime and model;
+strict mode does not download them. Then explore the sidebar (or press
+**⌘K / Ctrl-K**).
 
 ## Requirements
 - **Python 3.11+** and one local **runtime** (Ollama recommended; LM Studio,
@@ -36,15 +43,19 @@ onboarding recommend one. Then explore the sidebar (or press **⌘K / Ctrl-K**).
   Training Lab runs a dependency-free **simulation** so you can learn the flow.
 
 ## Trust model
-RedForge is **local-first, localhost-only, single-user, and unauthenticated by
-design** — like a local database GUI or Jupyter server. No accounts, no telemetry,
-no mandatory cloud; nothing is uploaded. Cloud providers are opt-in and use your
-own API key (read from the environment, never stored). **Do not expose RedForge to
-an untrusted network.** It runs as a single process and refuses to start under a
-multi-worker configuration. Full statement in [SECURITY.md](SECURITY.md).
+RedForge's desktop management API is **single-user, localhost-oriented, and
+unauthenticated by design**. SDK trace ingestion uses local project tokens.
+Optional trace capture is stored locally under a project policy, not sent to
+a RedForge cloud service. The default strict profile blocks RedForge-managed
+hosted inference, remote trace ingestion, downloads, update checks, and
+non-loopback server binding. This is an application policy, not an OS firewall.
+**Do not expose RedForge to an untrusted network.** See
+[SECURITY.md](SECURITY.md) and the website privacy policy for details.
 
 ## Known limitations
-- macOS runs from the `.tar.gz`; a signed `.dmg` is future work.
-- Windows `.exe` and Linux `AppImage` are produced in CI from the release folder.
+- Local project boundaries do not provide multi-user enterprise RBAC.
+- Local alert history has no email or webhook notifications by default.
+- Estimated budget limits cannot preempt calls made directly to external SDKs.
+- Release gates do not deploy, invoke production tools, or execute rollback.
 - Live training progress and background jobs do not survive a backend restart;
   interrupted jobs are marked `interrupted` on the next start.

@@ -48,6 +48,7 @@ END_USER_DOCS = [
     "model-installation.md",
     "providers.md",
     "runtime.md",
+    "network-profile.md",
     "gpu-support.md",
     "evaluation-engine.md",
     "intelligent-evaluation.md",
@@ -59,11 +60,33 @@ END_USER_DOCS = [
 _IGNORE = shutil.ignore_patterns(
     # caches / build leftovers / local data
     "__pycache__", "*.pyc", "*.pyo", ".pytest_cache", "*.db",
+    "*.sqlite", "*.sqlite3", ".env", "*.key", "*.pem", "*.p12", "*.pfx", "*.log",
     ".vite", "node_modules", "dist", ".mypy_cache",
     ".venv", "venv", ".idea", ".vscode", ".DS_Store",
     # developer-only files — never shipped to end users
     "tests", "pytest.ini", "requirements-dev.txt", "conftest.py",
 )
+
+
+def _backend_ignore(directory: str, names: list[str]) -> set[str]:
+    ignored = set(_IGNORE(directory, names))
+    if Path(directory).resolve() == (ROOT / "backend").resolve():
+        # These are generated on the developer's machine, not release assets.
+        # In particular, outputs/ can contain private training checkpoints.
+        ignored.update({".redforge", "artifacts", "checkpoints", "logs", "outputs",
+                        "runs", "unsloth_compiled_cache"} & set(names))
+    # A checkout may contain an old compiled UI. Ship only the just-built dist,
+    # not stale chunks that survived from an earlier version.
+    if Path(directory).resolve() == (ROOT / "backend" / "app").resolve():
+        ignored.add("static")
+    return ignored
+
+
+def _cli_ignore(directory: str, names: list[str]) -> set[str]:
+    ignored = set(_IGNORE(directory, names))
+    if Path(directory).resolve() == (ROOT / "cli").resolve():
+        ignored.update({"build", "redforge_cli.egg-info", "redforge.egg-info"} & set(names))
+    return ignored
 
 
 def _version() -> str:
@@ -85,12 +108,12 @@ def build_frontend() -> Path:
 def stage(version: str, dist: Path) -> Path:
     staging = RELEASES / f"redforge-{version}"
     if staging.exists():
-        shutil.rmtree(staging)
+        raise SystemExit(f"Refusing to overwrite existing staging directory: {staging}")
     staging.mkdir(parents=True)
 
     print("• Staging backend, cli, datasets, docs…")
-    shutil.copytree(ROOT / "backend", staging / "backend", ignore=_IGNORE)
-    shutil.copytree(ROOT / "cli", staging / "cli", ignore=_IGNORE)
+    shutil.copytree(ROOT / "backend", staging / "backend", ignore=_backend_ignore)
+    shutil.copytree(ROOT / "cli", staging / "cli", ignore=_cli_ignore)
     shutil.copytree(ROOT / "datasets", staging / "datasets", ignore=_IGNORE)
     _stage_docs(staging / "docs")
     for f in ("VERSION", "README.md", "CHANGELOG.md", "RELEASE_NOTES.md",
@@ -123,7 +146,19 @@ def _stage_docs(dest: Path) -> None:
 def _write_launchers(staging: Path) -> None:
     (staging / "install.cmd").write_text(
         "@echo off\r\n"
-        "python -m pip install -r backend\\requirements.txt\r\n"
+        "if /I \"%REDFORGE_NETWORK_PROFILE%\"==\"connected\" (\r\n"
+        "  python -m pip install -r backend\\requirements.lock\r\n"
+        ") else (\r\n"
+        "  if defined REDFORGE_WHEELHOUSE (\r\n"
+        "    python -m pip install --no-index --find-links \"%REDFORGE_WHEELHOUSE%\" -r backend\\requirements.lock\r\n"
+        "  ) else (\r\n"
+        "    python -m pip install --no-index -r backend\\requirements.lock\r\n"
+        "  )\r\n"
+        ")\r\n"
+        "if errorlevel 1 (\r\n"
+        "  echo Strict mode needs preinstalled dependencies or REDFORGE_WHEELHOUSE.\r\n"
+        "  exit /b 1\r\n"
+        ")\r\n"
         "echo.\r\n"
         "echo RedForge installed. Run start.cmd to launch.\r\n",
         encoding="utf-8",
@@ -135,7 +170,14 @@ def _write_launchers(staging: Path) -> None:
         encoding="utf-8",
     )
     (staging / "install.sh").write_text(
-        "#!/usr/bin/env bash\nset -e\npython3 -m pip install -r backend/requirements.txt\n"
+        "#!/usr/bin/env bash\nset -e\n"
+        'if [ "$(printf %s "${REDFORGE_NETWORK_PROFILE:-strict}" | tr "[:upper:]" "[:lower:]")" = "connected" ]; then\n'
+        '  python3 -m pip install -r backend/requirements.lock\n'
+        'elif [ -n "${REDFORGE_WHEELHOUSE:-}" ]; then\n'
+        '  python3 -m pip install --no-index --find-links "$REDFORGE_WHEELHOUSE" -r backend/requirements.lock\n'
+        'else\n'
+        '  python3 -m pip install --no-index -r backend/requirements.lock\n'
+        'fi\n'
         'echo "RedForge installed. Run ./start.sh to launch."\n',
         encoding="utf-8",
     )
@@ -152,8 +194,10 @@ def _write_launchers(staging: Path) -> None:
     (staging / "READ_ME_FIRST.txt").write_text(
         "RedForge — quick start\n"
         "======================\n\n"
-        "Requirements: Python 3.11+ and Ollama (https://ollama.com/download).\n"
+        "Requirements: Python 3.11+ and an installed local runtime/model.\n"
         "Node.js is NOT required.\n\n"
+        "Strict mode has no package-index access. Provide REDFORGE_WHEELHOUSE\n"
+        "or preinstall dependencies. See docs/network-profile.md.\n\n"
         "1. Install:   install.cmd   (Windows)   |   ./install.sh   (Linux/macOS)\n"
         "2. Start:     start.cmd                 |   ./start.sh\n"
         "3. Your browser opens automatically. Follow the on-screen setup.\n",
@@ -164,6 +208,9 @@ def _write_launchers(staging: Path) -> None:
 def archive(staging: Path, version: str) -> list[Path]:
     print("• Creating archives…")
     base = RELEASES / f"redforge-{version}"
+    for suffix in (".zip", ".tar.gz"):
+        if Path(str(base) + suffix).exists():
+            raise SystemExit(f"Refusing to overwrite existing archive: {base}{suffix}")
     artifacts = []
     zip_path = Path(shutil.make_archive(str(base), "zip", root_dir=RELEASES, base_dir=staging.name))
     artifacts.append(zip_path)
@@ -176,10 +223,23 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-frontend", action="store_true", help="reuse existing frontend/dist")
     ap.add_argument("--version", default=None)
+    ap.add_argument("--output-dir", type=Path, default=None,
+                    help="write staging and archives to a new or empty output directory")
     args = ap.parse_args()
 
+    global RELEASES
+    if args.output_dir is not None:
+        RELEASES = args.output_dir.resolve()
+    if RELEASES.resolve() in {ROOT.resolve(), ROOT.parent.resolve(), Path.home().resolve()}:
+        raise SystemExit("Choose a dedicated release output directory")
     version = args.version or _version()
     RELEASES.mkdir(exist_ok=True)
+    if (RELEASES / "SHA256SUMS.txt").exists():
+        raise SystemExit(f"Refusing to overwrite existing checksums: {RELEASES / 'SHA256SUMS.txt'}")
+    for suffix in ("", ".zip", ".tar.gz"):
+        target = RELEASES / f"redforge-{version}{suffix}"
+        if target.exists():
+            raise SystemExit(f"Refusing to overwrite existing release output: {target}")
     print(f"Building RedForge release {version}\n")
 
     dist = ROOT / "frontend" / "dist"

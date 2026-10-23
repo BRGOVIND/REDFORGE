@@ -15,9 +15,10 @@ redforge diagnose      # writes diagnostics.zip (no secrets included)
 ## Installation
 
 **`redforge install` fails while installing dependencies.**
-Check your network connection and re-run `redforge repair`. A failed fresh
-install rolls back its virtual environment automatically, so nothing is left
-half-installed.
+In strict mode, provide a local wheelhouse via `REDFORGE_WHEELHOUSE` or
+preinstall dependencies before re-running `redforge repair`. The installer does
+not contact a package index in strict mode. In connected mode, check network
+access. Review any partial environment before retrying.
 
 **"Python 3.11+ required."**
 RedForge needs Python 3.11 or newer. Install a supported version and re-run
@@ -50,12 +51,13 @@ Confirm the base URL matches `REDFORGE_OLLAMA_URL` (default
 `http://localhost:11434`). Use the **Runtime** page or `redforge doctor` to test.
 
 **No models are found.**
-Pull at least one model — `ollama pull llama3.1:8b`, or use RedForge's onboarding
-to download a recommended model. Confirm with `redforge models`.
+Load an already downloaded model into the local runtime. An explicit
+`ollama pull llama3.1:8b` command contacts a model source outside RedForge;
+the in-app pull is blocked in strict mode. Confirm with `redforge models`.
 
 **A model download stalls or fails.**
-Downloads run through your runtime (e.g. Ollama's pull). Check disk space and
-that the runtime is running; retry from onboarding or `ollama pull <model>`.
+In strict mode, downloads are blocked before they start. In a connected
+deployment, check disk space and runtime health before retrying.
 
 **Evaluations are very slow.**
 Without a GPU, inference runs on CPU and is much slower. Choose a smaller model
@@ -65,8 +67,8 @@ Without a GPU, inference runs on CPU and is much slower. Choose a smaller model
 ## Cloud providers
 
 **"API key not set."**
-Cloud providers (OpenAI, Anthropic, Gemini, Groq, OpenRouter) need their standard
-API-key environment variable set before you start RedForge. See
+Cloud providers are disabled in strict mode. In a separate connected
+deployment, they need their standard API-key environment variable. See
 [providers.md](providers.md).
 
 ## Still stuck?

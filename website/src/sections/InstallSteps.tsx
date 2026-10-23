@@ -6,7 +6,7 @@ const STEPS = [
   { icon: Package, k: 'Install', v: 'A normal desktop install with shortcuts, Start menu, uninstaller.', cmd: 'double-click' },
   { icon: Server, k: 'Launch', v: 'RedForge starts its own backend. No Python, no terminal.', cmd: 'automatic' },
   { icon: Cpu, k: 'Hardware detected', v: 'GPU, VRAM and installed runtimes are found for you.', cmd: 'first-run wizard' },
-  { icon: Sparkles, k: 'Get a model', v: 'Pick one from the built-in Model Hub and download it in a click.', cmd: 'Model Hub' },
+  { icon: Sparkles, k: 'Load a model', v: 'Use a model already installed in your local runtime. Strict mode blocks in-app downloads.', cmd: 'local runtime' },
   { icon: Play, k: 'Start working', v: 'Chat, benchmark, evaluate, or fine-tune. Done.', cmd: '→ first result' },
 ];
 
@@ -48,7 +48,7 @@ export function InstallSteps() {
         <p className="mt-8 text-center text-sm text-steel-400">
             The backend is <span className="text-bone">bundled</span>, no Python, no Node.js, no
             terminal. A local runtime (<span className="text-bone">Ollama</span>, LM Studio,
-            llama.cpp, or vLLM) is only needed to run models, and RedForge helps you install one.
+            llama.cpp, or vLLM) and an installed model are needed to run inference.
           </p>
         </Reveal>
       </div>

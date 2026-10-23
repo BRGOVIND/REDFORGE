@@ -5,23 +5,30 @@
 RedForge is a **single-user, local-first desktop tool** — comparable to a local
 database GUI or a local Jupyter server. Its security posture is deliberate:
 
-- **Local-first.** Models, datasets, prompts, checkpoints, logs, and results stay
-  on your machine. Nothing is uploaded.
-- **Localhost only.** The server binds to `127.0.0.1` by default. Binding to a
-  non-local address (`redforge start --host …`) prints a warning first.
-- **No accounts. No telemetry. No mandatory cloud.** RedForge works fully offline.
+- **Strict profile by default.** Workspace records are stored on your machine.
+  RedForge-managed hosted inference, remote trace ingestion, downloads, and
+  update checks are blocked in strict mode. A separate explicit `connected`
+  profile retains remote adapters for future deployments. See
+  [network profiles](docs/network-profile.md).
+- **Localhost only in strict mode.** The server binds to `127.0.0.1` by default.
+  `redforge start --host` rejects non-loopback binding in strict mode, including
+  with `--yes`. Connected mode warns before non-loopback binding.
+- **No RedForge accounts or mandatory cloud.** Local model workflows can work
+  offline. Optional tracing records data in the local database under a
+  project-level capture policy; it is not sent to a RedForge cloud service.
 - **Authentication is intentionally absent.** There is no login because the trust
   boundary is *your machine* — anyone who can reach the port can use the API.
   **Do not expose RedForge to an untrusted network.**
-- **Cloud providers are opt-in.** They require your own API key, read from the
-  environment and **never stored or logged** (the API only reports whether a key
-  is present).
+- **Remote adapters are disabled in strict mode.** In a separately configured
+  connected deployment they require your own API key from the environment.
 - **Single process by design.** Live state (runtime cache, training/download
   progress) is held in memory, so RedForge must run as one process. It refuses to
   start under a multi-worker configuration unless `REDFORGE_ALLOW_MULTIWORKER=1`.
 
 RedForge deliberately generates adversarial prompts to test models. These prompts
-live in the local database and reports and never leave your machine.
+and results can be stored in the local database and reports. If you direct a test
+to a hosted provider in connected mode, its requests leave your machine. Review
+the provider's terms and avoid sending secrets or personal data without authorization.
 
 ### Hardening in place
 - Streamed, size-capped dataset uploads (default 50 MB) that cannot exhaust memory.
@@ -30,7 +37,9 @@ live in the local database and reports and never leave your machine.
   static serving is path-traversal-guarded; no secrets in logs.
 
 ## Supported versions
-Security fixes target the latest release (currently **2.0.4**).
+Security fixes target the current source version (currently **2.1.0**).
+The latest published installer may lag behind the source version; check the
+GitHub Releases page for available builds.
 
 ## Reporting a vulnerability
 Please report security issues **privately** rather than opening a public issue:

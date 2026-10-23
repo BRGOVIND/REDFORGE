@@ -23,8 +23,8 @@ const config: Config = {
         content: {
           DEFAULT: '#E8E8EC',
           muted: '#A1A1AA',
-          subtle: '#71717A',
-          faint: '#52525B',
+          subtle: '#94949E',
+          faint: '#888892',
         },
         // Red accent scale
         red: {

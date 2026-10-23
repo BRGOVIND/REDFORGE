@@ -91,8 +91,9 @@ def build(version: str, checksums: Path | None) -> str:
     parts = [
         f"# RedForge v{version}",
         "",
-        "The local AI engineering platform — build, evaluate and manage AI models "
-        "entirely on your own hardware. No account, no cloud, no telemetry.",
+        "A local-first AI engineering workspace for building, evaluating, and "
+        "managing models. No RedForge account or mandatory cloud service is required; "
+        "hosted-provider requests leave your machine when you choose to use one.",
         "",
         "## Download",
         "",
@@ -125,6 +126,8 @@ def build(version: str, checksums: Path | None) -> str:
         "Unsloth stack; without it, Training runs a clearly-labelled simulation.",
         "- RedForge is local-first and unauthenticated by design — do not expose it "
         "to an untrusted network.",
+        "- Optional traces are stored locally under project capture settings. "
+        "Prompt and response bodies are off by default.",
         "",
         f"**Full changelog:** {REPO}/blob/v{version}/CHANGELOG.md",
     ]

@@ -3,6 +3,33 @@
 All notable changes to RedForge. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — Unreleased candidate
+
+### Added
+- Optional project-scoped LLM traces, revocable ingestion tokens, a trace explorer,
+  and server-enforced capture, redaction, sampling, and retention controls.
+- A draft/publish prompt registry with immutable versions, comparison, import,
+  activation of older versions, and links to evaluation records.
+- Versioned model comparisons and routing decisions, operator-defined prices,
+  cost reporting, and estimated soft/hard budgets.
+- Bounded local anomaly alerts and a reviewed, sanitized route from production
+  traces to evaluation cases.
+- Reviewed security candidates and evidence-based release gates that cannot
+  deploy or replay production side effects.
+
+### Changed
+- Security and privacy wording now distinguishes local storage from optional
+  hosted-provider requests and model downloads.
+- Compatible npm lockfile updates address high-severity runtime advisories.
+- Desktop packaging moves to Electron 44 and electron-builder 26 to remove
+  high and critical toolchain advisories. Release CI now uses Node.js 22.
+
+### Limits
+- The desktop API is for a local single user, not network-exposed multi-user
+  RBAC. Trace capture is local and opt-in for bodies. Budget figures are
+  estimates, not provider invoice caps. Release gates report evidence but do
+  not deploy, and alerts have no external notification channel by default.
+
 ## [2.0.4]
 
 A fix-only release. Upgrading from 2.0.3 could leave the app unable to open

@@ -3,7 +3,7 @@ import { Reveal } from '../motion';
 
 const CAPS = [
   { k: 'Runtime Manager', d: 'Detect, connect, and monitor Ollama, LM Studio, llama.cpp, and vLLM from one place.' },
-  { k: 'Model Hub', d: 'Browse and download models from Hugging Face and Ollama without a terminal.' },
+  { k: 'Model Hub', d: 'Compare model requirements. In strict mode, use models already installed locally.' },
   { k: 'Projects & Workspaces', d: 'Keep models, datasets, runs, and reports together in local projects.' },
   { k: 'Datasets', d: 'Import, prepare, version, and inspect datasets on your own disk.' },
   { k: 'Prompt Workbench', d: 'Design, test, and compare prompts across models.' },
@@ -12,7 +12,7 @@ const CAPS = [
   { k: 'Security Testing', d: 'Red-team local models with a library of adversarial attacks.' },
   { k: 'Reports & Analytics', d: 'Turn runs into reports with findings and evidence.' },
   { k: 'Training', d: 'Explore local fine-tuning with LoRA and QLoRA.', exp: true },
-  { k: 'Global Task Manager', d: 'Track downloads, benchmarks, and training jobs with progress and logs.' },
+  { k: 'Global Task Manager', d: 'Track benchmarks, evaluations, and training jobs with progress and logs.' },
   { k: 'Health Engine', d: 'Check Python, CUDA, runtimes, and GPU health.' },
   { k: 'Model Registry', d: 'Register checkpoints and adapters with versioned local metadata.' },
   { k: 'Foundation Models', d: 'Connect runtime tags to Hugging Face repositories for training and export.' },
@@ -39,7 +39,7 @@ export function Capabilities() {
         </Reveal>
 
         <div className="workbench-features-layout">
-          <div className="workbench-features-groups" aria-label="Explore RedForge capabilities">
+          <div className="workbench-features-groups" role="group" aria-label="Explore RedForge capabilities">
             {GROUPS.map((group, index) => (
               <button
                 key={group.title}

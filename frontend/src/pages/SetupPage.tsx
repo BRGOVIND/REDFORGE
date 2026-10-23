@@ -88,6 +88,12 @@ export default function SetupPage() {
         <p className="mt-2 text-sm text-content-muted">
           Let's make sure everything's ready before your first evaluation.
         </p>
+        {data?.network_profile === 'strict' && (
+          <p className="mt-3 rounded-md border border-border bg-overlay px-3 py-2 text-xs text-content-muted">
+            Strict local mode: hosted inference, model downloads, training-runtime installation,
+            and update checks are blocked. Installed local models still work.
+          </p>
+        )}
       </div>
 
       {/* System check */}

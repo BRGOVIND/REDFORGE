@@ -1,6 +1,8 @@
 # RedForge — Architecture Review & Engineering Philosophy
 
-**Status:** Reverse-engineered from the implementation as of `VERSION 2.0.0`. This document describes what RedForge **is today** — no redesign, no recommendations beyond what is explicitly labeled as such in Parts IV–V. It is the foundation reference for all future architecture work.
+**Status:** Historical architecture review of `VERSION 2.0.0`, not a current
+security or privacy statement. Version 2.1.0 adds optional local trace capture;
+see `docs/observability.md` and `SECURITY.md` for the current trust model.
 
 **Scope:** `C:\Users\LOQ\redforge\backend` (FastAPI, SQLAlchemy 2.0 async, SQLite) + `C:\Users\LOQ\redforge\frontend` (React 18, TypeScript, Vite).
 

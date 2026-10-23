@@ -15,6 +15,8 @@ const Leaderboard = React.lazy(() => import('./pages/LeaderboardPage'));
 const History = React.lazy(() => import('./pages/HistoryPage'));
 const TraceExplorer = React.lazy(() => import('./pages/TraceExplorerPage'));
 const Observability = React.lazy(() => import('./pages/ObservabilityPage'));
+const ReleaseReadiness = React.lazy(() => import('./pages/ReleaseReadinessPage'));
+const Optimization = React.lazy(() => import('./pages/OptimizationPage'));
 const RuntimeManager = React.lazy(() => import('./pages/RuntimeManagerPage'));
 const ModelManager = React.lazy(() => import('./pages/ModelManagerPage'));
 const ModelHub = React.lazy(() => import('./pages/ModelHubPage'));
@@ -48,6 +50,8 @@ function titleFor(pathname: string): string {
   if (pathname.startsWith('/history')) return 'RedForge • History';
   if (pathname.startsWith('/traces')) return 'RedForge • Trace Explorer';
   if (pathname.startsWith('/signals')) return 'RedForge • Signals & Feedback';
+  if (pathname.startsWith('/release-readiness')) return 'RedForge • Security & Release';
+  if (pathname.startsWith('/optimization')) return 'RedForge • Model Decisions';
   if (pathname.startsWith('/leaderboard')) return 'RedForge • Leaderboard';
   if (pathname.startsWith('/runtime')) return 'RedForge • Runtime Manager';
   if (pathname.startsWith('/settings')) return 'RedForge • Settings';
@@ -119,6 +123,8 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/traces" element={<TraceExplorer />} />
           <Route path="/signals" element={<Observability />} />
+          <Route path="/release-readiness" element={<ReleaseReadiness />} />
+          <Route path="/optimization" element={<Optimization />} />
           <Route path="/runtime" element={<RuntimeManager />} />
           <Route path="/models" element={<ModelManager />} />
           <Route path="/model-hub" element={<ModelHub />} />

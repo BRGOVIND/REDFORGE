@@ -19,9 +19,13 @@ export interface TraceItem {
   status: string;
   input_tokens: number | null;
   output_tokens: number | null;
+  cached_input_tokens: number | null;
+  reasoning_tokens: number | null;
   usage_source: string | null;
   cost_usd: number | null;
   cost_source: string | null;
+  pricing_record_id: string | null;
+  cost_calculated_at: string | null;
   service: string | null;
   environment: string | null;
   trace_id: string | null;

@@ -32,7 +32,7 @@ export function WorkbenchPreview() {
 
   return (
     <div className="workbench-scene" ref={sceneRef}>
-    <div className="workbench-preview" aria-label="Interactive RedForge workflow preview">
+    <div className="workbench-preview" role="region" aria-label="Interactive RedForge workflow preview">
       <div className="workbench-preview-topbar">
         <div className="flex items-center gap-2.5">
           <ForgeMark size={20} />
@@ -44,7 +44,7 @@ export function WorkbenchPreview() {
       </div>
 
       <div className="workbench-preview-body">
-        <div className="workbench-preview-nav" aria-label="Preview workflows">
+        <div className="workbench-preview-nav" role="group" aria-label="Preview workflows">
           <p className="workbench-preview-nav-title">What you can do</p>
           {VIEWS.map((item, index) => (
             <button

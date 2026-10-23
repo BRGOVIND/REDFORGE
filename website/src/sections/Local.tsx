@@ -40,7 +40,7 @@ export function Local() {
             transition: 'opacity 700ms ease, transform 700ms cubic-bezier(0.16,1,0.3,1)',
           }}
         >
-          {['Local by default', 'No account for local use', 'Hosted when you choose'].map((t) => (
+          {['Local runtime', 'No account required', 'No automatic downloads'].map((t) => (
             <span key={t} className="label flex items-center gap-2 text-steel-300">
               <span className="h-1 w-1 rounded-full bg-forge" />
               {t}

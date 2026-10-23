@@ -8,7 +8,7 @@ import type { CSSProperties } from 'react';
 // One connected engineering workflow, not isolated tools. Everything below runs
 // locally and flows into the next stage, with full lineage.
 const STAGES = [
-  { k: 'Discover', icon: Package, d: 'Browse the Model Hub and one-click download models from Hugging Face or Ollama, into a local project. No terminal.' },
+  { k: 'Discover', icon: Package, d: 'Browse the Model Hub for requirements, then work with a model already installed in your local runtime.' },
   { k: 'Datasets', icon: Database, d: 'Import, preprocess, and version datasets for training and evaluation. Everything stays on disk, under your control.' },
   { k: 'Train', icon: Dumbbell, d: 'Fine-tune with LoRA / QLoRA. The workflow mirrors real execution today and is actively evolving, marked Experimental.' },
   { k: 'Benchmark', icon: Gauge, d: 'Score and compare models across suites, tracked over time, so you know what actually improved.' },

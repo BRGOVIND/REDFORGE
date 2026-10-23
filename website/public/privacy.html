@@ -17,27 +17,39 @@
     </header>
     <main class="wrap">
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated · September 2026</p>
+      <p class="updated">Last updated · October 2026</p>
 
       <p>
-        RedForge is a <strong>local-first application</strong>. You can run models through local
-        runtimes or choose to connect a hosted provider. This page describes how those choices
-        affect your data.
+        RedForge is a <strong>local-first application</strong>. The planned 2.1.0 desktop
+        release defaults to strict local mode. A separate, explicitly configured connected
+        deployment retains hosted-provider support; this page describes both modes.
       </p>
 
       <h2>What the application collects</h2>
       <p>
         RedForge does not require a RedForge account or send prompts and results to a RedForge
-        cloud service. With a local runtime, model inference stays on your computer. If you connect
-        a hosted provider, the requests you send to it leave your machine and are handled under
-        that provider's policies.
+        cloud service. With a loopback runtime, RedForge sends inference requests to a service
+        on your computer. Strict mode blocks hosted-provider requests. In a separately configured
+        connected deployment, hosted requests leave your machine and are handled under that
+        provider's policies.
       </p>
 
       <h2>Where your data lives</h2>
       <p>
         Workspace records, including evaluation sessions, findings, and reports, are stored in a
-        local SQLite database on your machine. Requests sent to a hosted provider are also processed
-        by that provider. Review its privacy policy before sending sensitive material.
+        local SQLite database on your machine. In connected deployments, requests sent to a
+        hosted provider are also processed by that provider. Review its privacy policy before
+        sending sensitive material.
+      </p>
+
+      <h2>Optional trace capture</h2>
+      <p>
+        Project trace capture records operational data locally. Prompt bodies, response bodies,
+        custom metadata, and detailed errors are off by default. You can change capture, sampling,
+        and retention settings for each project. Enabling body capture may store personal or
+        confidential information on your device. Redaction is best-effort and cannot guarantee
+        detection of every sensitive value. Keep the local service private, use only data you are
+        allowed to process, and review or delete local records when no longer needed.
       </p>
 
       <h2>This website</h2>
@@ -50,8 +62,9 @@
       <h2>Third parties</h2>
       <p>
         Local runtimes such as <a href="https://ollama.com">Ollama</a> run on your machine. Downloading
-        models contacts the selected model source. If you choose a hosted provider, RedForge sends
-        requests to that provider using the connection you configure.
+        models outside RedForge contacts the selected model source. The strict desktop profile
+        blocks in-app downloads and update checks. In a separate connected deployment, configured
+        hosted-provider calls and explicit downloads contact those services.
       </p>
 
       <h2>Contact</h2>

@@ -99,7 +99,7 @@ export default function StudioPage() {
     <div onClick={() => setMenuFor(null)}>
       <PageHeader
         title="AI Studio"
-        description="Local workspaces — group models, evaluations, and reports. Nothing leaves your machine."
+        description="Group models, evaluations, and reports in a local workspace. Hosted model calls are optional."
         actions={
           <Button onClick={newProject} loading={create.isPending}>
             <FolderPlus size={16} /> New Project

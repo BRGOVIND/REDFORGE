@@ -44,6 +44,9 @@ import {
   useWorkbenchSessions,
 } from '../hooks/queries';
 import { toast } from '../lib/toast';
+import { errorMessage } from '../api/client';
+import * as api from '../api/endpoints';
+import { queryClient } from '../lib/query';
 import type { EvaluationResult, Prompt, WorkbenchSession } from '../api/types';
 
 const INPUT =
@@ -395,6 +398,7 @@ function PromptsPanel({ setId }: { setId: string | null }) {
       {editing && (
         <PromptEditor
           setId={setId}
+          projectId={set.data?.project_id ?? null}
           prompt={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
         />
@@ -403,20 +407,23 @@ function PromptsPanel({ setId }: { setId: string | null }) {
   );
 }
 
-function PromptEditor({ setId, prompt, onClose }: { setId: string; prompt: Prompt | null; onClose: () => void }) {
+function PromptEditor({ setId, projectId, prompt, onClose }: { setId: string; projectId: string | null; prompt: Prompt | null; onClose: () => void }) {
   const create = useCreatePrompt();
   const update = useUpdatePrompt();
   const del = useDeletePrompt();
   const versions = usePromptVersions(prompt?.id ?? null);
+  const [busy, setBusy] = useState(false);
+  const [compare, setCompare] = useState<Record<string, { a: unknown; b: unknown }> | null>(null);
+  const [variableSpec, setVariableSpec] = useState(JSON.stringify(prompt?.draft?.variables_schema ?? prompt?.variables_schema ?? [], null, 2));
 
   const [f, setF] = useState({
-    title: prompt?.title ?? '',
-    prompt: prompt?.prompt ?? '',
-    system_prompt: prompt?.system_prompt ?? '',
-    expected_behavior: prompt?.expected_behavior ?? '',
-    golden_response: prompt?.golden_response ?? '',
-    expected_output: prompt?.expected_output ?? '',
-    difficulty: prompt?.difficulty ?? 'normal',
+    title: String(prompt?.draft?.title ?? prompt?.title ?? ''),
+    prompt: String(prompt?.draft?.prompt ?? prompt?.prompt ?? ''),
+    system_prompt: String(prompt?.draft?.system_prompt ?? prompt?.system_prompt ?? ''),
+    expected_behavior: String(prompt?.draft?.expected_behavior ?? prompt?.expected_behavior ?? ''),
+    golden_response: String(prompt?.draft?.golden_response ?? prompt?.golden_response ?? ''),
+    expected_output: String(prompt?.draft?.expected_output ?? prompt?.expected_output ?? ''),
+    difficulty: String(prompt?.draft?.difficulty ?? prompt?.difficulty ?? 'normal'),
     enabled: prompt?.enabled ?? true,
     min_similarity: prompt?.acceptance_criteria?.min_similarity ?? 60,
     must_include: (prompt?.acceptance_criteria?.must_include ?? []).join(', '),
@@ -424,7 +431,7 @@ function PromptEditor({ setId, prompt, onClose }: { setId: string; prompt: Promp
   });
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
 
-  const save = async () => {
+  const save = async (publish = false) => {
     if (!f.prompt.trim()) {
       toast.error('Prompt text is required');
       return;
@@ -440,12 +447,31 @@ function PromptEditor({ setId, prompt, onClose }: { setId: string; prompt: Promp
       expected_output: f.expected_output, difficulty: f.difficulty,
       enabled: f.enabled, acceptance_criteria: acceptance,
     };
-    const res = prompt
-      ? await update.mutate({ id: prompt.id, body })
-      : await create.mutate({ prompt_set_id: setId, ...body });
-    if (res) {
-      toast.success(prompt ? 'Prompt updated' : 'Prompt created');
-      onClose();
+    if (prompt && projectId) {
+      let variables_schema: unknown;
+      try { variables_schema = JSON.parse(variableSpec); }
+      catch { toast.error('Variables must be valid JSON'); return; }
+      setBusy(true);
+      try {
+        await api.savePromptDraft(projectId, prompt.id, {
+          ...body, context: prompt.context || '', description: prompt.description || '', tags: prompt.tags || [],
+          variables_schema, priority: prompt.priority, notes: prompt.notes,
+        });
+        if (publish) await api.publishPromptDraft(projectId, prompt.id);
+        queryClient.invalidate(['wb-prompt-set', setId]);
+        queryClient.invalidate(['wb-prompt-versions', prompt.id]);
+        toast.success(publish ? 'Version published' : 'Draft saved');
+        if (publish) onClose();
+      } catch (error) { toast.error(errorMessage(error)); }
+      finally { setBusy(false); }
+    } else {
+      const res = prompt
+        ? await update.mutate({ id: prompt.id, body })
+        : await create.mutate({ prompt_set_id: setId, ...body });
+      if (res) {
+        toast.success(prompt ? 'Prompt updated' : 'Prompt published');
+        onClose();
+      }
     }
   };
 
@@ -472,6 +498,9 @@ function PromptEditor({ setId, prompt, onClose }: { setId: string; prompt: Promp
         <Field label="Prompt *">
           <textarea className={`${INPUT} min-h-[70px] font-mono`} value={f.prompt} onChange={(e) => set('prompt', e.target.value)} />
         </Field>
+        {projectId && prompt && <Field label="Template variables (JSON schema)">
+          <textarea className={`${INPUT} min-h-[64px] font-mono`} value={variableSpec} onChange={(e) => setVariableSpec(e.target.value)} placeholder='[{"name":"customer","type":"string","required":true}]' />
+        </Field>}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="System prompt">
             <textarea className={`${INPUT} min-h-[52px]`} value={f.system_prompt} onChange={(e) => set('system_prompt', e.target.value)} />
@@ -516,17 +545,28 @@ function PromptEditor({ setId, prompt, onClose }: { setId: string; prompt: Promp
           </label>
         </div>
 
-        {prompt && (versions.data ?? []).length > 0 && (
-          <div className="rounded-lg border border-border bg-base p-2 text-[11px] text-content-subtle">
-            <span className="font-medium text-content-muted">Version history:</span>{' '}
-            {(versions.data ?? []).map((v) => `v${v.version} (${v.note})`).join(' → ')}
-          </div>
-        )}
+        {prompt && (versions.data ?? []).length > 0 && <div className="rounded-lg border border-border bg-base p-3 text-xs">
+          <p className="mb-2 font-semibold text-content">Published history <span className="font-normal text-content-subtle">· active v{prompt.active_version ?? prompt.current_version}</span></p>
+          <div className="flex flex-wrap gap-2">{(versions.data ?? []).map((v) => <span key={v.id} className="inline-flex items-center gap-2 rounded border border-border px-2 py-1 text-content-subtle">
+            <span className="font-mono text-content">v{v.version}</span> {v.note}
+            {projectId && v.version !== (prompt.active_version ?? prompt.current_version) && <button type="button" className="underline rf-focus" onClick={async () => {
+              try { await api.activatePromptVersion(projectId, prompt.id, v.version); queryClient.invalidate(['wb-prompt-set', setId]); toast.success(`Activated v${v.version}`); onClose(); }
+              catch (error) { toast.error(errorMessage(error)); }
+            }}>Activate</button>}
+          </span>)}</div>
+          {projectId && (versions.data ?? []).length > 1 && <button type="button" className="mt-2 text-content underline rf-focus" onClick={async () => {
+            const history = versions.data ?? [];
+            try { const result = await api.compareRegistryVersions(projectId, prompt.id, history[history.length - 2].version, history[history.length - 1].version); setCompare(result.diff); }
+            catch (error) { toast.error(errorMessage(error)); }
+          }}>Compare latest two versions</button>}
+          {compare && <div className="mt-2 space-y-2">{Object.entries(compare).map(([field, values]) => <div key={field} className="grid gap-1 border-t border-border pt-2 sm:grid-cols-[100px_1fr_1fr]"><strong>{field}</strong><pre className="whitespace-pre-wrap break-words">{String(values.a ?? '')}</pre><pre className="whitespace-pre-wrap break-words text-content">{String(values.b ?? '')}</pre></div>)}</div>}
+        </div>}
 
         <div className="flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={save} loading={create.isPending || update.isPending}>
-            {prompt ? 'Save (new version if changed)' : 'Create prompt'}
+          {prompt && projectId && <Button variant="ghost" size="sm" onClick={() => save(false)} loading={busy}>Save draft</Button>}
+          <Button size="sm" onClick={() => save(!!prompt && !!projectId)} loading={busy || create.isPending || update.isPending}>
+            {prompt && projectId ? 'Publish new version' : prompt ? 'Save (new version if changed)' : 'Create and publish'}
           </Button>
         </div>
       </div>

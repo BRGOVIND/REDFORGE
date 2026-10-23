@@ -1,12 +1,13 @@
 # Quick Start
 
-Get from zero to your first security report in a few minutes. Everything runs on
-your machine — no cloud, no API keys.
+Get from zero to your first security report. In the strict profile, RedForge
+uses local runtimes and no hosted API key. Installer or manual runtime setup may
+need connectivity unless you provide packages and models offline.
 
 ## 1. Install RedForge
 
 ```bash
-pip install redforge
+python -m pip install .   # from the RedForge source checkout
 redforge install
 ```
 
@@ -30,9 +31,10 @@ ollama serve
 ollama pull llama3.1:8b
 ```
 
-You can also pull models directly from RedForge's onboarding screen — it
-recommends models that fit your hardware. Other supported runtimes (LM Studio,
-llama.cpp, vLLM, and cloud providers) are covered in [providers.md](providers.md).
+The explicit `ollama pull` command above contacts Ollama's model source. For a
+strict RedForge setup, transfer an already downloaded model into your local
+runtime. In-app pulls are disabled in strict mode. Other local runtimes and the
+separate connected profile are covered in [providers.md](providers.md).
 
 ## 3. Start RedForge
 

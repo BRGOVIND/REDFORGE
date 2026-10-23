@@ -296,6 +296,7 @@ export interface SystemProvider {
 export interface SystemChecksResponse {
   ready: boolean;
   platform: string;
+  network_profile: 'strict' | 'connected';
   /** The active runtime provider (from the Runtime Manager). */
   provider: SystemProvider;
   checks: SystemCheck[];
@@ -353,6 +354,7 @@ export interface ProviderInfo {
 export interface ProvidersResponse {
   default: string;
   providers: ProviderInfo[];
+  network_profile: 'strict' | 'connected';
 }
 
 export interface RuntimeStatusResponse {

@@ -167,12 +167,25 @@ create the four original tables. Not an issue for normal operation.
 `pages/` (routes). No business logic in components. See
 [frontend-architecture](frontend-architecture.md).
 
+Phase 3 adds a lazy Model decisions page. Frozen comparisons reuse Workbench
+sessions and prompt versions; explicit routing calls reuse Runtime Manager;
+versioned prices and bounded SQL reports extend trace metadata. All three stay
+project-scoped and local-operator controlled. See
+[Phase 3 comparisons, routing, and costs](phase3-comparison-routing-cost.md).
+
+Phase 5 adds a lazy-loaded Security & Release page. Reviewed security cases
+extend traces and feedback; local test jobs reuse the Runtime Manager and
+existing security scorer. Immutable gate policies read Workbench, Benchmark
+Center, security-test, and version-matched trace evidence. Gate decisions are
+reports only: deployment stays outside RedForge. See
+[Phase 5 security and release gates](phase5-security-release-gates.md).
+
 ---
 
 ## Quality gates
 
 ```
-cd backend  && python -m pytest -q      # 233 tests
+cd backend  && python -m pytest -q
 cd frontend && npm run typecheck && npm run build
 cd website  && npm run typecheck && npm run build
 ```

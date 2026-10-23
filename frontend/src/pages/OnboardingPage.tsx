@@ -156,7 +156,8 @@ export default function OnboardingPage() {
               groups={models.data?.providers ?? []}
               loading={models.isLoading && !models.data}
               recommendations={recs.data?.models}
-              canPull={recs.data?.runtime.state === 'running'}
+              strict={providers.data?.network_profile !== 'connected'}
+              canPull={providers.data?.network_profile === 'connected' && recs.data?.runtime.state === 'running'}
               onPulled={() => models.refetch?.()}
             />
           )}
@@ -200,8 +201,8 @@ export default function OnboardingPage() {
 function Welcome() {
   const points = [
     'A local red-teaming laboratory for large language models.',
-    'Everything runs on your own machine — models, prompts, and findings.',
-    'No cloud dependency, no API keys, nothing leaves your computer.',
+    'Local model workflows run on your machine, with findings stored locally.',
+    'No account or API key is needed for local use. Hosted providers are optional.',
     'Open source and yours to run, fork, and audit.',
   ];
   return (
@@ -401,11 +402,13 @@ function ModelPullRow({
   model,
   installed,
   canPull,
+  strict,
   onPulled,
 }: {
   model: ModelRecommendation;
   installed: boolean;
   canPull: boolean;
+  strict: boolean;
   onPulled: () => void;
 }) {
   const [pull, setPull] = useState<PullStatus | null>(null);
@@ -470,7 +473,9 @@ function ModelPullRow({
             {pulling ? (pct !== null ? `${pct}%` : 'Downloading…') : 'Download'}
           </Button>
         ) : (
-          <span className="text-[11px] text-content-faint">start the runtime to download</span>
+          <span className="text-[11px] text-content-faint">
+            {strict ? 'Download blocked in strict mode' : 'Start the runtime to download'}
+          </span>
         )}
       </div>
       {pulling && (
@@ -489,11 +494,13 @@ function RecommendedModels({
   recommendations,
   installedNames,
   canPull,
+  strict,
   onPulled,
 }: {
   recommendations: OnboardingRecommendations['models'];
   installedNames: Set<string>;
   canPull: boolean;
+  strict: boolean;
   onPulled: () => void;
 }) {
   const fitting = recommendations.models.filter((m) => m.fits);
@@ -516,6 +523,7 @@ function RecommendedModels({
             model={m}
             installed={installedNames.has(m.name)}
             canPull={canPull}
+            strict={strict}
             onPulled={onPulled}
           />
         ))}
@@ -530,6 +538,7 @@ function ModelDetection({
   loading,
   recommendations,
   canPull,
+  strict,
   onPulled,
 }: {
   total: number;
@@ -537,6 +546,7 @@ function ModelDetection({
   loading: boolean;
   recommendations?: OnboardingRecommendations['models'];
   canPull: boolean;
+  strict: boolean;
   onPulled: () => void;
 }) {
   const withModels = groups.filter((g) => g.models.length > 0);
@@ -546,11 +556,18 @@ function ModelDetection({
       <h2 className="text-xl font-semibold tracking-tight text-content">Model detection</h2>
       <p className="mt-1 text-sm text-content-muted">Looking for models across your providers.</p>
 
+      {strict && (
+        <p className="mt-4 rounded-lg border border-border bg-overlay px-4 py-3 text-xs text-content-muted" role="status">
+          Strict local mode blocks downloads. Load an already downloaded model into your local runtime, then scan again.
+        </p>
+      )}
+
       {recommendations && (
         <RecommendedModels
           recommendations={recommendations}
           installedNames={installedNames}
           canPull={canPull}
+          strict={strict}
           onPulled={onPulled}
         />
       )}

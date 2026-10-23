@@ -165,4 +165,5 @@ a bug, not a placeholder.
 - Errors must be actionable: what failed, why, and what to do next. No bare
   "Something went wrong."
 - Experimental features are labelled in the UI. Simulated results say so.
-- Local-first: no telemetry, no account, no mandatory cloud.
+- Local-first: no account or mandatory cloud; optional project traces are stored
+  locally under explicit capture settings, with bodies off by default.

@@ -14,7 +14,8 @@ interface PromptSet { id: string; title: string }
 const metrics = [
   ['latency_p95', 'P95 latency, ms'], ['error_rate', 'Error rate, %'],
   ['timeout_rate', 'Timeout rate, %'], ['tokens_per_call', 'Tokens per call'],
-  ['cost_per_call_usd', 'Cost per call, USD'], ['eval_pass_rate', 'Evaluation pass rate, %'],
+  ['cost_per_call_usd', 'Cost per call, USD'], ['project_spend_usd', 'Project spend, USD'],
+  ['eval_pass_rate', 'Evaluation pass rate, %'],
   ['provider_availability', 'Provider availability, %'],
 ];
 const categories = ['incorrect_output', 'hallucination', 'tool_failure', 'policy_violation', 'latency_regression', 'security_concern'];

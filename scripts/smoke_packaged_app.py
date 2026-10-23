@@ -26,6 +26,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import socket
 import subprocess
@@ -49,6 +50,16 @@ from verify_frontend_assets import references  # noqa: E402
 BOOT_TIMEOUT_S = 90.0
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
+
+
+# This harness probes only the loopback server it launched. A poisoned proxy
+# must not make a healthy packaged backend look broken or receive local data.
+_LOCAL_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+
 def exe_name() -> str:
     """The frozen backend's filename — the packaging contract, in one place.
 
@@ -66,7 +77,8 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def get(url: str, timeout: float = 30.0, retries: int = 2) -> tuple[int, dict[str, str], bytes]:
+def get(url: str | urllib.request.Request, timeout: float = 30.0,
+        retries: int = 2) -> tuple[int, dict[str, str], bytes]:
     """Fetch a URL. A transport failure is reported as status 0, never raised.
 
     A single hung request must be a FAILED CHECK, not a crashed smoke test —
@@ -75,7 +87,7 @@ def get(url: str, timeout: float = 30.0, retries: int = 2) -> tuple[int, dict[st
     last = ""
     for attempt in range(retries + 1):
         try:
-            with urllib.request.urlopen(url, timeout=timeout) as resp:
+            with _LOCAL_OPENER.open(url, timeout=timeout) as resp:
                 return resp.status, {k.lower(): v for k, v in resp.headers.items()}, resp.read()
         except urllib.error.HTTPError as exc:
             return exc.code, {k.lower(): v for k, v in exc.headers.items()}, exc.read()
@@ -128,6 +140,9 @@ def launch(bundle: Path | None, static: Path, port: int, home: Path,
         "REDFORGE_PORT": str(port),
         "REDFORGE_HOST": "127.0.0.1",
         "REDFORGE_HOME": str(home.resolve()),
+        # The backend's DB default is OS app-data, not REDFORGE_HOME. Keep a
+        # packaging smoke from opening or migrating the operator's real DB.
+        "REDFORGE_DATABASE_URL": f"sqlite+aiosqlite:///{(home.resolve() / 'redforge.db').as_posix()}",
         "REDFORGE_STATIC_DIR": str(static),
         "PYTHONUNBUFFERED": "1",
     }
@@ -149,7 +164,7 @@ def launch(bundle: Path | None, static: Path, port: int, home: Path,
     )
 
 
-def run_checks(base: str, static: Path) -> list[str]:
+def run_checks(base: str, static: Path, local_model: str | None = None) -> list[str]:
     failures: list[str] = []
 
     def check(name: str, ok: bool, detail: str = "") -> None:
@@ -209,6 +224,33 @@ def run_checks(base: str, static: Path) -> list[str]:
             bad_routes.append(f"{route} -> {st}")
     check("client-side routes still return the SPA", not bad_routes, "; ".join(bad_routes))
 
+    if local_model:
+        st, _, body = get(f"{base}/api/providers")
+        try:
+            profile = json.loads(body).get("network_profile")
+        except (ValueError, AttributeError):
+            profile = None
+        check("strict local profile is active", st == 200 and profile == "strict",
+              f"HTTP {st}, profile {profile}")
+        if st == 200 and profile == "strict":
+            request = urllib.request.Request(
+                f"{base}/api/playground/chat",
+                data=json.dumps({
+                    "model": local_model,
+                    "messages": [{"role": "user", "content": "Reply with one word: ready"}],
+                    "max_tokens": 12,
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            st, _, body = get(request, timeout=90, retries=0)
+            try:
+                response = json.loads(body).get("response", "")
+            except (ValueError, AttributeError):
+                response = ""
+            check("preloaded local-model inference succeeds", st == 200 and bool(response),
+                  f"HTTP {st}, response length {len(response)}")
+
     return failures
 
 
@@ -218,6 +260,8 @@ def main() -> int:
                     help="a staged/packaged backend dir (holds redforge-backend and app/static)")
     ap.add_argument("--static", type=Path, default=None,
                     help="serve this frontend build instead of the bundle's own")
+    ap.add_argument("--local-model", default=None,
+                    help="also test one strict-mode inference using an already installed local model")
     args = ap.parse_args()
 
     # Resolve everything up front. The child process runs with cwd=bundle, so a
@@ -263,7 +307,7 @@ def main() -> int:
                 if log.is_file():
                     print(log.read_text(encoding="utf-8", errors="replace")[-4000:], file=sys.stderr)
                 return 1
-            failures = run_checks(base, static)
+            failures = run_checks(base, static, args.local_model)
         finally:
             proc.terminate()
             try:

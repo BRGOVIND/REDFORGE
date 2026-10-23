@@ -3,11 +3,11 @@ import { Reveal } from '../motion';
 const PRINCIPLES = [
   {
     k: 'Local by default',
-    v: 'Use Ollama, LM Studio, llama.cpp, or vLLM to keep inference on your machine. Hosted providers are available when you choose to connect them.',
+    v: 'Use Ollama, LM Studio, llama.cpp, or vLLM on your machine. The strict desktop profile blocks hosted inference.',
   },
   {
-    k: 'Simulation-first architecture',
-    v: 'Where infrastructure is still evolving, workflows accurately mirror real execution while preserving the final production experience, an intentional engineering decision, not a limitation. Training is currently Experimental.',
+    k: 'Honest about what runs',
+    v: 'Training is experimental. When a workflow uses a simulation instead of a real GPU run, RedForge labels the result so you can tell the difference.',
   },
   {
     k: 'Open & extensible',
@@ -35,8 +35,8 @@ export function About() {
           </Reveal>
           <Reveal delay={320}>
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-steel-400">
-              With a local runtime, prompts and evaluation results stay on your hardware. Hosted
-              providers are optional. Security remains one capability within the wider workflow.
+              The strict desktop profile uses local runtimes and keeps workspace records on your
+              machine. Security remains one capability within the wider workflow.
             </p>
           </Reveal>
         </div>

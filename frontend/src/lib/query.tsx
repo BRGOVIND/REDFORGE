@@ -64,19 +64,26 @@ class QueryClient {
   async fetch<T>(key: string, fn: () => Promise<T>): Promise<T> {
     const existing = this.cache.get(key) as CacheEntry<T> | undefined;
     if (existing?.promise) return existing.promise;
+    const version = this.getInvalidationVersion(key);
 
     const promise = fn()
       .then((data) => {
-        this.setEntry(key, { data, status: 'success', updatedAt: Date.now() });
+        // A mutation can invalidate this key while the old request is in flight.
+        // Never let that older response overwrite the post-mutation refetch.
+        if (this.getInvalidationVersion(key) === version) {
+          this.setEntry(key, { data, status: 'success', updatedAt: Date.now() });
+        }
         return data;
       })
       .catch((error) => {
-        this.setEntry(key, {
-          data: existing?.data,
-          error,
-          status: 'error',
-          updatedAt: Date.now(),
-        });
+        if (this.getInvalidationVersion(key) === version) {
+          this.setEntry(key, {
+            data: existing?.data,
+            error,
+            status: 'error',
+            updatedAt: Date.now(),
+          });
+        }
         throw error;
       });
 
@@ -90,9 +97,10 @@ class QueryClient {
   }
 
   invalidate(prefix?: QueryKey): void {
-    const p = prefix ? keyToString(prefix).slice(0, -1) : '';
+    const serialized = prefix ? keyToString(prefix) : '';
+    const childPrefix = prefix ? `${serialized.slice(0, -1)},` : '';
     for (const key of this.cache.keys()) {
-      if (!prefix || key.startsWith(p)) {
+      if (!prefix || key === serialized || key.startsWith(childPrefix)) {
         const entry = this.cache.get(key);
         if (entry) {
           this.invalidations.set(key, this.getInvalidationVersion(key) + 1);

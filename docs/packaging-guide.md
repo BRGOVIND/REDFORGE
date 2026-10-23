@@ -65,6 +65,9 @@ Artifacts land in `desktop/release-build/`.
 **`--require-frozen` is not optional in CI.** Without it, a failed freeze still
 produces an installer — one that silently falls back to a system Python the end
 user does not have. The flag turns that into a build failure.
+Release staging also rebuilds the frontend. Combining `--require-frozen` with
+`--skip-frontend` now fails, because a complete but stale UI once reached a
+Windows test archive while the source archive carried a newer UI.
 
 ### Faster iteration
 

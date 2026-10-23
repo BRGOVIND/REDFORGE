@@ -1,6 +1,6 @@
 import { Reveal } from '../motion';
 
-const LOCAL = ['Ollama', 'LM Studio', 'llama.cpp', 'GGUF', 'Hugging Face', 'vLLM'];
+const LOCAL = ['Ollama', 'LM Studio', 'llama.cpp', 'GGUF files', 'vLLM'];
 const CLOUD = ['OpenAI', 'Anthropic', 'Gemini', 'Groq', 'OpenRouter'];
 
 /** Supported technologies, RedForge as the orchestration layer connecting them all. */
@@ -10,11 +10,11 @@ export function Stack() {
       <div className="mx-auto max-w-editorial px-6 sm:px-10">
         <Reveal>
           <h2 className="display max-w-2xl text-4xl leading-[1.05] text-bone sm:text-5xl">
-            The orchestration layer for local &amp; hosted AI.
+            One workspace for local AI.
           </h2>
           <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-steel-300">
-            RedForge connects the runtimes and providers you already use, with local, offline-first
-            execution at its core and hosted providers available when you want them.
+            RedForge connects the local runtimes you already use. The strict desktop profile
+            blocks hosted inference and automatic downloads.
           </p>
         </Reveal>
 
@@ -30,7 +30,10 @@ export function Stack() {
             </div>
           </Reveal>
           <Reveal delay={120}>
-            <h3 className="mb-4 text-sm font-medium text-bone">Hosted providers</h3>
+            <h3 className="mb-4 text-sm font-medium text-bone">Preserved for connected deployments</h3>
+            <p className="mb-3 text-xs leading-relaxed text-steel-400">
+              These adapters are disabled in the strict consumer profile.
+            </p>
             <div className="flex flex-wrap gap-2.5">
               {CLOUD.map((t) => (
                 <span key={t} className="rounded-lg border border-steel-800 bg-ink px-3.5 py-2 text-[13px] text-steel-200">

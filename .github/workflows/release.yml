@@ -38,7 +38,7 @@ concurrency:
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+  NODE_VERSION: "22"
   # Windows runners default to a legacy console codepage (cp1252), so any
   # non-ASCII byte a script prints raises UnicodeEncodeError and fails the job.
   # UTF-8 mode makes Python's stdio UTF-8 regardless of the console codepage —
@@ -166,7 +166,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
-          pip install pyinstaller
+          pip install pyinstaller==6.21.0 pyinstaller-hooks-contrib==2026.9
 
       # Frontend build + PyInstaller freeze + assemble desktop/resources/backend.
       # --require-frozen fails the build rather than shipping an installer that

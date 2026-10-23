@@ -6,6 +6,7 @@ import { toast } from '../lib/toast';
 import * as api from '../api/endpoints';
 import type { ModelHubModel } from '../api/types';
 import { useTaskManager } from '../components/TaskManager';
+import { useProviders } from '../hooks/queries';
 
 const BADGE_TONE: Record<string, 'green' | 'amber' | 'grey'> = {
   'Great for Training': 'green',
@@ -24,7 +25,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   );
 }
 
-function ModelCard({ m }: { m: ModelHubModel }) {
+function ModelCard({ m, canDownload }: { m: ModelHubModel; canDownload: boolean }) {
   const taskMgr = useTaskManager();
   const [busy, setBusy] = useState(false);
   const [source, setSource] = useState<'huggingface' | 'ollama'>(
@@ -85,7 +86,7 @@ function ModelCard({ m }: { m: ModelHubModel }) {
             <option value="ollama">Ollama</option>
           </select>
         )}
-        <Button size="sm" onClick={download} loading={busy} className="flex-1">
+        <Button size="sm" onClick={download} loading={busy} disabled={!canDownload} className="flex-1">
           <Download size={14} /> Download
         </Button>
       </div>
@@ -95,6 +96,8 @@ function ModelCard({ m }: { m: ModelHubModel }) {
 
 export default function ModelHubPage() {
   const catalog = useQuery({ queryKey: ['model-hub'], queryFn: api.modelHubCatalog });
+  const providers = useProviders();
+  const canDownload = providers.data?.network_profile === 'connected';
   const categories = catalog.data?.categories ?? [];
   const [cat, setCat] = useState<string>('all');
 
@@ -107,8 +110,14 @@ export default function ModelHubPage() {
     <div>
       <PageHeader
         title="Model Hub"
-        description="Browse and download models directly — no terminal, no huggingface-cli, no ollama pull. Downloads run as tasks; each model is verified and registered as a Foundation Model automatically."
+        description="Browse model requirements and sources. Downloads are available only in an explicitly configured connected deployment."
       />
+
+      {!canDownload && (
+        <p className="mb-4 rounded-lg border border-border bg-overlay px-4 py-3 text-xs text-content-muted" role="status">
+          Strict local mode blocks model downloads. Import an already downloaded model into your local runtime to use it here.
+        </p>
+      )}
 
       {/* Category filter */}
       <div className="mb-4 flex flex-wrap gap-1.5">
@@ -138,7 +147,7 @@ export default function ModelHubPage() {
                 <span className="text-[11px] font-normal text-content-faint">({c.models.length})</span>
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {c.models.map((m) => <ModelCard key={m.id} m={m} />)}
+                {c.models.map((m) => <ModelCard key={m.id} m={m} canDownload={canDownload} />)}
               </div>
             </section>
           ))}

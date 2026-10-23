@@ -47,7 +47,7 @@ a:hover { color: #7f1010; }
 ul { padding-left: 20px; }
 li { margin: 6px 0; }
 hr { border: none; border-top: 1px solid #d7d0c6; margin: 40px 0; }
-pre { background: #fff; border: 1px solid #d7d0c6; border-radius: 10px; padding: 18px; overflow-x: auto; color: #4d4741; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.6; }
+pre { background: #fff; border: 1px solid #d7d0c6; border-radius: 10px; padding: 18px; white-space: pre-wrap; overflow-wrap: anywhere; color: #4d4741; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.6; }
 footer.legal { border-top: 1px solid #d7d0c6; background: #ebe6df; }
-footer.legal .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 28px 24px; color: #706960; font-size: 13px; }
+footer.legal .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 28px 24px; color: #625a53; font-size: 13px; }
 a:focus-visible, .back:focus-visible, .brand:focus-visible { outline: 2px solid rgba(161,18,18,0.7); outline-offset: 3px; border-radius: 4px; }
