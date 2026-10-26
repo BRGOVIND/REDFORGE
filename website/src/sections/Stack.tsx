@@ -13,8 +13,8 @@ export function Stack() {
             One workspace for local AI.
           </h2>
           <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-steel-300">
-            RedForge connects the local runtimes you already use. The strict desktop profile
-            blocks hosted inference and automatic downloads.
+            RedForge connects the local runtimes you already use. The 2.1 test candidate adds
+            a strict desktop profile that blocks managed hosted inference and automatic downloads.
           </p>
         </Reveal>
 
@@ -32,7 +32,7 @@ export function Stack() {
           <Reveal delay={120}>
             <h3 className="mb-4 text-sm font-medium text-bone">Preserved for connected deployments</h3>
             <p className="mb-3 text-xs leading-relaxed text-steel-400">
-              These adapters are disabled in the strict consumer profile.
+              These adapters are disabled in the 2.1 test candidate's strict profile.
             </p>
             <div className="flex flex-wrap gap-2.5">
               {CLOUD.map((t) => (
