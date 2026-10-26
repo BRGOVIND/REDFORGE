@@ -1,0 +1,77 @@
+/* Warm glass follows the existing RedForge palette. Opaque fills remain usable without blur. */
+.forge-glass-shell { position: relative; max-width: 1160px; margin: 16px auto 0; padding: 14px 22px 10px; border: 1px solid #fff9; border-radius: 44px; background: linear-gradient(180deg, #d5d0c9ed, #faf8f2e8 48%, #ddd7cde8); box-shadow: inset 0 1px 1px #fff, inset 0 -2px 3px #7e72602b, 0 12px 30px -16px #30241d66, 0 0 0 1px #5b4c3629; transition: box-shadow 250ms ease; }
+@supports (backdrop-filter: blur(16px)) {
+  .forge-glass-shell { background: linear-gradient(180deg, #b8b2aa8c, #fffdf3b8 48%, #d1c9bd9e); backdrop-filter: blur(18px) saturate(120%); -webkit-backdrop-filter: blur(18px) saturate(120%); }
+}
+.forge-glass-shell.is-scrolled { box-shadow: inset 0 1px 1px #fff, inset 0 -2px 3px #7e72602b, 0 14px 34px -17px #30241d80, 0 0 0 1px #5b4c3633; }
+.forge-glass-nav { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 22px; min-height: 44px; }
+.forge-nav-ruler { position: absolute; top: 7px; left: 34px; right: 34px; height: 5px; overflow: hidden; border-radius: 3px; pointer-events: none; }
+.forge-nav-ticks { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #66594b66 0 1px, transparent 1px 14px); mask-image: linear-gradient(90deg, transparent, #000 8% 92%, transparent); }
+.forge-nav-progress { position: absolute; inset: 3px 0 0; background: #a11212; transform: scaleX(0); transform-origin: left; }
+.forge-desktop-links { display: flex; align-items: center; gap: 9px; }
+.forge-dock-link { position: relative; display: grid; place-items: center; padding: 10px 14px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+.forge-dock-link::after { content: ''; position: absolute; bottom: 4px; height: 2px; width: 18px; background: #75695b66; transform: scaleX(.65); transition: transform 220ms ease, background-color 220ms ease; }
+.forge-dock-link:hover::after, .forge-dock-link[aria-current]::after { background: #a11212; transform: scaleX(1.5); }
+.forge-nav.is-on-light .forge-dock-link[aria-current] { color: #a11212; }
+.forge-nav-actions { display: flex; align-items: center; gap: 7px; }
+.forge-dock-download { display: flex; align-items: center; gap: 8px; border: 1px solid #b7aa9b; border-radius: 24px; padding: 11px 17px; background: linear-gradient(180deg, #fff9, #fff2); box-shadow: inset 0 1px #fff9; font-size: 13px; transition: background-color 200ms ease, transform 200ms ease; }
+.forge-dock-download:hover { background-color: #fff8; transform: translateY(-1px); }
+.forge-menu-toggle { display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; color: #272321; }
+.forge-mobile-menu[hidden] { display: none; }
+.forge-mobile-menu { position: absolute; top: calc(100% + 10px); left: 0; right: 0; padding: 12px; border: 1px solid #fff; border-radius: 24px; background: #f7f4eef5; box-shadow: 0 14px 34px -14px #30241d55; }
+.forge-mobile-menu a { display: flex; justify-content: space-between; padding: 13px 15px; border-radius: 14px; font-size: 15px; }
+.forge-mobile-menu a[aria-current], .forge-mobile-menu a:hover { background: #a112120d; }
+.is-forging .forge-glass-shell { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+/* Restrained glass on a few small surfaces, never over the app screenshots. */
+.tour-caption { padding: 24px; border: 1px solid #fff; border-radius: 18px; background: linear-gradient(125deg, #ffffffa8, #ffffff38); box-shadow: inset 0 1px #fff, 0 8px 24px -20px #3b2a2866; }
+.release-status { padding: 20px 24px; border: 1px solid #fff; border-radius: 18px; background: linear-gradient(125deg, #ffffffa8, #ffffff38); box-shadow: inset 0 1px #fff, 0 8px 24px -20px #3b2a2866; }
+.workspace-follow { background: #251b19eb; box-shadow: 0 18px 32px -14px #39241d88, inset 0 1px #ffffff50; }
+@supports (backdrop-filter: blur(10px)) {
+  .tour-caption, .release-status { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+}
+.next-release-grid article { transition: transform 250ms ease; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .next-release-grid article:hover { transform: translateY(-5px); }
+}
+@media (max-width: 1230px) { .forge-glass-shell { margin-left: 24px; margin-right: 24px; } }
+@media (max-width: 899px) {
+  .forge-desktop-links { display: none; }
+  .forge-menu-toggle { display: flex; }
+  .forge-glass-shell { margin: 12px 16px 0; padding: 13px 15px 8px; }
+  .forge-glass-nav { gap: 12px; }
+}
+@media (max-width: 639px) {
+  .forge-glass-shell { margin: 10px 10px 0; padding: 13px 12px 8px; }
+  .forge-glass-nav { gap: 5px; }
+  .forge-dock-download { padding: 11px 12px; font-size: 12px; }
+  .forge-dock-download svg { display: none; }
+  .forge-nav-ruler { left: 25px; right: 25px; }
+  .tour-caption { padding: 19px; }
+  .release-status { padding: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-dock-link::after, .forge-dock-download, .next-release-grid article { transition: none; }
+  .forge-dock-download:hover { transform: none; }
+  .scroll-reveal { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
+}
+/* The logo keeps the same landing slot before and after the intro. */
+.forge-compass-trigger { display: none; }
+@media (min-width: 900px) {
+  .forge-nav .forge-glass-shell { width: calc(100% - 48px); max-width: 390px; margin-inline: auto; height: 58px; padding: 0 22px; transition: max-width 600ms cubic-bezier(.16,1,.3,1), height 450ms cubic-bezier(.16,1,.3,1), box-shadow 300ms; }
+  .forge-nav.is-ready .forge-glass-shell.is-expanded { max-width: 1160px; height: 88px; }
+  .forge-glass-nav { height: 58px; padding-top: 8px; transition: height 450ms cubic-bezier(.16,1,.3,1); }
+  .forge-glass-shell.is-expanded .forge-glass-nav { height: 88px; }
+  .forge-glass-nav > a { flex-shrink: 0; }
+  .forge-nav .forge-desktop-links, .forge-nav .forge-nav-actions { opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-8px); transition: opacity 120ms, visibility 120ms, transform 350ms; }
+  .forge-nav .is-expanded .forge-desktop-links, .forge-nav .is-expanded .forge-nav-actions { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition: opacity 250ms 170ms, visibility 0s, transform 400ms 100ms; }
+  .forge-compass-trigger { position: absolute; right: 20px; top: 10px; z-index: 3; display: flex; gap: 13px; align-items: center; justify-content: center; width: 105px; height: 44px; color: #625951; font-size: 11px; border-radius: 24px; transition: opacity 150ms, transform 450ms; }
+  .forge-compass-trigger svg { color: #a11212; transition: transform 600ms cubic-bezier(.16,1,.3,1); }
+  .is-expanded .forge-compass-trigger { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(25px); }
+  .is-expanded .forge-compass-trigger svg { transform: rotate(135deg); }
+  .forge-nav .forge-nav-ruler { top: 7px; left: 27px; right: 27px; height: 7px; }
+  .forge-nav.is-forging .forge-compass-trigger { visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-nav .forge-glass-shell, .forge-glass-nav, .forge-compass-trigger, .forge-compass-trigger svg, .forge-nav .forge-nav-reveal { transition: none; }
+}
