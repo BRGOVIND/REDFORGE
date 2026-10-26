@@ -1,0 +1,43 @@
+/* Native scrollbars retain dragging, keyboard scrolling and OS accessibility behavior. */
+html, .screenshot-viewport, .tour-gallery-track {
+  scrollbar-color: #a11212 #f2efe8;
+  scrollbar-width: auto;
+}
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: #f2efe8; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c84238, #a11212 55%, #751515);
+  border: 3px solid #f2efe8;
+  border-radius: 12px;
+}
+::-webkit-scrollbar-thumb:hover { background: #b82a23; }
+::-webkit-scrollbar-thumb:active { background: #791414; }
+.screenshot-viewport { scrollbar-color: #c84238 #211d1c; }
+
+.forge-cursor { position: fixed; inset: 0 auto auto 0; width: 0; height: 0; margin: 0; padding: 0; border: 0; overflow: visible; background: transparent; z-index: 1000; pointer-events: none; visibility: hidden; }
+.forge-cursor::backdrop { background: transparent; pointer-events: none; }
+.forge-cursor[data-visible='true'] { visibility: visible; }
+.forge-cursor-ring, .forge-cursor-dot { position: absolute; left: 0; top: 0; display: grid; place-items: center; transform: translate(-50%, -50%); border-radius: 50%; }
+.forge-cursor-dot { width: 5px; height: 5px; background: #b31616; box-shadow: 0 0 5px #ffdfc8, 0 0 12px #c3282866; }
+.forge-cursor-ring {
+  width: 27px; height: 27px; border: 1px solid #42312db3;
+  background: radial-gradient(circle, #d641411c, transparent 70%);
+  box-shadow: 0 0 0 1px #fff6, 0 0 16px #b3161626;
+  transition: width 160ms ease, height 160ms ease, background-color 160ms ease, transform 120ms ease;
+}
+.forge-cursor-ring > span { opacity: 0; font: 500 11px 'Inter', sans-serif; }
+.forge-cursor[data-mode='action'] .forge-cursor-ring { width: 39px; height: 39px; border-color: #a11212; background-color: #b3161612; }
+.forge-cursor[data-mode='view'] .forge-cursor-ring { width: 58px; height: 58px; background: #861313e8; border-color: #f3d4bc; color: #fff8f0; box-shadow: 0 0 0 1px #86131366, 0 0 22px #b316164d; }
+.forge-cursor[data-mode='view'] .forge-cursor-ring > span { opacity: 1; }
+.forge-cursor[data-mode='view'] .forge-cursor-dot { opacity: 0; }
+.forge-cursor[data-pressed='true'] .forge-cursor-ring { transform: translate(-50%, -50%) scale(.8); }
+@media (hover: hover) and (pointer: fine) and (forced-colors: none) {
+  html.forge-cursor-active, html.forge-cursor-active *, html.forge-cursor-active ::backdrop { cursor: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-cursor-ring { transition: none; }
+}
+@media (forced-colors: active) {
+  .forge-cursor { display: none; }
+  html, .screenshot-viewport, .tour-gallery-track { scrollbar-color: auto; }
+}
