@@ -52,12 +52,6 @@ export function Download() {
                 Forge it<br />yourself.
               </h2>
             </Reveal>
-            <Reveal delay={200}>
-              <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-steel-700 px-3 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-forge" />
-                <span className="label text-steel-300">RedForge V{release.version}</span>
-              </div>
-            </Reveal>
 
             {/* OS-detected primary button */}
             <Reveal delay={280}>
