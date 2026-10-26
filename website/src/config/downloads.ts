@@ -170,9 +170,11 @@ export function useLatestRelease(): { release: Release; live: boolean } {
 export function detectOS(): OS {
   if (typeof navigator === 'undefined') return 'other';
   const s = `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
+  // Mobile browsers often report Linux or Mac; neither can install our desktop app.
+  if (/android|iphone|ipad|ipod/.test(s) || (s.includes('mac') && navigator.maxTouchPoints > 1)) return 'other';
   if (s.includes('win')) return 'windows';
   if (s.includes('mac')) return 'mac';
-  if (s.includes('linux') || s.includes('android') || s.includes('x11')) return 'linux';
+  if (s.includes('linux') || s.includes('x11')) return 'linux';
   return 'other';
 }
 
