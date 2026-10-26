@@ -45,7 +45,7 @@ export function Reveal({
 
   return (
     // @ts-expect-error, ref typing across the polymorphic tag union is safe here
-    <Tag ref={ref} style={style} className={cn(className)}>
+    <Tag ref={ref} style={style} className={cn('scroll-reveal', className)}>
       {children}
     </Tag>
   );
