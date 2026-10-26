@@ -4,10 +4,10 @@ import { cn } from '../lib/cn';
 const AUDIENCES = [
   { k: 'AI Engineers', v: 'A single local workspace to discover models, engineer prompts, benchmark, evaluate, and ship, without stitching five tools together.' },
   { k: 'ML Engineers', v: 'Manage datasets, fine-tune (experimental), track experiments, and compare results with real metrics and full lineage, on your own hardware.' },
-  { k: 'Researchers', v: 'Reproducible, citable runs with a versioned benchmark and deterministic evaluation, no prompt ever leaves your machine.' },
+  { k: 'Researchers', v: 'Keep evaluation settings and results together. Use local runtimes to study model behaviour on your own hardware.' },
   { k: 'Students', v: 'A hands-on way to learn the entire local-AI workflow, end to end, for free on a laptop.' },
-  { k: 'Security Engineers', v: 'Red-team any local model in minutes and export findings your team can act on, one capability inside a full platform.' },
-  { k: 'Developers & Hobbyists', v: 'Run models locally with zero API cost, unlimited experimentation, and a native desktop app that just works.' },
+  { k: 'Security Engineers', v: 'Test supported local models against adversarial prompts, inspect the responses, and export findings for review.' },
+  { k: 'Developers & Hobbyists', v: 'Experiment with local models in a desktop workspace. Start with a small model that fits your machine.' },
 ];
 
 export function BuiltFor() {
@@ -22,6 +22,8 @@ export function BuiltFor() {
               {AUDIENCES.map((a, i) => (
                 <li key={a.k}>
                   <button
+                    onClick={() => setActive(i)}
+                    aria-pressed={active === i}
                     onMouseEnter={() => setActive(i)}
                     onFocus={() => setActive(i)}
                     className={cn(
@@ -49,6 +51,7 @@ export function BuiltFor() {
                 {AUDIENCES.map((a, i) => (
                   <p
                     key={a.k}
+                    aria-hidden={active !== i}
                     className="absolute inset-0 text-[18px] leading-relaxed text-steel-200"
                     style={{
                       opacity: active === i ? 1 : 0,
