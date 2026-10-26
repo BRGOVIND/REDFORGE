@@ -1,39 +1,21 @@
+import { ArrowUpRight } from 'lucide-react';
 import { Reveal } from '../motion';
+import { REPO } from '../config/downloads';
 
-const HORIZON = [
-  { k: 'Real fine-tuning', v: 'Graduate Training from Experimental to production, full local LoRA / QLoRA with real GPU execution.' },
-  { k: 'Distributed training', v: 'Scale runs across multiple GPUs and machines, orchestrated from one workspace.' },
-  { k: 'Plugin marketplace', v: 'Install community runtimes, attacks, evaluators, and workflows in one click.' },
-  { k: 'Agent workflows', v: 'Compose multi-step agentic pipelines over your local models and tools.' },
-  { k: 'Cloud sync & collaboration', v: 'Optional sync and team workspaces, for those who want to share, without giving up local-first.' },
+const NEXT = [
+  { title: 'Follow a call from end to end.', text: 'Local trace exploration and SDK capture, with separate controls for inputs, outputs, metadata and errors.' },
+  { title: 'Give every prompt a history.', text: 'Draft, publish and compare immutable prompt versions. Select an older version without erasing the record.' },
+  { title: 'Turn failures into better tests.', text: 'Local anomaly alerts and reviewed, sanitized regression cases derived from selected traces.' },
+  { title: 'Make decisions with evidence.', text: 'Model comparisons, estimated cost budgets and reviewed security gates. Gate decisions do not deploy anything.' },
 ];
 
 export function Future() {
   return (
-    <section id="future" className="relative border-t border-steel-800 py-12 sm:py-14 lg:py-16">
-      <div className="mx-auto max-w-editorial px-6 sm:px-10">
-        <Reveal delay={120}>
-          <h2 className="display max-w-2xl text-5xl text-bone sm:text-6xl">
-            What&apos;s forging next.
-          </h2>
-        </Reveal>
-
-        <div className="relative mt-8 sm:mt-10">
-          <div className="absolute left-0 right-0 top-[7px] hidden h-px bg-steel-700 lg:block" />
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-            {HORIZON.map((h, i) => (
-              <Reveal key={h.k} delay={i * 140}>
-                <div className="relative lg:pr-6">
-                  <span className="mb-5 block h-3.5 w-3.5 rounded-full border border-forge bg-ink lg:-mt-[1px]">
-                    <span className="mx-auto mt-[3px] block h-1.5 w-1.5 rounded-full bg-forge" />
-                  </span>
-                  <h3 className="display text-xl text-bone">{h.k}</h3>
-                  <p className="mt-3 text-[14px] leading-relaxed text-steel-400">{h.v}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
+    <section id="future" className="next-release">
+      <div className="workspace-inner">
+        <Reveal><div className="next-release-heading"><div><h2>More context.<br /><span>Better decisions.</span></h2></div><p className="release-status"><span>In testing</span>2.1.0 is an internal test candidate.<br />Public release validation is still in progress.</p></div></Reveal>
+        <div className="next-release-grid">{NEXT.map((item, index) => <Reveal key={item.title} delay={index * 70}><article><span className="release-number">0{index + 1}</span><h3>{item.title}</h3><p>{item.text}</p></article></Reveal>)}</div>
+        <div className="next-release-footer"><p>Capture is conservative by default. Review privacy settings before enabling prompt or response bodies.</p><a className="focus-ring" href={`${REPO}/blob/main/docs/release-readiness-audit.md`} target="_blank" rel="noopener noreferrer">Follow development <ArrowUpRight size={16} aria-hidden="true" /></a></div>
       </div>
     </section>
   );
