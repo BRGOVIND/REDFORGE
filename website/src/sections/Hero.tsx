@@ -2,7 +2,6 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { useRef } from 'react';
 import { useScrollScene } from '../motion/useScrollScene';
 import { ForgeMark } from '../components/marks';
-import { WorkbenchPreview } from './WorkbenchPreview';
 import { ForgeMesh } from './ForgeMesh';
 
 export function Hero({ started }: { started: boolean }) {
@@ -44,9 +43,7 @@ export function Hero({ started }: { started: boolean }) {
           </div>
         </div>
 
-        <div className="forge-hero-preview-wrap">
-          <WorkbenchPreview />
-        </div>
+
       </div>
     </section>
   );
