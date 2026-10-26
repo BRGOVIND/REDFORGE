@@ -36,6 +36,7 @@ export function Pipeline() {
                   aria-hidden={i !== active}
                   style={{
                     opacity: i === active ? 1 : 0,
+                    visibility: i === active ? 'visible' : 'hidden',
                     transform: i === active ? 'translateY(0)' : 'translateY(18px)',
                     transition: 'opacity 400ms ease, transform 500ms cubic-bezier(0.16,1,0.3,1)',
                     pointerEvents: i === active ? 'auto' : 'none',
@@ -49,7 +50,7 @@ export function Pipeline() {
           </div>
 
           {/* Right, the drawing pipeline */}
-          <div className="relative mx-auto w-full max-w-sm">
+          <div className="pipeline-drawing relative mx-auto w-full max-w-lg">
             <div className="pipeline-timeline flex flex-col">
               {STAGES.map((s, i) => {
                 const lit = i <= active;
