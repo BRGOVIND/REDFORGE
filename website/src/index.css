@@ -419,7 +419,7 @@
   }
 
   .landing-light { background: #f2efe8; color: #272321; }
-  .landing-light main > section:not(#top):not(#capabilities) {
+  .landing-light main > section:not(#top):not(#capabilities):not(.next-release) {
     background-color: #f2efe8;
     border-color: transparent;
     color: #272321;
