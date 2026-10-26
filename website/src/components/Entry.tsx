@@ -64,7 +64,7 @@ export function Entry({ logoRef, onDone }: EntryProps) {
     // Flatten the actual chevrons onto the ember axis, contract, then unfold.
     for (const selector of ['.forge-angle-top', '.forge-angle-bottom']) {
       animate(logo.querySelector(selector), [
-        { transform: 'scale(0.01, 0.015)', stroke: '#D12A2A', opacity: 0, offset: 0 },
+        { transform: 'scale(0.01, 0.015)', stroke: '#c92626', opacity: 0, offset: 0 },
         { transform: 'scale(9, 0.015)', stroke: '#A11212', opacity: 0.7, offset: 0.28 },
         { transform: 'scale(1, 0.015)', stroke: '#D12A2A', opacity: 1, offset: 0.66 },
         { transform: 'none', stroke: '#55555F', opacity: 1, offset: 1 },
