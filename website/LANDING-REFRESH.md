@@ -36,7 +36,7 @@ No dependencies added. Gallery pixel transitions use quantized canvas resolution
 ## Local validation
 
 - `npm run build` in `website`: TypeScript and Vite production build passed.
-- Output: JS 258.38 kB (81.34 kB gzip), CSS 59.44 kB (13.28 kB gzip), HTML 3.91 kB (1.42 kB gzip). PNGs are additional, separately requested assets.
+- Output: JS 258.38 kB (81.34 kB gzip), CSS 59.44 kB (13.29 kB gzip), HTML 3.91 kB (1.42 kB gzip). PNGs are additional, separately requested assets.
 - `git diff --check`: passed with repository line-ending conversion warnings only.
 - Checked desktop 1440 x 1000 and mobile 390 x 844; additional width checks at 320 x 740 and 900 x 900 found no horizontal document overflow.
 - Verified gallery centering, incoming/outgoing pixel states, endpoint button disabling, reduced-motion clear images, and keyboard Home/End navigation.
@@ -60,4 +60,5 @@ Production-preview checks passed for text hover, the cursor above screenshot dia
 ## Zoomed desktop gallery follow-up (27 October 2026)
 
 The sticky gallery remains active down to a 520 px desktop CSS viewport height. Its compact layout fits the smaller scene; below that height it uses native horizontal scrolling. Production preview checked at 960 x 600, 800 x 520 and 640 x 520: vertical scrolling advanced screenshots, reached the last screen and then released to the next section. Browser errors were empty. This checks viewport behavior, not every browser's native zoom implementation.
+
 

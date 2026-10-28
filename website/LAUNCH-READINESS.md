@@ -15,7 +15,7 @@
 | Published download metadata | PASS | GitHub latest-release API returned non-draft, non-prerelease v2.0.3. All six configured installer/portable names and SHA256SUMS.txt exist in that release. Installers were not downloaded or executed. |
 | Legal/static routes | PASS | privacy.html, terms.html, license.html, open-source-notice.html, robots.txt and sitemap.xml returned 200 locally. This verifies availability, not legal approval. |
 | Gallery and modal | PASS | Vertical document scrolling drives all five screens inside a sticky scene. At progress 0, .25, .5, .75 and 1, the desktop panel stays at top 100 px; after the endpoint it releases. Reverse scrolling and keyboard arrows work. An actual 850 px browser scroll advanced to Observe while staying pinned. Pixel transitions, modal blur, zoom/pan, Escape and focus restoration passed. |
-| Navigation and workflow | PASS | Desktop 390 x 58 compass/ruler expands to 1160 x 88 on hover or activation. Keyboard Enter opens and focuses Inside; Escape closes and returns focus to the visible compass. Mobile menu remains available. Enlarged workflow fits without document overflow. |
+| Navigation and workflow | PASS | Desktop 390 x 58 compass/ruler expands to 1040 x 72 on hover or activation. Keyboard Enter opens and focuses Inside; Escape closes and returns focus to the visible compass. Mobile menu remains available. Enlarged workflow fits without document overflow. |
 | Intro and feature previews | PASS | Root entry animates the logo into the visible navbar slot. Clicking the home logo replays it. Hovered workflow rows retain their matching screenshot; clicking opens the blurred-backdrop dialog. Inline screenshot buttons provide access below 1024 px. |
 | Responsive layout | PASS | Checked 320 x 740, 390 x 844, 900 x 900 and 1440 x 1000. No horizontal document overflow. |
 | Reduced motion | PASS | Screenshot canvases are hidden, clear images remain, navigation still works. Reduced motion and desktop viewports shorter than 520 px and mobile viewports shorter than 700 px use an unpinned horizontal gallery without a tall scene spacer. |
@@ -41,16 +41,16 @@ This website emits static assets. Tailwind/PostCSS run during builds; the site d
 
 - HTML: 3.91 kB, gzip 1.42 kB.
 - JS: 258.38 kB, gzip 81.34 kB.
-- CSS: 59.44 kB, gzip 13.28 kB.
+- CSS: 59.44 kB, gzip 13.29 kB.
 - Six original screenshot assets: 1,216,010 bytes total; five in the gallery and one in the feature previews. Lazy loaded; no new dependencies.
 
 SHA-256, local generated artifacts:
 
 | Artifact | SHA-256 |
 | --- | --- |
-| dist/index.html | AF70C2961E924F297E1E857A09E357EC37BD722D3F452F408BA212E233B53857 |
-| dist/assets/index-DC8OBoma.js | 92168D7635F28366D93CA156B7A36AAC3BF3FC0BE51101F974DB7C63B47FBDC1 |
-| dist/assets/index-D9TrH_0S.css | 895AABD06C2CC0C48C7616E47968D59094B5257CEE95194F04284598801FB1CB |
+| dist/index.html | 23879355AA579744953CAE9C677134FAD0A00790096CF841F663907839A4BAF5 |
+| dist/assets/index-BhrJXvEp.js | 92168D7635F28366D93CA156B7A36AAC3BF3FC0BE51101F974DB7C63B47FBDC1 |
+| dist/assets/index-CACezGg1.css | 4DF60892C7D3AA0A57B2694065B45E6CF80698BFD35997B0B9F55B5509DE415E |
 
 Local evidence: `%TEMP%/rf-website-audit-20261026.json`, `%TEMP%/rf-website-a11y-interactions-20261026.json`, `%TEMP%/rf-pinned-desktop-final.png` and `%TEMP%/rf-pinned-mobile-verified.png`. These temporary files are not committed release evidence and should be copied to the owner's review archive if needed. Checks used the named `agent-browser --session redforge-launch-check` session against the production preview. The latest fragment check found no missing targets or duplicate IDs.
 
@@ -73,4 +73,7 @@ Production-preview checks passed for text hover, the cursor above screenshot dia
 ## Zoomed desktop gallery follow-up (27 October 2026)
 
 The sticky gallery remains active down to a 520 px desktop CSS viewport height. Its compact layout fits the smaller scene; below that height it uses native horizontal scrolling. Production preview checked at 960 x 600, 800 x 520 and 640 x 520: vertical scrolling advanced screenshots, reached the last screen and then released to the next section. Browser errors were empty. This checks viewport behavior, not every browser's native zoom implementation.
+
+
+The expanded desktop navigation was reduced to 1040 x 72 px on 27 October 2026. Hover expansion was checked at 1440 px and 900 px viewport widths; links and Download fit without overlap or document overflow. Production build passed and browser errors were empty.
 
